@@ -1,0 +1,6 @@
+name: PlotsX
+version: '1.0'
+main: pl.syntaxdevteam.plotsx.PlotsX
+api-version: '1.21'
+authors: [ SyntaxDevTeam ]
+website: https://syntaxdevteam.pl
