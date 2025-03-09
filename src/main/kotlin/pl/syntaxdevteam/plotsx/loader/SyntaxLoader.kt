@@ -1,4 +1,4 @@
-package pl.syntaxdevteam.legacyteamx.loader
+package pl.syntaxdevteam.plotsx.loader
 
 import io.papermc.paper.plugin.loader.PluginClasspathBuilder
 import io.papermc.paper.plugin.loader.PluginLoader

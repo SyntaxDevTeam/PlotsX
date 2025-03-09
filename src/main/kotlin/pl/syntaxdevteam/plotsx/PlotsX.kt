@@ -4,6 +4,7 @@ import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.plugin.java.JavaPlugin
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.common.*
+import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.loader.PluginInitializer
 import java.io.File
 import java.util.*
@@ -17,13 +18,13 @@ class PlotsX : JavaPlugin() {
     lateinit var logger: Logger
     lateinit var pluginsManager: PluginManager
     lateinit var statsCollector: StatsCollector
-    //lateinit var databaseHandler: DatabaseHandler
+    lateinit var databaseHandler: DatabaseHandler
     lateinit var messageHandler: MessageHandler
     lateinit var updateChecker: UpdateChecker
     //lateinit var commandsManager: CommandsManager
     lateinit var hookHandler: HookHandler
     //lateinit var cacheHandler: CacheHandler
-    lateinit var invitationManager: InvitationManager
+    //lateinit var invitationManager: InvitationManager
 
     override fun onEnable() {
         pluginInitializer = PluginInitializer(this)

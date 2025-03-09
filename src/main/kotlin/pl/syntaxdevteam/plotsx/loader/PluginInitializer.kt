@@ -5,8 +5,7 @@ import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.common.*
 import pl.syntaxdevteam.plotsx.hooks.CleanerXHook
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
-
-//import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
+import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 
 @Suppress("UnstableApiUsage")
 class PluginInitializer(private val plugin: PlotsX) {
@@ -23,6 +22,7 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     fun onDisable() {
+        plugin.databaseHandler.closeConnection()
         plugin.logger.err(plugin.pluginMeta.name + " " + plugin.pluginMeta.version + " has been disabled ☹️")
     }
 
@@ -42,10 +42,10 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     private fun setupDatabase() {
-        /*
+
         plugin.databaseHandler = DatabaseHandler(plugin)
         plugin.databaseHandler.openConnection()
-        plugin.databaseHandler.createTables()*/
+        plugin.databaseHandler.createTables()
     }
 
     private fun setupHandlers() {
