@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "2.1.20-RC2"
-    id("com.gradleup.shadow") version "9.0.0-beta9"
+    kotlin("jvm") version "2.1.20"
+    id("com.gradleup.shadow") version "9.0.0-beta11"
 }
 
 group = "pl.syntaxdevteam"
@@ -33,7 +33,7 @@ dependencies {
     compileOnly("com.zaxxer:HikariCP:6.2.1")
     compileOnly("net.luckperms:api:5.4")
     compileOnly("me.clip:placeholderapi:2.11.6")
-    compileOnly("io.github.miniplaceholders:miniplaceholders-kotlin-ext:2.2.3")
+    compileOnly("io.github.miniplaceholders:miniplaceholders-kotlin-ext:2.3.0")
     compileOnly("com.github.milkbowl:VaultAPI:1.7.1")
     compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.9")
     compileOnly(files("libs/CleanerX-1.5.1-DEV-all.jar"))
