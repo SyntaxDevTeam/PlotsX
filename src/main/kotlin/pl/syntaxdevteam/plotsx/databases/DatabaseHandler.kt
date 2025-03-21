@@ -7,16 +7,6 @@ import java.io.File
 import java.io.IOException
 import java.sql.*
 
-/**
- * Represents a handler for database operations.
- *
- * This class provides methods to interact with the database, such as creating tables, adding punishments,
- * removing punishments, and retrieving punishment data. It uses the HikariCP connection pool to manage
- * database connections efficiently and safely.
- *
- * @param plugin The PunisherX plugin instance.
- */
-@Suppress("KDocUnresolvedReference")
 class DatabaseHandler(private val plugin: PlotsX) {
     private var dataSource: HikariDataSource? = null
     private var logger = plugin.logger
@@ -179,142 +169,456 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
     }
 
-    /**
-     * Creates necessary tables in the database.
-     *
-     * This method executes SQL statements to create the following tables if they do not already exist:
-     * - `punishments`: Stores information about active punishments.
-     * - `punishmenthistory`: Stores information about historical punishments.
-     *
-     * The table structures and types are adapted to the configured database type
-     * (e.g., `SQLite`, `PostgreSQL`, `H2`, `MySQL`/`MariaDB`).
-     *
-     * SQL statements are constructed dynamically to match the syntax and capabilities of each database type.
-     *
-     * @throws SQLException If an error occurs while creating the tables.
-     */
     fun createTables() {
         getConnection()?.use { conn ->
             logger.debug("Database connection established from createTables")
             conn.createStatement().use { statement ->
                 try {
-                    val createTablesPunishments = when (dbType) {
+                    val createPlotsTable = when (dbType) {
                         "sqlite" -> """
-                    CREATE TABLE IF NOT EXISTS punishments (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        name TEXT,
-                        uuid TEXT,
-                        reason TEXT,
-                        operator TEXT,
-                        punishmentType TEXT,
-                        start INTEGER,
-                        endTime TEXT
-                    );
-                """.trimIndent()
-
-                        "postgresql" -> """ 
-                    CREATE TABLE IF NOT EXISTS punishments ( 
-                        id SERIAL PRIMARY KEY, 
-                        name VARCHAR(32), 
-                        uuid VARCHAR(36), 
-                        reason VARCHAR(255), 
-                        operator VARCHAR(16), 
-                        punishmentType VARCHAR(16), 
-                        start BIGINT, 
-                        endTime VARCHAR(32) 
-                    ); 
-                """.trimIndent()
-
-                        "h2" -> """
-                    CREATE TABLE IF NOT EXISTS punishments (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        name VARCHAR(32),
-                        uuid VARCHAR(36),
-                        reason VARCHAR(255),
-                        operator VARCHAR(16),
-                        punishmentType VARCHAR(16),
-                        start BIGINT,
-                        endTime VARCHAR(32)
-                    );
-                """.trimIndent()
-
-                        else -> """
-                    CREATE TABLE IF NOT EXISTS punishments (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        name VARCHAR(32),
-                        uuid VARCHAR(36),
-                        reason VARCHAR(255),
-                        operator VARCHAR(16),
-                        punishmentType VARCHAR(16),
-                        start BIGINT,
-                        endTime VARCHAR(32)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-                """.trimIndent()
-                    }
-                    statement.executeUpdate(createTablesPunishments)
-                    logger.debug("Operacje na tabeli 'punishments' ukończone.")
-
-                    val createTablesPunishmenthistory = when (dbType) {
-                        "sqlite" -> """
-                    CREATE TABLE IF NOT EXISTS punishmenthistory (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        name TEXT,
-                        uuid TEXT,
-                        reason TEXT,
-                        operator TEXT,
-                        punishmentType TEXT,
-                        start INTEGER,
-                        endTime TEXT
-                    );
-                """.trimIndent()
+                            CREATE TABLE IF NOT EXISTS plots (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                owner_uuid TEXT NOT NULL,
+                                x INTEGER NOT NULL,
+                                z INTEGER NOT NULL,
+                                world TEXT NOT NULL,
+                                name TEXT NOT NULL,
+                                creation_time BIGINT NOT NULL,
+                                expiration_time BIGINT,
+                                UNIQUE(x, z, world)
+                            );
+                        """.trimIndent()
 
                         "postgresql" -> """
-                    CREATE TABLE IF NOT EXISTS punishmenthistory (
-                        id SERIAL PRIMARY KEY,
-                        name VARCHAR(32),
-                        uuid VARCHAR(36),
-                        reason VARCHAR(255),
-                        operator VARCHAR(16),
-                        punishmentType VARCHAR(16),
-                        start BIGINT,
-                        endTime VARCHAR(32)
-                    );
-                """.trimIndent()
+                            CREATE TABLE IF NOT EXISTS plots (
+                                id SERIAL PRIMARY KEY,
+                                owner_uuid VARCHAR(36) NOT NULL,
+                                x INTEGER NOT NULL,
+                                z INTEGER NOT NULL,
+                                world VARCHAR(255) NOT NULL,
+                                name VARCHAR(255) NOT NULL,
+                                creation_time BIGINT NOT NULL,
+                                expiration_time BIGINT,
+                                UNIQUE(x, z, world)
+                            );
+                        """.trimIndent()
 
                         "h2" -> """
-                    CREATE TABLE IF NOT EXISTS punishmenthistory (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        name VARCHAR(32),
-                        uuid VARCHAR(36),
-                        reason VARCHAR(255),
-                        operator VARCHAR(16),
-                        punishmentType VARCHAR(16),
-                        start BIGINT,
-                        endTime VARCHAR(32)
-                    );
-                """.trimIndent()
+                            CREATE TABLE IF NOT EXISTS plots (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                owner_uuid VARCHAR(36) NOT NULL,
+                                x INTEGER NOT NULL,
+                                z INTEGER NOT NULL,
+                                world VARCHAR(255) NOT NULL,
+                                name VARCHAR(255) NOT NULL,
+                                creation_time BIGINT NOT NULL,
+                                expiration_time BIGINT,
+                                UNIQUE(x, z, world)
+                            );
+                        """.trimIndent()
 
                         else -> """
-                    CREATE TABLE IF NOT EXISTS punishmenthistory (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        name VARCHAR(32),
-                        uuid VARCHAR(36),
-                        reason VARCHAR(255),
-                        operator VARCHAR(16),
-                        punishmentType VARCHAR(16),
-                        start BIGINT,
-                        endTime VARCHAR(32)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-                """.trimIndent()
+                            CREATE TABLE IF NOT EXISTS plots (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                owner_uuid VARCHAR(36) NOT NULL,
+                                x INT NOT NULL,
+                                z INT NOT NULL,
+                                world VARCHAR(255) NOT NULL,
+                                name VARCHAR(255) NOT NULL,
+                                creation_time BIGINT NOT NULL,
+                                expiration_time BIGINT,
+                                UNIQUE(x, z, world)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+                        """.trimIndent()
                     }
-                    statement.executeUpdate(createTablesPunishmenthistory)
-                    logger.debug("Operacje na tabeli 'punishmenthistory' ukończone.")
+                    statement.executeUpdate(createPlotsTable)
+                    logger.debug("Table 'plots' created.")
+
+                    val createPlotMembersTable = when (dbType) {
+                        "sqlite" -> """
+                            CREATE TABLE IF NOT EXISTS plot_members (
+                                plot_id INTEGER NOT NULL,
+                                member_uuid TEXT NOT NULL,
+                                role TEXT NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, member_uuid)
+                            );
+                        """.trimIndent()
+
+                        "postgresql" -> """
+                            CREATE TABLE IF NOT EXISTS plot_members (
+                                plot_id INTEGER NOT NULL,
+                                member_uuid VARCHAR(36) NOT NULL,
+                                role VARCHAR(255) NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, member_uuid)
+                            );
+                        """.trimIndent()
+
+                        "h2" -> """
+                            CREATE TABLE IF NOT EXISTS plot_members (
+                                plot_id INT NOT NULL,
+                                member_uuid VARCHAR(36) NOT NULL,
+                                role VARCHAR(255) NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, member_uuid)
+                            );
+                        """.trimIndent()
+
+                        else -> """
+                            CREATE TABLE IF NOT EXISTS plot_members (
+                                plot_id INT NOT NULL,
+                                member_uuid VARCHAR(36) NOT NULL,
+                                role VARCHAR(255) NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, member_uuid)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+                        """.trimIndent()
+                    }
+                    statement.executeUpdate(createPlotMembersTable)
+                    logger.debug("Table 'plot_members' created.")
+
+                    val createPlotFlagsTable = when (dbType) {
+                        "sqlite" -> """
+                            CREATE TABLE IF NOT EXISTS plot_flags (
+                                plot_id INTEGER NOT NULL,
+                                flag_key TEXT NOT NULL,
+                                flag_value TEXT NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, flag_key)
+                            );
+                        """.trimIndent()
+
+                        "postgresql" -> """
+                            CREATE TABLE IF NOT EXISTS plot_flags (
+                                plot_id INTEGER NOT NULL,
+                                flag_key VARCHAR(255) NOT NULL,
+                                flag_value VARCHAR(255) NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, flag_key)
+                            );
+                        """.trimIndent()
+
+                        "h2" -> """
+                            CREATE TABLE IF NOT EXISTS plot_flags (
+                                plot_id INT NOT NULL,
+                                flag_key VARCHAR(255) NOT NULL,
+                                flag_value VARCHAR(255) NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, flag_key)
+                            );
+                        """.trimIndent()
+
+                        else -> """
+                            CREATE TABLE IF NOT EXISTS plot_flags (
+                                plot_id INT NOT NULL,
+                                flag_key VARCHAR(255) NOT NULL,
+                                flag_value VARCHAR(255) NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, flag_key)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+                        """.trimIndent()
+                    }
+                    statement.executeUpdate(createPlotFlagsTable)
+                    logger.debug("Table 'plot_flags' created.")
+
+                    val createPlotLogsTable = when (dbType) {
+                        "sqlite" -> """
+                            CREATE TABLE IF NOT EXISTS plot_logs (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                plot_id INTEGER NOT NULL,
+                                action TEXT NOT NULL,
+                                actor_uuid TEXT NOT NULL,
+                                timestamp BIGINT NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE
+                            );
+                        """.trimIndent()
+
+                        "postgresql" -> """
+                            CREATE TABLE IF NOT EXISTS plot_logs (
+                                id SERIAL PRIMARY KEY,
+                                plot_id INTEGER NOT NULL,
+                                action VARCHAR(255) NOT NULL,
+                                actor_uuid VARCHAR(36) NOT NULL,
+                                timestamp BIGINT NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE
+                            );
+                        """.trimIndent()
+
+                        "h2" -> """
+                            CREATE TABLE IF NOT EXISTS plot_logs (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                plot_id INT NOT NULL,
+                                action VARCHAR(255) NOT NULL,
+                                actor_uuid VARCHAR(36) NOT NULL,
+                                timestamp BIGINT NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE
+                            );
+                        """.trimIndent()
+
+                        else -> """
+                            CREATE TABLE IF NOT EXISTS plot_logs (
+                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                plot_id INT NOT NULL,
+                                action VARCHAR(255) NOT NULL,
+                                actor_uuid VARCHAR(36) NOT NULL,
+                                timestamp BIGINT NOT NULL,
+                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+                        """.trimIndent()
+                    }
+                    statement.executeUpdate(createPlotLogsTable)
+                    logger.debug("Table 'plot_logs' created.")
                 } catch (ex: SQLException) {
-                    logger.err("Błąd podczas tworzenia tabel: ${ex.message}")
+                    logger.err("Error creating tables: ${ex.message}")
                 }
             }
-        } ?: logger.err("Brak połączenia z bazą danych.")
-        logger.debug("Operacje tworzenia tabel zakończone.")
+        } ?: logger.err("No database connection.")
+        logger.debug("Table creation operations completed.")
+    }
+
+    fun saveNewPlot(ownerUuid: String, x: Int, z: Int, world: String, name: String, creationTime: Long, expirationTime: Long?) {
+        getConnection()?.use { conn ->
+            conn.autoCommit = false
+            try {
+                val plotId: Int
+                conn.prepareStatement(
+                    """
+                    INSERT INTO plots (owner_uuid, x, z, world, name, creation_time, expiration_time)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, Statement.RETURN_GENERATED_KEYS
+                ).use { stmt ->
+                    stmt.setString(1, ownerUuid)
+                    stmt.setInt(2, x)
+                    stmt.setInt(3, z)
+                    stmt.setString(4, world)
+                    stmt.setString(5, name)
+                    stmt.setLong(6, creationTime)
+                    stmt.setObject(7, expirationTime)
+                    stmt.executeUpdate()
+                    val rs = stmt.generatedKeys
+                    if (rs.next()) {
+                        plotId = rs.getInt(1)
+                    } else {
+                        throw SQLException("Failed to retrieve plot ID.")
+                    }
+                }
+
+                // Insert default plot member
+                conn.prepareStatement(
+                    """
+                    INSERT INTO plot_members (plot_id, member_uuid, role)
+                    VALUES (?, ?, ?)
+                    """
+                ).use { stmt ->
+                    stmt.setInt(1, plotId)
+                    stmt.setString(2, ownerUuid)
+                    stmt.setString(3, "owner")
+                    stmt.executeUpdate()
+                }
+
+                // Insert default plot flag
+                conn.prepareStatement(
+                    """
+                    INSERT INTO plot_flags (plot_id, flag_key, flag_value)
+                    VALUES (?, ?, ?)
+                    """
+                ).use { stmt ->
+                    stmt.setInt(1, plotId)
+                    stmt.setString(2, "default_flag")
+                    stmt.setString(3, "true")
+                    stmt.executeUpdate()
+                }
+
+                // Insert default plot log
+                conn.prepareStatement(
+                    """
+                    INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp)
+                    VALUES (?, ?, ?, ?)
+                    """
+                ).use { stmt ->
+                    stmt.setInt(1, plotId)
+                    stmt.setString(2, "plot_created")
+                    stmt.setString(3, ownerUuid)
+                    stmt.setLong(4, creationTime)
+                    stmt.executeUpdate()
+                }
+
+                conn.commit()
+                logger.success("New plot saved successfully with ID: $plotId")
+            } catch (ex: SQLException) {
+                conn.rollback()
+                logger.err("Failed to save new plot: ${ex.message}")
+            } finally {
+                conn.autoCommit = true
+            }
+        } ?: logger.err("No database connection.")
+    }
+
+    fun getPlotById(plotId: Int): Plot? {
+        getConnection()?.use { conn ->
+            try {
+                val plot: Plot?
+                conn.prepareStatement(
+                    """
+                    SELECT * FROM plots WHERE id = ?
+                    """
+                ).use { stmt ->
+                    stmt.setInt(1, plotId)
+                    val rs = stmt.executeQuery()
+                    if (rs.next()) {
+                        val ownerUuid = rs.getString("owner_uuid")
+                        val x = rs.getInt("x")
+                        val z = rs.getInt("z")
+                        val world = rs.getString("world")
+                        val name = rs.getString("name")
+                        val creationTime = rs.getLong("creation_time")
+                        val expirationTime = rs.getLong("expiration_time").takeIf { !rs.wasNull() }
+
+                        val members = getPlotMembers(conn, plotId)
+                        val flags = getPlotFlags(conn, plotId)
+                        val logs = getPlotLogs(conn, plotId)
+
+                        plot = Plot(plotId, ownerUuid, x, z, world, name, creationTime, expirationTime, members, flags, logs)
+                    } else {
+                        plot = null
+                    }
+                }
+                return plot
+            } catch (ex: SQLException) {
+                logger.err("Failed to retrieve plot: ${ex.message}")
+                return null
+            }
+        } ?: run {
+            logger.err("No database connection.")
+            return null
+        }
+    }
+
+    private fun getPlotMembers(conn: Connection, plotId: Int): List<PlotMember> {
+        val members = mutableListOf<PlotMember>()
+        conn.prepareStatement(
+            """
+            SELECT * FROM plot_members WHERE plot_id = ?
+            """
+        ).use { stmt ->
+            stmt.setInt(1, plotId)
+            val rs = stmt.executeQuery()
+            while (rs.next()) {
+                members.add(PlotMember(rs.getInt("plot_id"), rs.getString("member_uuid"), rs.getString("role")))
+            }
+        }
+        return members
+    }
+
+    private fun getPlotFlags(conn: Connection, plotId: Int): List<PlotFlag> {
+        val flags = mutableListOf<PlotFlag>()
+        conn.prepareStatement(
+            """
+            SELECT * FROM plot_flags WHERE plot_id = ?
+            """
+        ).use { stmt ->
+            stmt.setInt(1, plotId)
+            val rs = stmt.executeQuery()
+            while (rs.next()) {
+                flags.add(PlotFlag(rs.getInt("plot_id"), rs.getString("flag_key"), rs.getString("flag_value")))
+            }
+        }
+        return flags
+    }
+
+    private fun getPlotLogs(conn: Connection, plotId: Int): List<PlotLog> {
+        val logs = mutableListOf<PlotLog>()
+        conn.prepareStatement(
+            """
+            SELECT * FROM plot_logs WHERE plot_id = ?
+            """
+        ).use { stmt ->
+            stmt.setInt(1, plotId)
+            val rs = stmt.executeQuery()
+            while (rs.next()) {
+                logs.add(PlotLog(rs.getInt("id"), rs.getInt("plot_id"), rs.getString("action"), rs.getString("actor_uuid"), rs.getLong("timestamp")))
+            }
+        }
+        return logs
+    }
+
+    fun updatePlot(plotId: Int, ownerUuid: String?, x: Int?, z: Int?, world: String?, name: String?, creationTime: Long?, expirationTime: Long?) {
+        getConnection()?.use { conn ->
+            val updates = mutableListOf<String>()
+            val params = mutableListOf<Any?>()
+
+            ownerUuid?.let {
+                updates.add("owner_uuid = ?")
+                params.add(it)
+            }
+            x?.let {
+                updates.add("x = ?")
+                params.add(it)
+            }
+            z?.let {
+                updates.add("z = ?")
+                params.add(it)
+            }
+            world?.let {
+                updates.add("world = ?")
+                params.add(it)
+            }
+            name?.let {
+                updates.add("name = ?")
+                params.add(it)
+            }
+            creationTime?.let {
+                updates.add("creation_time = ?")
+                params.add(it)
+            }
+            expirationTime?.let {
+                updates.add("expiration_time = ?")
+                params.add(it)
+            }
+
+            if (updates.isEmpty()) {
+                logger.warning("No values provided to update for plot ID: $plotId")
+                return
+            }
+
+            val sql = "UPDATE plots SET ${updates.joinToString(", ")} WHERE id = ?"
+            params.add(plotId)
+
+            try {
+                conn.prepareStatement(sql).use { stmt ->
+                    params.forEachIndexed { index, param ->
+                        stmt.setObject(index + 1, param)
+                    }
+                    stmt.executeUpdate()
+                    logger.success("Plot ID: $plotId updated successfully.")
+                }
+            } catch (ex: SQLException) {
+                logger.err("Failed to update plot: ${ex.message}")
+            }
+        } ?: logger.err("No database connection.")
+    }
+
+    fun deletePlot(plotId: Int) {
+        getConnection()?.use { conn ->
+            try {
+                conn.prepareStatement(
+                    """
+                    DELETE FROM plots WHERE id = ?
+                    """
+                ).use { stmt ->
+                    stmt.setInt(1, plotId)
+                    val rowsAffected = stmt.executeUpdate()
+                    if (rowsAffected > 0) {
+                        logger.success("Plot ID: $plotId and its related data deleted successfully.")
+                    } else {
+                        logger.warning("No plot found with ID: $plotId.")
+                    }
+                }
+            } catch (ex: SQLException) {
+                logger.err("Failed to delete plot: ${ex.message}")
+            }
+        } ?: logger.err("No database connection.")
     }
 
     /**
