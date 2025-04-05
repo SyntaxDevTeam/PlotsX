@@ -1,9 +1,8 @@
 package pl.syntaxdevteam.plotsx.loader
 
 import pl.syntaxdevteam.plotsx.PlotsX
-//import pl.syntaxdevteam.plotsx.commands.CommandsManager
+import pl.syntaxdevteam.plotsx.commands.CommandsManager
 import pl.syntaxdevteam.plotsx.common.*
-import pl.syntaxdevteam.plotsx.hooks.CleanerXHook
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 
@@ -55,16 +54,16 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     private fun registerCommands() {
-        //plugin.commandsManager = CommandsManager(plugin)
-        //plugin.commandsManager.registerCommands()
+        plugin.commandsManager = CommandsManager(plugin)
+        plugin.commandsManager.registerCommands()
     }
 
     private fun registerEvents() {
-        /*plugin.server.pluginManager.registerEvents(GUIHandler(plugin), plugin)
+
         if (plugin.hookHandler.checkPlaceholderAPI()) {
-            PlaceholderHandler(plugin).register()
-        }*/
-        val cleanerXApi = CleanerXHook.getApi()
+            //PlaceholderHandler(plugin).register()
+        }
+        val cleanerXApi = HookHandler(plugin).checkAndGetCleanerXApi()
         if (cleanerXApi != null) {
             plugin.logger.info("CleanerX API detected - integration enabled.")
         } else {

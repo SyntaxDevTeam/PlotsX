@@ -5,6 +5,7 @@ data class Plot(
     val ownerUuid: String,
     val x: Int,
     val z: Int,
+    val radius: Int,
     val world: String,
     val name: String,
     val creationTime: Long,

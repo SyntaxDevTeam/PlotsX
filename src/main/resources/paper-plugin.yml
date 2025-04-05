@@ -4,3 +4,24 @@ main: pl.syntaxdevteam.plotsx.PlotsX
 api-version: '1.21'
 authors: [ SyntaxDevTeam ]
 website: https://syntaxdevteam.pl
+
+loader: pl.syntaxdevteam.plotsx.loader.SyntaxLoader
+has-open-classloader: false
+
+dependencies:
+  server:
+    PlaceholderAPI:
+      load: BEFORE
+      required: false
+    MiniPlaceholders:
+      load: BEFORE
+      required: false
+    LuckPerms:
+      load: BEFORE
+      required: false
+    Vault:
+      load: BEFORE
+      required: false
+    VaultUnlocked:
+      load: BEFORE
+      required: false

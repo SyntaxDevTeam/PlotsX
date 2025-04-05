@@ -1,0 +1,32 @@
+### Config version 1.0.0
+
+# Settings for connecting to the database
+database:
+  # Available options: mariadb, mysql, postgresql, sqlite, h2
+  type: "sqlite"
+  sql:
+    host: "localhost"
+    port: 3306 # 5432 if you use PostgreSQL default for MySQL is 3306
+    dbname: "my_database"
+    username: "root"
+    password: "password"
+
+# Plugin language selection. Possible values:  EN, PL, ES, FR, DE
+# If you would like to add your own language file, please contact us on Discord (https://discord.gg/Zk6mxv7eMh).
+language: "PL"
+
+plots:
+  expiration:
+    enabled: false
+    duration: 30d
+
+# Update check and auto-update settings
+checkForUpdates: true
+autoDownloadUpdates: false
+
+# Debug mode set to true provides more detailed logs in the console
+debug: true
+
+# Should StatsCollector be enabled? Recommended setting: true
+stats:
+  enabled: false

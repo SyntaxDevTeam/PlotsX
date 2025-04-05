@@ -7,6 +7,7 @@ import net.milkbowl.vault.chat.Chat
 import net.milkbowl.vault.permission.Permission
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
+import pl.syntaxdevteam.cleanerx.api.CleanerXAPI
 import pl.syntaxdevteam.plotsx.PlotsX
 
 /**
@@ -22,6 +23,7 @@ class HookHandler(private val plugin: PlotsX) {
     private var luckPerms: LuckPerms? = null
     private var chat: Chat? = null
     private var permission: Permission? = null
+    private var cleanerXAPI: CleanerXAPI? = null
 
     /**
      * Initializes the HookHandler by checking if the required services are available on the server.
@@ -35,6 +37,11 @@ class HookHandler(private val plugin: PlotsX) {
         if (chat == null || permission == null) {
             checkVaultUnlocked()
         }
+    }
+    fun checkAndGetCleanerXApi(): CleanerXAPI? {
+        return Bukkit.getPluginManager().getPlugin("CleanerX")
+            ?.takeIf { it.isEnabled }
+            ?.let { Bukkit.getServicesManager().load(CleanerXAPI::class.java) }
     }
 
     /**

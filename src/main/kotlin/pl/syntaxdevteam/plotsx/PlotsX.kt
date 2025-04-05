@@ -2,6 +2,7 @@ package pl.syntaxdevteam.plotsx
 
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.plugin.java.JavaPlugin
+import pl.syntaxdevteam.plotsx.commands.CommandsManager
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.common.*
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
@@ -21,7 +22,7 @@ class PlotsX : JavaPlugin() {
     lateinit var databaseHandler: DatabaseHandler
     lateinit var messageHandler: MessageHandler
     lateinit var updateChecker: UpdateChecker
-    //lateinit var commandsManager: CommandsManager
+    lateinit var commandsManager: CommandsManager
     lateinit var hookHandler: HookHandler
     //lateinit var cacheHandler: CacheHandler
     //lateinit var invitationManager: InvitationManager
