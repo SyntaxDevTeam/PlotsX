@@ -33,7 +33,7 @@ class PlotsX : JavaPlugin() {
     }
 
     override fun onDisable() {
-        //databaseHandler.closeConnection()
+        databaseHandler.closeConnection()
         pluginInitializer.onDisable()
     }
     fun onReload() {

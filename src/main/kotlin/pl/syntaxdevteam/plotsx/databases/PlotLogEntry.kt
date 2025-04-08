@@ -1,9 +1,10 @@
 package pl.syntaxdevteam.plotsx.databases
 
-data class PlotLog(
-    val id: Int,
+import java.util.*
+
+data class PlotLogEntry(
     val plotId: Int,
     val action: String,
-    val actorUuid: String,
+    val actorUUID: UUID,
     val timestamp: Long
 )

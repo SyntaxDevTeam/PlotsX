@@ -2,11 +2,11 @@ package pl.syntaxdevteam.plotsx.databases
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import org.bukkit.Location
 import pl.syntaxdevteam.plotsx.PlotsX
 import java.io.File
 import java.io.IOException
 import java.sql.*
+import java.util.*
 
 class DatabaseHandler(private val plugin: PlotsX) {
     private var dataSource: HikariDataSource? = null
@@ -178,7 +178,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                     val createPlotsTable = when (dbType) {
                         "sqlite" -> """
                             CREATE TABLE IF NOT EXISTS plots (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                plot_id INTEGER PRIMARY KEY AUTOINCREMENT,
                                 owner_uuid TEXT NOT NULL,
                                 x INTEGER NOT NULL,
                                 z INTEGER NOT NULL,
@@ -186,14 +186,13 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 world TEXT NOT NULL,
                                 name TEXT NOT NULL,
                                 creation_time TEXT NOT NULL,
-                                expiration_time TEXT,
                                 UNIQUE(x, z, world)
                             );
                         """.trimIndent()
 
                         "postgresql" -> """
                             CREATE TABLE IF NOT EXISTS plots (
-                                id SERIAL PRIMARY KEY,
+                                plot_id SERIAL PRIMARY KEY,
                                 owner_uuid VARCHAR(36) NOT NULL,
                                 x INTEGER NOT NULL,
                                 z INTEGER NOT NULL,
@@ -201,14 +200,13 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 world VARCHAR(255) NOT NULL,
                                 name VARCHAR(255) NOT NULL,
                                 creation_time BIGINT NOT NULL,
-                                expiration_time BIGINT,
                                 UNIQUE(x, z, world)
                             );
                         """.trimIndent()
 
                         "h2" -> """
                             CREATE TABLE IF NOT EXISTS plots (
-                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                plot_id INT AUTO_INCREMENT PRIMARY KEY,
                                 owner_uuid VARCHAR(36) NOT NULL,
                                 x INTEGER NOT NULL,
                                 z INTEGER NOT NULL,
@@ -216,23 +214,26 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 world VARCHAR(255) NOT NULL,
                                 name VARCHAR(255) NOT NULL,
                                 creation_time BIGINT NOT NULL,
-                                expiration_time BIGINT,
                                 UNIQUE(x, z, world)
                             );
                         """.trimIndent()
 
                         else -> """
                             CREATE TABLE IF NOT EXISTS plots (
-                                id INT AUTO_INCREMENT PRIMARY KEY,
+                                plot_id INT AUTO_INCREMENT PRIMARY KEY,
                                 owner_uuid VARCHAR(36) NOT NULL,
                                 x INT NOT NULL,
                                 z INT NOT NULL,
-                                radius INTEGER NOT NULL,
+                                radius INT NOT NULL,
                                 world VARCHAR(255) NOT NULL,
                                 name VARCHAR(255) NOT NULL,
                                 creation_time BIGINT NOT NULL,
-                                expiration_time BIGINT,
-                                UNIQUE(x, z, world)
+                                
+                                INDEX idx_owner_uuid (owner_uuid),
+                                INDEX idx_world (world),
+                                INDEX idx_coordinates (x, z),
+                                INDEX idx_radius (radius),
+                                UNIQUE KEY unique_location (x, z, world)
                             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
                         """.trimIndent()
                     }
@@ -245,7 +246,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 plot_id INTEGER NOT NULL,
                                 member_uuid TEXT NOT NULL,
                                 role TEXT NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
                                 UNIQUE(plot_id, member_uuid)
                             );
                         """.trimIndent()
@@ -255,7 +256,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 plot_id INTEGER NOT NULL,
                                 member_uuid VARCHAR(36) NOT NULL,
                                 role VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
                                 UNIQUE(plot_id, member_uuid)
                             );
                         """.trimIndent()
@@ -265,7 +266,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 plot_id INT NOT NULL,
                                 member_uuid VARCHAR(36) NOT NULL,
                                 role VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
                                 UNIQUE(plot_id, member_uuid)
                             );
                         """.trimIndent()
@@ -275,7 +276,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 plot_id INT NOT NULL,
                                 member_uuid VARCHAR(36) NOT NULL,
                                 role VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
                                 UNIQUE(plot_id, member_uuid)
                             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
                         """.trimIndent()
@@ -287,40 +288,40 @@ class DatabaseHandler(private val plugin: PlotsX) {
                         "sqlite" -> """
                             CREATE TABLE IF NOT EXISTS plot_flags (
                                 plot_id INTEGER NOT NULL,
-                                flag_key TEXT NOT NULL,
+                                flag_name TEXT NOT NULL,
                                 flag_value TEXT NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, flag_key)
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, flag_name)
                             );
                         """.trimIndent()
 
                         "postgresql" -> """
                             CREATE TABLE IF NOT EXISTS plot_flags (
                                 plot_id INTEGER NOT NULL,
-                                flag_key VARCHAR(255) NOT NULL,
+                                flag_name VARCHAR(255) NOT NULL,
                                 flag_value VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, flag_key)
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, flag_name)
                             );
                         """.trimIndent()
 
                         "h2" -> """
                             CREATE TABLE IF NOT EXISTS plot_flags (
                                 plot_id INT NOT NULL,
-                                flag_key VARCHAR(255) NOT NULL,
+                                flag_name VARCHAR(255) NOT NULL,
                                 flag_value VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, flag_key)
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, flag_name)
                             );
                         """.trimIndent()
 
                         else -> """
                             CREATE TABLE IF NOT EXISTS plot_flags (
                                 plot_id INT NOT NULL,
-                                flag_key VARCHAR(255) NOT NULL,
+                                flag_name VARCHAR(255) NOT NULL,
                                 flag_value VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, flag_key)
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
+                                UNIQUE(plot_id, flag_name)
                             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
                         """.trimIndent()
                     }
@@ -335,7 +336,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 action TEXT NOT NULL,
                                 actor_uuid TEXT NOT NULL,
                                 timestamp TEXT NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
                             );
                         """.trimIndent()
 
@@ -346,7 +347,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 action VARCHAR(255) NOT NULL,
                                 actor_uuid VARCHAR(36) NOT NULL,
                                 timestamp BIGINT NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
                             );
                         """.trimIndent()
 
@@ -357,7 +358,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 action VARCHAR(255) NOT NULL,
                                 actor_uuid VARCHAR(36) NOT NULL,
                                 timestamp TEXT NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
                             );
                         """.trimIndent()
 
@@ -368,7 +369,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 action VARCHAR(255) NOT NULL,
                                 actor_uuid VARCHAR(36) NOT NULL,
                                 timestamp BIGINT (255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(id) ON DELETE CASCADE
+                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
                             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
                         """.trimIndent()
                     }
@@ -382,287 +383,671 @@ class DatabaseHandler(private val plugin: PlotsX) {
         logger.debug("Table creation operations completed.")
     }
 
-    fun saveNewPlot(ownerUuid: String, x: Int, z: Int, radius: Int, world: String, name: String, creationTime: Long, expirationTime: Long?) {
-        getConnection()?.use { conn ->
-            conn.useTransaction {
-                val plotId = insertPlot(conn, ownerUuid, x, z, radius, world, name, creationTime, expirationTime)
-                    ?: throw SQLException("Failed to retrieve plot ID.")
-
-                // Wstawienie właściciela do plot_members
-                conn.prepareStatement(
-                    "INSERT INTO plot_members (plot_id, member_uuid, role) VALUES (?, ?, ?);"
-                ).use { stmt ->
-                    stmt.setInt(1, plotId)
-                    stmt.setString(2, ownerUuid)
-                    stmt.setString(3, "owner")
-                    stmt.executeUpdate()
-                }
-
-                // Wstawienie domyślnej flagi do plot_flags
-                conn.prepareStatement(
-                    "INSERT INTO plot_flags (plot_id, flag_key, flag_value) VALUES (?, ?, ?);"
-                ).use { stmt ->
-                    stmt.setInt(1, plotId)
-                    stmt.setString(2, "default_flag")
-                    stmt.setString(3, "true")
-                    stmt.executeUpdate()
-                }
-
-                // Zapisanie loga utworzenia działki
-                conn.prepareStatement(
-                    "INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp) VALUES (?, ?, ?, ?);"
-                ).use { stmt ->
-                    stmt.setInt(1, plotId)
-                    stmt.setString(2, "plot_created")
-                    stmt.setString(3, ownerUuid)
-                    stmt.setLong(4, creationTime)
-                    stmt.executeUpdate()
-                }
-
-                logger.success("New plot saved successfully with ID: $plotId")
-            }
-        } ?: logger.err("No database connection.")
-    }
-
-    private fun insertPlot(conn: Connection, ownerUuid: String, x: Int, z: Int, radius: Int, world: String, name: String, creationTime: Long, expirationTime: Long?): Int? {
-        conn.prepareStatement(
-            """
-        INSERT INTO plots (owner_uuid, x, z, radius, world, name, creation_time, expiration_time)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, Statement.RETURN_GENERATED_KEYS
-        ).use { stmt ->
-            stmt.setString(1, ownerUuid)
-            stmt.setInt(2, x)
-            stmt.setInt(3, z)
-            stmt.setInt(4, radius)
-            stmt.setString(5, world)
-            stmt.setString(6, name)
-            stmt.setLong(7, creationTime)
-            stmt.setObject(8, expirationTime)
-            stmt.executeUpdate()
-
-            stmt.generatedKeys.use { rs ->
-                if (rs.next()) return rs.getInt(1)
-            }
-
-            if (conn.metaData.databaseProductName.contains("SQLite", true)) {
-                conn.prepareStatement("SELECT last_insert_rowid();").use { stmt2 ->
-                    stmt2.executeQuery().use { rs ->
-                        if (rs.next()) return rs.getInt(1)
-                    }
-                }
-            }
+    fun createNewPlot(
+        ownerUuid: UUID,
+        world: String,
+        x: Int,
+        z: Int,
+        radius: Int,
+        name: String
+    ): Int? {
+        val connection = getConnection() ?: run {
+            logger.err("Brak połączenia z bazą danych.")
+            return null
         }
-        return null
-    }
 
-    private fun Connection.useTransaction(block: () -> Unit) {
-        autoCommit = false
+        val defaultFlags = mapOf(
+            "build" to false,
+            "pvp" to false,
+            "chest" to false,
+            "ender-chest" to true,
+            "lever" to false,
+            "button" to false,
+            "door" to true,
+            "spawn-monsters" to false,
+            "spawn-animals" to true,
+            "pasywne" to false,
+            "flow" to false,
+            "fire" to false,
+            "minecart" to false,
+            "allow-home" to true,
+            "smart-door" to false,
+            "use-potions" to false,
+            "mob-loot" to false,
+            "flow-damage" to false,
+            "iceform-player" to false,
+            "iceform-world" to true,
+            "allow-fly" to true,
+            "teleport" to false,
+            "can-grow" to true,
+            "allow-spawners" to false,
+            "leaves-decay" to false,
+            "allow-effects" to false,
+            "redstone" to false,
+            "block-transform" to false,
+            "team" to false
+        )
+
         try {
-            block()
-            commit()
-        } catch (ex: SQLException) {
-            rollback()
-            logger.err("Transaction failed: ${ex.message}")
-        } finally {
-            autoCommit = true
-        }
-    }
+            connection.use { conn ->
+                conn.autoCommit = false 
 
-    fun getPlotById(plotId: Int): Plot? {
-        getConnection()?.use { conn ->
-            try {
-                val plot: Plot?
-                conn.prepareStatement(
-                    """
-                    SELECT * FROM plots WHERE id = ?
-                    """
-                ).use { stmt ->
-                    stmt.setInt(1, plotId)
-                    val rs = stmt.executeQuery()
-                    if (rs.next()) {
-                        val ownerUuid = rs.getString("owner_uuid")
-                        val x = rs.getInt("x")
-                        val z = rs.getInt("z")
-                        val radius = rs.getInt("radius")
-                        val world = rs.getString("world")
-                        val name = rs.getString("name")
-                        val creationTime = rs.getLong("creation_time")
-                        val expirationTime = rs.getLong("expiration_time").takeIf { !rs.wasNull() }
+                // 1. Dodajemy działkę
+                val plotId: Int
+                val insertPlotSql = """
+                INSERT INTO plots (owner_uuid, x, z, radius, world, name, creation_time)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """.trimIndent()
 
-                        val members = getPlotMembers(conn, plotId)
-                        val flags = getPlotFlags(conn, plotId)
-                        val logs = getPlotLogs(conn, plotId)
+                conn.prepareStatement(insertPlotSql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
+                    stmt.setString(1, ownerUuid.toString())
+                    stmt.setInt(2, x)
+                    stmt.setInt(3, z)
+                    stmt.setInt(4, radius)
+                    stmt.setString(5, world)
+                    stmt.setString(6, name)
+                    stmt.setLong(7, System.currentTimeMillis())
+                    stmt.executeUpdate()
 
-                        plot = Plot(plotId, ownerUuid, x, z, radius, world, name, creationTime, expirationTime, members, flags, logs)
+                    val generatedKeys = stmt.generatedKeys
+                    if (generatedKeys.next()) {
+                        plotId = generatedKeys.getInt(1)
                     } else {
-                        plot = null
+                        conn.rollback()
+                        logger.err("Nie udało się pobrać ID nowej działki.")
+                        return null
                     }
                 }
-                return plot
-            } catch (ex: SQLException) {
-                logger.err("Failed to retrieve plot: ${ex.message}")
-                return null
+
+                // 2. Domyślne flagi
+                val insertFlagSql = """
+                INSERT INTO plot_flags (plot_id, flag_name, flag_value) VALUES (?, ?, ?)
+            """.trimIndent()
+
+                conn.prepareStatement(insertFlagSql).use { flagStmt ->
+                    for ((flag, value) in defaultFlags) {
+                        flagStmt.setInt(1, plotId)
+                        flagStmt.setString(2, flag)
+                        flagStmt.setString(3, value.toString())
+                        flagStmt.addBatch()
+                    }
+                    flagStmt.executeBatch()
+                }
+
+                conn.commit()
+                logger.debug("Utworzono działkę z domyślnymi flagami: plot_id=$plotId")
+                return plotId
             }
-        } ?: run {
-            logger.err("No database connection.")
+        } catch (ex: SQLException) {
+            logger.err("Błąd podczas tworzenia działki: ${ex.message}")
             return null
         }
     }
 
-    fun getPlotIdByLocation(location: Location): Int? {
-        getConnection()?.use { conn ->
-            try {
-                conn.prepareStatement(
-                    """
-                    SELECT id FROM plots WHERE x = ? AND z = ? AND world = ?
-                    """
-                ).use { stmt ->
-                    stmt.setInt(1, location.blockX)
-                    stmt.setInt(2, location.blockZ)
-                    stmt.setString(3, location.world.name)
-                    val rs = stmt.executeQuery()
-                    if (rs.next()) {
-                        return rs.getInt("id")
+    fun deletePlot(plotId: Int): Boolean {
+        val connection = getConnection() ?: run {
+            logger.err("Brak połączenia z bazą danych.")
+            return false
+        }
+
+        try {
+            connection.use { conn ->
+                conn.autoCommit = false
+
+                // Usunięcie działki — reszta powiązanych danych usunie się kaskadowo
+                val deleteSql = "DELETE FROM plots WHERE plot_id = ?"
+
+                conn.prepareStatement(deleteSql).use { stmt ->
+                    stmt.setInt(1, plotId)
+                    val affectedRows = stmt.executeUpdate()
+                    if (affectedRows == 0) {
+                        conn.rollback()
+                        logger.warning("Nie znaleziono działki do usunięcia: plot_id=$plotId")
+                        return false
                     }
                 }
-            } catch (ex: SQLException) {
-                logger.err("Błąd podczas pobierania identyfikatora działki: ${ex.message}")
+
+                conn.commit()
+                logger.debug("Działka plot_id=$plotId została usunięta.")
+                return true
             }
-        } ?: logger.err("Brak połączenia z bazą danych.")
-        return null
+        } catch (ex: SQLException) {
+            logger.err("Błąd podczas usuwania działki: ${ex.message}")
+            return false
+        }
     }
 
-    private fun getPlotMembers(conn: Connection, plotId: Int): List<PlotMember> {
-        val members = mutableListOf<PlotMember>()
-        val sql = """
-        SELECT member_uuid, role FROM plot_members WHERE plot_id = ?
-    """
+    fun updatePlotDetails(plotId: Int, newName: String? = null, newRadius: Int? = null): Boolean {
+        val connection = getConnection() ?: run {
+            logger.err("Brak połączenia z bazą danych.")
+            return false
+        }
+
+        if (newName == null && newRadius == null) {
+            logger.warning("Brak danych do aktualizacji dla plot_id=$plotId.")
+            return false
+        }
+
+        val updates = mutableListOf<String>()
+        val params = mutableListOf<Any>()
+
+        newName?.let {
+            updates.add("name = ?")
+            params.add(it)
+        }
+
+        newRadius?.let {
+            updates.add("radius = ?")
+            params.add(it)
+        }
+
+        val sql = "UPDATE plots SET ${updates.joinToString(", ")} WHERE plot_id = ?"
+
         try {
-            conn.prepareStatement(sql).use { stmt ->
-                stmt.setInt(1, plotId)
-                stmt.executeQuery().use { rs ->
-                    while (rs.next()) {
-                        members.add(
-                            PlotMember(
-                                plotId,
-                                rs.getString("member_uuid"),
-                                rs.getString("role")
-                            )
-                        )
+            connection.use { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    params.forEachIndexed { index, param ->
+                        when (param) {
+                            is String -> stmt.setString(index + 1, param)
+                            is Int -> stmt.setInt(index + 1, param)
+                        }
+                    }
+                    stmt.setInt(params.size + 1, plotId)
+
+                    val rows = stmt.executeUpdate()
+                    if (rows == 0) {
+                        logger.warning("Nie znaleziono działki do aktualizacji: plot_id=$plotId")
+                        return false
+                    }
+
+                    logger.debug("Działka plot_id=$plotId została zaktualizowana.")
+                    return true
+                }
+            }
+        } catch (ex: SQLException) {
+            logger.err("Błąd podczas aktualizacji działki: ${ex.message}")
+            return false
+        }
+    }
+
+    /**
+     * Aktualizacja flag do sprawdzenia, czy nie pomyliłem czegoś!
+     *
+     * Muszę pamiętać o sposobie użycia np.
+     *
+     * `updatePlotFlag(plotId = 42, flagName = "pvp", flagValue = true)`
+     **/
+    fun updatePlotFlag(plotId: Int, flagName: String, flagValue: Boolean): Boolean {
+        val connection = getConnection() ?: run {
+            logger.err("Brak połączenia z bazą danych.")
+            return false
+        }
+
+        val sql = when (dbType) {
+            "postgresql" -> """
+            INSERT INTO plot_flags (plot_id, flag_name, flag_value)
+            VALUES (?, ?, ?)
+            ON CONFLICT (plot_id, flag_name) DO UPDATE SET flag_value = EXCLUDED.flag_value;
+        """
+            "sqlite" -> """
+            INSERT INTO plot_flags (plot_id, flag_name, flag_value)
+            VALUES (?, ?, ?)
+            ON CONFLICT(plot_id, flag_name) DO UPDATE SET flag_value = excluded.flag_value;
+        """
+            "mysql", "mariadb" -> """
+            INSERT INTO plot_flags (plot_id, flag_name, flag_value)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE flag_value = VALUES(flag_value);
+        """
+            else -> """
+            MERGE INTO plot_flags (plot_id, flag_name, flag_value)
+            KEY (plot_id, flag_name)
+            VALUES (?, ?, ?);
+        """ // dla H2, ale chyba zmienię w przyszłości miejscami na MySQL
+        }.trimIndent()
+
+        try {
+            connection.use { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setInt(1, plotId)
+                    stmt.setString(2, flagName)
+                    stmt.setString(3, flagValue.toString())
+                    val rows = stmt.executeUpdate()
+                    logger.debug("Zmieniono flagę '$flagName' na '$flagValue' dla plot_id=$plotId (rows=$rows).")
+                    return true
+                }
+            }
+        } catch (ex: SQLException) {
+            logger.err("Błąd przy aktualizacji flagi '$flagName' dla plot_id=$plotId: ${ex.message}")
+            return false
+        }
+    }
+
+    /**
+     * Pobranie flag działki
+     *
+     * @param plotId
+     * @return `Map<String, Boolean>`
+     */
+    fun getPlotFlags(plotId: Int): Map<String, Boolean> {
+        val flags = mutableMapOf<String, Boolean>()
+        val connection = getConnection() ?: run {
+            logger.err("Brak połączenia z bazą danych.")
+            return flags
+        }
+
+        val sql = "SELECT flag_name, flag_value FROM plot_flags WHERE plot_id = ?"
+
+        try {
+            connection.use { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setInt(1, plotId)
+                    stmt.executeQuery().use { rs ->
+                        while (rs.next()) {
+                            val name = rs.getString("flag_name")
+                            val valueRaw = rs.getString("flag_value").lowercase()
+                            val value = valueRaw == "true" || valueRaw == "1" || valueRaw == "yes"
+                            flags[name] = value
+                        }
                     }
                 }
             }
         } catch (ex: SQLException) {
-            logger.err("Błąd podczas pobierania członków działki: ${ex.message}")
+            logger.err("Błąd podczas pobierania flag działki plot_id=$plotId: ${ex.message}")
         }
-        return members
-    }
 
-    private fun getPlotFlags(conn: Connection, plotId: Int): List<PlotFlag> {
-        val flags = mutableListOf<PlotFlag>()
-        val sql = """
-        SELECT flag_key, flag_value FROM plot_flags WHERE plot_id = ?
-    """
-        try {
-            conn.prepareStatement(sql).use { stmt ->
-                stmt.setInt(1, plotId)
-                stmt.executeQuery().use { rs ->
-                    while (rs.next()) {
-                        flags.add(
-                            PlotFlag(
-                                plotId,
-                                rs.getString("flag_key"),
-                                rs.getString("flag_value")
-                            )
-                        )
-                    }
-                }
-            }
-        } catch (ex: SQLException) {
-            logger.err("Błąd podczas pobierania flag działki: ${ex.message}")
-        }
         return flags
     }
 
-    private fun getPlotLogs(conn: Connection, plotId: Int): List<PlotLog> {
-        val logs = mutableListOf<PlotLog>()
-        val sql = """
-        SELECT id, action, actor_uuid, timestamp FROM plot_logs WHERE plot_id = ?
-    """
-        try {
+    /**
+     * Pobranie pojedynczej flagi danej działki
+     *
+     * @param plotId
+     * @param flagName
+     * @return `String?`
+     */
+    fun getPlotFlag(plotId: Int, flagName: String): PlotFlagData? {
+        val sql = "SELECT flag_value FROM plot_flags WHERE plot_id = ? AND flag_name = ?"
+
+        getConnection()?.use { conn ->
             conn.prepareStatement(sql).use { stmt ->
                 stmt.setInt(1, plotId)
+                stmt.setString(2, flagName)
+
+                stmt.executeQuery().use { rs ->
+                    return if (rs.next()) {
+                        PlotFlagData(plotId, flagName, rs.getString("flag_value"))
+                    } else null
+                }
+            }
+        }
+        return null
+    }
+
+
+    /**
+     * Dodanie gracza do działki
+     *
+     * @param plotId
+     * @param memberUuid
+     * @param role
+     * @return `Boolean`
+     */
+    fun addPlotMember(plotId: Int, memberUuid: UUID, role: String = "member"): Boolean {
+        val connection = getConnection() ?: run {
+            logger.err("Brak połączenia z bazą danych.")
+            return false
+        }
+
+        val sql = when (dbType.lowercase()) {
+            "sqlite", "postgresql" -> """
+            INSERT INTO plot_members (plot_id, member_uuid, role)
+            VALUES (?, ?, ?)
+            ON CONFLICT(plot_id, member_uuid) DO UPDATE SET role = excluded.role
+        """.trimIndent()
+
+            "h2" -> """
+            MERGE INTO plot_members (plot_id, member_uuid, role)
+            KEY (plot_id, member_uuid)
+            VALUES (?, ?, ?)
+        """.trimIndent()
+
+            else -> """
+            INSERT INTO plot_members (plot_id, member_uuid, role)
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE role = VALUES(role)
+        """.trimIndent() // domyślnie MySQL/MariaDB
+        }
+
+        try {
+            connection.use { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setInt(1, plotId)
+                    stmt.setString(2, memberUuid.toString())
+                    stmt.setString(3, role)
+                    stmt.executeUpdate()
+                    logger.debug("Dodano członka działki: $memberUuid do plot_id=$plotId jako $role")
+                    return true
+                }
+            }
+        } catch (ex: SQLException) {
+            logger.err("Błąd podczas dodawania członka do działki: ${ex.message}")
+            return false
+        }
+    }
+
+    fun removePlotMember(plotId: Int, memberUuid: UUID): Boolean {
+        val connection = getConnection() ?: run {
+            logger.err("Brak połączenia z bazą danych.")
+            return false
+        }
+
+        val sql = """
+        DELETE FROM plot_members
+        WHERE plot_id = ? AND member_uuid = ?
+    """.trimIndent()
+
+        try {
+            connection.use { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setInt(1, plotId)
+                    stmt.setString(2, memberUuid.toString())
+                    val affectedRows = stmt.executeUpdate()
+                    logger.debug("Usunięto członka $memberUuid z działki $plotId (zmienione wiersze: $affectedRows)")
+                    return affectedRows > 0
+                }
+            }
+        } catch (ex: SQLException) {
+            logger.err("Błąd podczas usuwania członka działki: ${ex.message}")
+            return false
+        }
+    }
+
+    /**
+     * Zmiana roli członka działki
+     *
+     * @param plotId
+     * @param memberUuid
+     * @param newRole
+     * @return `Boolean`
+     */
+    fun updatePlotMemberRole(plotId: Int, memberUuid: UUID, newRole: String): Boolean {
+        val connection = getConnection() ?: run {
+            logger.err("Brak połączenia z bazą danych.")
+            return false
+        }
+
+        val sql = """
+        UPDATE plot_members
+        SET role = ?
+        WHERE plot_id = ? AND member_uuid = ?
+    """.trimIndent()
+
+        try {
+            connection.use { conn ->
+                conn.prepareStatement(sql).use { stmt ->
+                    stmt.setString(1, newRole)
+                    stmt.setInt(2, plotId)
+                    stmt.setString(3, memberUuid.toString())
+                    val affectedRows = stmt.executeUpdate()
+                    logger.debug("Zmieniono rolę członka $memberUuid na $newRole w działce $plotId (zmienione wiersze: $affectedRows)")
+                    return affectedRows > 0
+                }
+            }
+        } catch (ex: SQLException) {
+            logger.err("Błąd podczas aktualizacji roli członka działki: ${ex.message}")
+            return false
+        }
+    }
+
+    /**
+     * Pobranie listy członków działki
+     *
+     * @param plotId
+     * @return `Map<UUID, String>`
+     */
+    fun getPlotMembers(plotId: Int): List<PlotMemberData> {
+        val result = mutableListOf<PlotMemberData>()
+        val sql = "SELECT member_uuid, role FROM plot_members WHERE plot_id = ?"
+
+        getConnection()?.use { conn ->
+            conn.prepareStatement(sql).use { stmt ->
+                stmt.setInt(1, plotId)
+
                 stmt.executeQuery().use { rs ->
                     while (rs.next()) {
-                        logs.add(
-                            PlotLog(
-                                rs.getInt("id"),
-                                plotId,
-                                rs.getString("action"),
-                                rs.getString("actor_uuid"),
-                                rs.getLong("timestamp")
+                        result.add(
+                            PlotMemberData(
+                                plotId = plotId,
+                                memberUUID = rs.getString("member_uuid"),
+                                memberRole = rs.getString("role")
                             )
                         )
                     }
                 }
             }
-        } catch (ex: SQLException) {
-            logger.err("Błąd podczas pobierania logów działki: ${ex.message}")
         }
-        return logs
+        return result
     }
 
 
-    fun updatePlot(plotId: Int, ownerUuid: String?, x: Int?, z: Int?, world: String?, name: String?, creationTime: Long?, expirationTime: Long?) {
+    /**
+     * Sprawdzenie, czy gracz posiada już działkę
+     *
+     * @param ownerUuid
+     * @return `Boolean`
+     */
+    fun playerOwnsPlot(ownerUuid: UUID): Boolean {
+        val query = when (dbType) {
+            "sqlite", "postgresql", "h2" -> "SELECT 1 FROM plots WHERE owner_uuid = ? LIMIT 1"
+            else -> "SELECT 1 FROM plots WHERE owner_uuid = ? LIMIT 1"
+        }
+
         getConnection()?.use { conn ->
-            conn.useTransaction {
-                val updates = mutableListOf<String>()
-                val params = mutableListOf<Any?>()
-
-                ownerUuid?.let { updates.add("owner_uuid = ?"); params.add(it) }
-                x?.let { updates.add("x = ?"); params.add(it) }
-                z?.let { updates.add("z = ?"); params.add(it) }
-                world?.let { updates.add("world = ?"); params.add(it) }
-                name?.let { updates.add("name = ?"); params.add(it) }
-                creationTime?.let { updates.add("creation_time = ?"); params.add(it) }
-                expirationTime?.let { updates.add("expiration_time = ?"); params.add(it) }
-
-                if (updates.isEmpty()) {
-                    logger.warning("No values provided to update for plot ID: $plotId")
-                    return@useTransaction
+            conn.prepareStatement(query).use { stmt ->
+                stmt.setString(1, ownerUuid.toString())
+                stmt.executeQuery().use { rs ->
+                    return rs.next()
                 }
-
-                val sql = "UPDATE plots SET ${updates.joinToString(", ")} WHERE id = ?"
-                params.add(plotId)
-
-                conn.prepareStatement(sql).use { stmt ->
-                    params.forEachIndexed { index, param -> stmt.setObject(index + 1, param) }
-                    stmt.executeUpdate()
-                }
-
-                logger.success("Plot ID: $plotId updated successfully.")
             }
-        } ?: logger.err("No database connection.")
+        }
+        return false
     }
 
-    fun deletePlot(plotId: Int) {
+    /**
+     * Sprawdzenie, czy działka, a raczej jej teren istnieje w danej lokalizacji X, Z
+     *
+     * @param world
+     * @param x
+     * @param z
+     * @return `Boolean`
+     */
+    fun getPlotAtLocation(world: String, x: Int, z: Int): PlotData? {
+        val query = when (dbType) {
+            "sqlite", "postgresql", "h2" -> """
+            SELECT * FROM plots WHERE world = ? AND
+            (? BETWEEN x - radius AND x + radius) AND
+            (? BETWEEN z - radius AND z + radius)
+        """
+            else -> """
+            SELECT * FROM plots WHERE world = ? AND
+            (? BETWEEN x - radius AND x + radius) AND
+            (? BETWEEN z - radius AND z + radius)
+        """
+        }
+
         getConnection()?.use { conn ->
-            conn.useTransaction {
-                listOf("plot_members", "plot_flags", "plot_logs").forEach { table ->
-                    conn.prepareStatement("DELETE FROM $table WHERE plot_id = ?").use { stmt ->
-                        stmt.setInt(1, plotId)
-                        stmt.executeUpdate()
+            conn.prepareStatement(query).use { stmt ->
+                stmt.setString(1, world)
+                stmt.setInt(2, x)
+                stmt.setInt(3, z)
+                stmt.executeQuery().use { rs ->
+                    return if (rs.next()) {
+                        PlotData(
+                            id = rs.getInt("plot_id"),
+                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
+                            x = rs.getInt("x"),
+                            z = rs.getInt("z"),
+                            radius = rs.getInt("radius"),
+                            world = rs.getString("world"),
+                            name = rs.getString("name"),
+                            creationTime = rs.getLong("creation_time")
+                        )
+                    } else null
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * Pobranie wszystkich działek gracza (których jest właścicielem lub członkiem)
+     *
+     * @param uuid
+     * @return `List<PlotData>`
+     */
+    fun getPlayerPlots(uuid: UUID): List<PlotData> {
+        val query = when (dbType) {
+            "sqlite", "postgresql", "h2" -> """
+            SELECT DISTINCT p.* FROM plots p
+            LEFT JOIN plot_members m ON p.plot_id = m.plot_id
+            WHERE p.owner_uuid = ? OR m.member_uuid = ?
+        """
+            else -> """
+            SELECT DISTINCT p.* FROM plots p
+            LEFT JOIN plot_members m ON p.plot_id = m.plot_id
+            WHERE p.owner_uuid = ? OR m.member_uuid = ?
+        """
+        }
+
+        val plots = mutableListOf<PlotData>()
+        getConnection()?.use { conn ->
+            conn.prepareStatement(query).use { stmt ->
+                stmt.setString(1, uuid.toString())
+                stmt.setString(2, uuid.toString())
+                stmt.executeQuery().use { rs ->
+                    while (rs.next()) {
+                        plots += PlotData(
+                            id = rs.getInt("plot_id"),
+                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
+                            x = rs.getInt("x"),
+                            z = rs.getInt("z"),
+                            radius = rs.getInt("radius"),
+                            world = rs.getString("world"),
+                            name = rs.getString("name"),
+                            creationTime = rs.getLong("creation_time")
+                        )
                     }
                 }
-                conn.prepareStatement("DELETE FROM plots WHERE id = ?").use { stmt ->
-                    stmt.setInt(1, plotId)
-                    stmt.executeUpdate()
-                }
-                logger.success("Plot ID: $plotId and its related data deleted successfully.")
             }
-        } ?: logger.err("No database connection.")
+        }
+        return plots
     }
+
+    /**
+     * Sprawdzenie, czy działka nie koliduje z innymi działkami w danym świecie
+     *
+     * @param x
+     * @param z
+     * @param radius
+     * @param world
+     * @return `Boolean`
+     */
+    fun doesPlotOverlap(x: Int, z: Int, radius: Int, world: String): Boolean {
+        getConnection()?.use { conn ->
+            val query = when (dbType) {
+                "sqlite", "h2" -> """
+                SELECT 1 FROM plots
+                WHERE world = ?
+                  AND (x + radius) >= ?
+                  AND (x - radius) <= ?
+                  AND (z + radius) >= ?
+                  AND (z - radius) <= ?
+                LIMIT 1;
+            """.trimIndent()
+
+                "postgresql" -> """
+                SELECT 1 FROM plots
+                WHERE world = ?
+                  AND (x + radius) >= ?
+                  AND (x - radius) <= ?
+                  AND (z + radius) >= ?
+                  AND (z - radius) <= ?
+                LIMIT 1;
+            """.trimIndent()
+
+                else -> """ -- MySQL / MariaDB
+                SELECT 1 FROM plots
+                WHERE world = ?
+                  AND (x + radius) >= ?
+                  AND (x - radius) <= ?
+                  AND (z + radius) >= ?
+                  AND (z - radius) <= ?
+                LIMIT 1;
+            """.trimIndent()
+            }
+
+            conn.prepareStatement(query).use { stmt ->
+                stmt.setString(1, world)
+                stmt.setInt(2, x - radius)
+                stmt.setInt(3, x + radius)
+                stmt.setInt(4, z - radius)
+                stmt.setInt(5, z + radius)
+
+                stmt.executeQuery().use { rs ->
+                    return rs.next() // Jeśli istnieje przynajmniej 1 wynik — kolizja
+                }
+            }
+        }
+        return false
+    }
+
+    /**
+     * Logowanie akcji na działce
+     *
+     */
+    fun logPlotAction(entry: PlotLogEntry) {
+        val sql = when (dbType) {
+            "sqlite", "h2" -> """
+            INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp)
+            VALUES (?, ?, ?, ?)
+        """.trimIndent()
+
+            "postgresql" -> """
+            INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp)
+            VALUES (?, ?, ?, ?)
+        """.trimIndent()
+
+            else -> """
+            INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp)
+            VALUES (?, ?, ?, ?)
+        """.trimIndent()
+        }
+
+        getConnection()?.use { conn ->
+            conn.prepareStatement(sql).use { stmt ->
+                stmt.setInt(1, entry.plotId)
+                stmt.setString(2, entry.action)
+                stmt.setString(3, entry.actorUUID.toString())
+                stmt.setLong(4, entry.timestamp)
+
+                stmt.executeUpdate()
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     /**
