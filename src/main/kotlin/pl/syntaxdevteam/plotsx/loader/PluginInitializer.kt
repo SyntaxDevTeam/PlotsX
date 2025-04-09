@@ -5,6 +5,7 @@ import pl.syntaxdevteam.plotsx.commands.CommandsManager
 import pl.syntaxdevteam.plotsx.common.*
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
+import pl.syntaxdevteam.plotsx.gui.GUIHandler
 
 @Suppress("UnstableApiUsage")
 class PluginInitializer(private val plugin: PlotsX) {
@@ -59,7 +60,7 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     private fun registerEvents() {
-
+        plugin.server.pluginManager.registerEvents(GUIHandler(plugin), plugin)
         if (plugin.hookHandler.checkPlaceholderAPI()) {
             //PlaceholderHandler(plugin).register()
         }

@@ -1,12 +1,27 @@
 name: PlotsX
-version: '1.0'
-main: pl.syntaxdevteam.plotsx.PlotsX
-api-version: '1.21'
-authors: [ SyntaxDevTeam ]
-website: https://syntaxdevteam.pl
+version: ${version}
+description: ${description}
+api-version: '1.20'
+folia-supported: true
 
+authors: [SyntaxDevTeam]
+website: https://github.com/SyntaxDevTeam/PlotsX
+support:
+  issues: https://github.com/SyntaxDevTeam/PlotsX/issues
+  updates: https://github.com/SyntaxDevTeam/PlotsX/releases
+
+localization:
+  available: [en_US, pl_PL, fr_FR, es_ES, de_DE]
+  default: en_US
+
+main: pl.syntaxdevteam.plotsx.PlotsX
 loader: pl.syntaxdevteam.plotsx.loader.SyntaxLoader
 has-open-classloader: false
+
+softdepend: [Folia]
+
+features:
+  debug: true
 
 dependencies:
   server:
@@ -25,3 +40,20 @@ dependencies:
     VaultUnlocked:
       load: BEFORE
       required: false
+
+commands:
+  claim:
+    aliases: [c]
+    description: Pozwala utworzyć działkę na danym terenie.
+    usage: /claim
+    permission: plotsx.cmd.claim
+  unclaim:
+    aliases: [unc]
+    description: Usuwa działkę na której się znajdujesz.
+    usage: /unclaim # TODO: dodać argument do usunięcia działki po jej nazwie bez konieczności stania na niej
+    permission: plotsx.cmd.unclaim
+  plotsx:
+    aliases: [ptx]
+    description: Główna komenda wtyczki.
+    usage: /plotsx
+    permission: plotsx.cmd.ptx

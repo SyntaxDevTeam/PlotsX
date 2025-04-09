@@ -4,20 +4,22 @@
 # Przykłady jak stosować MiniMessage: https://docs.advntr.dev/minimessage/format.html
 # Nie mieszaj formatów w jednej wiadomości. Jeśli używasz Legacy, nie wstawiaj formatowania MiniMessage, w przeciwnym wypadku zostanie użyty tylko ten drugi.
 
-prefix: "<gradient:#279147:#a4ff4f:#6eab35:#a4ff4f:#279147>[<b>PlotsX</b>]</gradient>"
+prefix: "<gradient:#5bab00:#83ab26:#88ff00:#83ab26:#5bab00>[<b>PlotsX</b>]</gradient>"
 
 # Wiadomości obsługi błędów
 error:
   no_permission: "<red>Nie masz uprawnień do tej komendy.</red>"
   claim_not_found: "<gold>Nie znaleziono gracza o nicku {player}.</gold>"
-  not_owner: "Nie możesz usunąć tej działki, ponieważ nie jesteś jej właścicielem."
+  not_owner: "<red>Nie możesz usunąć tej działki, ponieważ nie jesteś jej właścicielem.</red>"
   there_is_no_plot: "<red>Nie ma działki w tej lokalizacji.</red>"
   is_plot: "<red>Nie możesz postawić działki tutaj, ponieważ działka już istnieje.</red>"
+  in_collision: "<red>Nie możesz postawić działki tutaj, ponieważ koliduje z inną działką.</red>"
+  create_error: "<red>Wystąpił błąd podczas tworzenia działki.</red"
   console: "<red>Tylko gracz może użyć tej komendy</red>"
   reload: "<red>Wystąpił błąd podczas przełądowania konfiguracji:</red> "
 
 plots:
-  success: "<green>Działka została pomyślnie ustawiona!</green>"
+  claim_success: "<green>Działka została pomyślnie ustawiona!</green>"
   unclaim_success: "<green>Działka została pomyślnie usunięta.</green>"
 
 flags:

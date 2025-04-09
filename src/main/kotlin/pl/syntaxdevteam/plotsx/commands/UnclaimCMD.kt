@@ -18,6 +18,11 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
         val x = location.blockX
         val z = location.blockZ
 
+        if (!stack.sender.hasPermission("plotsx.cmd.unclaim")) {
+            plugin.messageHandler.getMessage("error", "no_permission")
+            return
+        }
+
         val currentPlot = dbh.getPlotAtLocation(world, x, z)
         if (currentPlot == null) {
             player.sendMessage("§cNie znajdujesz się na żadnej działce.")

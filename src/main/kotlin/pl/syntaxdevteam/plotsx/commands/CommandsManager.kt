@@ -15,14 +15,37 @@ class CommandsManager(private val plugin: PlotsX) {
             val commands: Commands = event.registrar()
             commands.register(
                 "claim",
-                "PunisherX plugin command. Type /punisherx help to check available commands",
+                "Type /ptx help to check available commands",
                 ClaimCMD(plugin)
             )
             commands.register(
                 "unclaim",
-                "PunisherX plugin command. Type /prx help to check available commands",
+                "Type /ptx help to check available commands",
                 UnclaimCMD(plugin)
             )
+            commands.register(
+                "plotsx",
+                "PlotsX plugin command. Type /ptx help to check available commands",
+                PlotsXCMD(plugin)
+            )
+            val aliases = plugin.config.getConfigurationSection("aliases")
+            aliases?.getKeys(false)?.forEach { key ->
+                val commandName = aliases.getString(key) ?: key
+                when (key) {
+                    "claim" -> commands.register(
+                        commandName,
+                        plugin.messageHandler.getSimpleMessage("claim", "usage"),
+                        ClaimCMD(plugin)
+                    )
+
+                    "unclaim" -> commands.register(
+                        commandName,
+                        plugin.messageHandler.getSimpleMessage("unclaim", "usage"),
+                        UnclaimCMD(plugin)
+                    )
+
+                }
+            }
         }
     }
 }
