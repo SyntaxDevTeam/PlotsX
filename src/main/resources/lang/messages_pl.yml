@@ -1,10 +1,11 @@
 # Ver. 1.0.0
+# Author: WieszczY
 # Formatowanie tekstów wiadomości:
 # Można używać formatowania MiniMessage oraz Legacy (Minecraft).
 # Przykłady jak stosować MiniMessage: https://docs.advntr.dev/minimessage/format.html
 # Nie mieszaj formatów w jednej wiadomości. Jeśli używasz Legacy, nie wstawiaj formatowania MiniMessage, w przeciwnym wypadku zostanie użyty tylko ten drugi.
 
-prefix: "<gradient:#5bab00:#83ab26:#88ff00:#83ab26:#5bab00>[<b>PlotsX</b>]</gradient>"
+prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</gradient>"
 
 # Wiadomości obsługi błędów
 error:
@@ -13,6 +14,7 @@ error:
   not_owner: "<red>Nie możesz usunąć tej działki, ponieważ nie jesteś jej właścicielem.</red>"
   there_is_no_plot: "<red>Nie ma działki w tej lokalizacji.</red>"
   is_plot: "<red>Nie możesz postawić działki tutaj, ponieważ działka już istnieje.</red>"
+  no_in_plot: "<red>Nie jesteś w działce.</red><grey>Użyj /plot <nazwa>, aby wybrać działkę lub stań na swojej działce.</grey>"
   in_collision: "<red>Nie możesz postawić działki tutaj, ponieważ koliduje z inną działką.</red>"
   create_error: "<red>Wystąpił błąd podczas tworzenia działki.</red"
   console: "<red>Tylko gracz może użyć tej komendy</red>"
@@ -21,6 +23,27 @@ error:
 plots:
   claim_success: "<green>Działka została pomyślnie ustawiona!</green>"
   unclaim_success: "<green>Działka została pomyślnie usunięta.</green>"
+
+
+GUI:
+  claim:
+    title_claim: "Potwierdź utworzenie działki!"
+    material_name:
+      confirm: "<green>Utwórz działkę</green>"
+      cancel: "<red>Anuluj</red>"
+  plot:
+    title_plot: "<b>Ustawienia dla działki"
+    material_name:
+      info: "<gold>Informacje o działce</gold>"
+      flags: "<color:#852579>Ustawienia flag</color>"
+      teleport: "<color:#aa2244>Teleportuj się do działki</color>"
+      list: "<gold>Lista działek</gold>"
+    info:
+      plot_name: "<green>Nazwa:</green> <white>{plot}"
+      id: "<green>ID:</green> <white>{id}"
+      creation_time: "<green>Utworzona:</green> <white>{time}"
+    list_title: "<b>Lista Twoich działek:</b>"
+
 
 flags:
   build: "Zezwalaj osobom niebędącym członkami regionu na umieszczanie i usuwanie bloków. Nie zastępuje to innych flag"

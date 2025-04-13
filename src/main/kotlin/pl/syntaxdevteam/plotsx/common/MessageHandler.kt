@@ -40,15 +40,22 @@ class MessageHandler(private val plugin: PlotsX) {
      * Displays information about the language file author based on the selected language.
      */
     fun initial() {
-        val author = when (language.lowercase()) {
-            "pl" -> "WieszczY"
-            "en" -> "Syntaxerr"
-            "fr" -> "OpenAI Chat GPT-3.5"
-            "es" -> "OpenAI Chat GPT-3.5"
-            "de" -> "OpenAI Chat GPT-3.5"
-            else -> plugin.getServerName()
-        }
+        val author = getAuthorFromYamlComment() ?: "SyntaxDevTeam"
         plugin.logger.log("<gray>Loaded \"$language\" language file by: <white><b>$author</b></white>")
+    }
+
+    private fun getAuthorFromYamlComment(): String? {
+        val langFile = File(plugin.dataFolder, "lang/messages_${language.lowercase()}.yml")
+        if (!langFile.exists()) return null
+
+        langFile.useLines { lines ->
+            for (line in lines) {
+                if (line.trim().startsWith("# Author:")) {
+                    return line.substringAfter("# Author:").trim()
+                }
+            }
+        }
+        return null
     }
 
     /**

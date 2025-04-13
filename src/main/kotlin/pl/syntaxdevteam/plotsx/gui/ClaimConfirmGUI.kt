@@ -11,15 +11,15 @@ import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 
 class ClaimConfirmGUI(private var plugin: PlotsX) : GUI {
-    private val claimConfirmTitleMaterialName = plugin.config.getString("GUI.claim_confirm.title", "<green><b>Create a plot")!!
-    private val claimConfirmMaterialName = plugin.config.getString("GUI.claim_confirm.material", claimConfirmTitleMaterialName)!!
-    private val claimConfirmMaterial = Material.matchMaterial(claimConfirmMaterialName) ?: Material.EMERALD_BLOCK
-    private val claimConfirmIndex = plugin.config.getInt("GUI.claim_confirm.index", 11)
+    private val message = plugin.messageHandler
 
-    private val claimNotConfirmTitleMaterialName = plugin.config.getString("GUI.claim_not_confirm.title", "<red>Cancel plot creation")!!
-    private val claimNotConfirmMaterialName = plugin.config.getString("GUI.claim_not_confirm.material", claimNotConfirmTitleMaterialName)!!
-    private val claimNotConfirmMaterial = Material.matchMaterial(claimNotConfirmMaterialName) ?: Material.REDSTONE_BLOCK
-    private val claimNotConfirmIndex = plugin.config.getInt("GUI.claim_not_confirm.index", 15)
+    private val claimConfirmTitleMaterialName = message.getCleanMessage("GUI", "claim.material_name.confirm")
+    private val claimConfirmMaterial = Material.EMERALD_BLOCK
+    private val claimConfirmIndex = 11
+
+    private val claimNotConfirmTitleMaterialName = message.getCleanMessage("GUI", "claim.material_name.cancel")
+    private val claimNotConfirmMaterial = Material.REDSTONE_BLOCK
+    private val claimNotConfirmIndex = 15
 
     override fun open(player: Player) {
         val inventory = Bukkit.createInventory(null, 27, getTitle())
@@ -48,18 +48,12 @@ class ClaimConfirmGUI(private var plugin: PlotsX) : GUI {
                 val z = location.blockZ
                 val radius = plugin.config.getInt("plots.radius", 16)
 
-                val currentPlot = dbh.getPlotAtLocation(world, x, z)
-                if (currentPlot != null) {
-                    player.sendMessage(plugin.messageHandler.getMessage("error", "is_plot"))
-                    return
-                }
+                val existingPlots = dbh.getPlotsByOwner(player.uniqueId)
+                val nextNumber = existingPlots.size + 1
+                val plotName = "${player.name}'s_Plot_$nextNumber"
 
-                if (dbh.doesPlotOverlap(x, z, radius, world)) {
-                    player.sendMessage(plugin.messageHandler.getMessage("error", "in_collision"))
-                    return
-                }
+                val plotId = dbh.createNewPlot(player.uniqueId, world, x, z, radius, plotName)
 
-                val plotId = dbh.createNewPlot(player.uniqueId, world, x, z, radius, "${player.name}'s_Plot")
                 if (plotId == null) {
                     player.sendMessage(plugin.messageHandler.getMessage("error", "create_error"))
                     return
@@ -86,7 +80,7 @@ class ClaimConfirmGUI(private var plugin: PlotsX) : GUI {
     }
 
     override fun getTitle(): Component {
-        return Component.text(plugin.messageHandler.getCleanMessage("GUI", "title_initialGUI"))
+        return plugin.messageHandler.getLogMessage("GUI", "claim.title_claim")
     }
 
     private fun createItem(material: Material, name: String): ItemStack {

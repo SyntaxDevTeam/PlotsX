@@ -838,10 +838,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
      * @return `Boolean`
      */
     fun playerOwnsPlot(ownerUuid: UUID): Boolean {
-        val query = when (dbType) {
-            "sqlite", "postgresql", "h2" -> "SELECT 1 FROM plots WHERE owner_uuid = ? LIMIT 1"
-            else -> "SELECT 1 FROM plots WHERE owner_uuid = ? LIMIT 1"
-        }
+        val query = "SELECT 1 FROM plots WHERE owner_uuid = ? LIMIT 1"
 
         getConnection()?.use { conn ->
             conn.prepareStatement(query).use { stmt ->
@@ -900,6 +897,32 @@ class DatabaseHandler(private val plugin: PlotsX) {
         return null
     }
 
+    fun getPlotByName(name: String, ownerUuid: UUID): PlotData? {
+        val query = "SELECT * FROM plots WHERE name = ? AND owner_uuid = ?"
+
+        getConnection()?.use { conn ->
+            conn.prepareStatement(query).use { stmt ->
+                stmt.setString(1, name)
+                stmt.setString(2, ownerUuid.toString())
+                stmt.executeQuery().use { rs ->
+                    return if (rs.next()) {
+                        PlotData(
+                            id = rs.getInt("plot_id"),
+                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
+                            x = rs.getInt("x"),
+                            z = rs.getInt("z"),
+                            radius = rs.getInt("radius"),
+                            world = rs.getString("world"),
+                            name = rs.getString("name"),
+                            creationTime = rs.getLong("creation_time")
+                        )
+                    } else null
+                }
+            }
+        }
+        return null
+    }
+
     /**
      * Pobranie wszystkich działek gracza (których jest właścicielem lub członkiem)
      *
@@ -925,6 +948,31 @@ class DatabaseHandler(private val plugin: PlotsX) {
             conn.prepareStatement(query).use { stmt ->
                 stmt.setString(1, uuid.toString())
                 stmt.setString(2, uuid.toString())
+                stmt.executeQuery().use { rs ->
+                    while (rs.next()) {
+                        plots += PlotData(
+                            id = rs.getInt("plot_id"),
+                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
+                            x = rs.getInt("x"),
+                            z = rs.getInt("z"),
+                            radius = rs.getInt("radius"),
+                            world = rs.getString("world"),
+                            name = rs.getString("name"),
+                            creationTime = rs.getLong("creation_time")
+                        )
+                    }
+                }
+            }
+        }
+        return plots
+    }
+
+    fun getPlotsByOwner(owner: UUID): List<PlotData> {
+        val query = "SELECT * FROM plots WHERE owner_uuid = ?"
+        val plots = mutableListOf<PlotData>()
+        getConnection()?.use { conn ->
+            conn.prepareStatement(query).use { stmt ->
+                stmt.setString(1, owner.toString())
                 stmt.executeQuery().use { rs ->
                     while (rs.next()) {
                         plots += PlotData(

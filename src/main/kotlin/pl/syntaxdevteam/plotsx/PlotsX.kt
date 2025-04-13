@@ -6,6 +6,7 @@ import pl.syntaxdevteam.plotsx.commands.CommandsManager
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.common.*
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
+import pl.syntaxdevteam.plotsx.gui.GUIHandler
 import pl.syntaxdevteam.plotsx.loader.PluginInitializer
 import java.io.File
 import java.util.*
@@ -24,6 +25,8 @@ class PlotsX : JavaPlugin() {
     lateinit var updateChecker: UpdateChecker
     lateinit var commandsManager: CommandsManager
     lateinit var hookHandler: HookHandler
+    lateinit var guiHandler: GUIHandler
+
     //lateinit var cacheHandler: CacheHandler
     //lateinit var invitationManager: InvitationManager
 

@@ -60,7 +60,10 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     private fun registerEvents() {
-        plugin.server.pluginManager.registerEvents(GUIHandler(plugin), plugin)
+        plugin.guiHandler = GUIHandler(plugin)
+        plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)
+
+
         if (plugin.hookHandler.checkPlaceholderAPI()) {
             //PlaceholderHandler(plugin).register()
         }

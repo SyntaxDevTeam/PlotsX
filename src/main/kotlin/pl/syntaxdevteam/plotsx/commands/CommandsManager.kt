@@ -28,19 +28,30 @@ class CommandsManager(private val plugin: PlotsX) {
                 "PlotsX plugin command. Type /ptx help to check available commands",
                 PlotsXCMD(plugin)
             )
+            commands.register(
+                "ptx",
+                "PlotsX plugin command. Type /ptx help to check available commands",
+                PlotsXCMD(plugin)
+            )
+            commands.register(
+                "plot",
+                "PlotsX plugin command. Type /ptx help to check available commands",
+                PlotCMD(plugin)
+            )
+
             val aliases = plugin.config.getConfigurationSection("aliases")
             aliases?.getKeys(false)?.forEach { key ->
                 val commandName = aliases.getString(key) ?: key
                 when (key) {
                     "claim" -> commands.register(
                         commandName,
-                        plugin.messageHandler.getSimpleMessage("claim", "usage"),
+                       "Type /ptx help to check available commands",
                         ClaimCMD(plugin)
                     )
 
                     "unclaim" -> commands.register(
                         commandName,
-                        plugin.messageHandler.getSimpleMessage("unclaim", "usage"),
+                        "Type /ptx help to check available commands",
                         UnclaimCMD(plugin)
                     )
 
