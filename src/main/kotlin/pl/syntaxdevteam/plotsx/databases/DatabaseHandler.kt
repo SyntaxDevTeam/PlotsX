@@ -159,11 +159,11 @@ class DatabaseHandler(private val plugin: PlotsX) {
      * @param connection The active SQLite connection.
      */
     private fun enableSQLiteWAL(connection: Connection) {
-        logger.debug("SQLite connection detected! I'm enabling WAL mode")
+        //logger.debug("SQLite connection detected! I'm enabling WAL mode")
         try {
             connection.createStatement().use { statement ->
                 statement.execute("PRAGMA journal_mode=WAL;")
-                logger.debug("SQLite WAL mode enabled.")
+                //logger.debug("SQLite WAL mode enabled.")
             }
         } catch (e: SQLException) {
             logger.err("Failed to enable SQLite WAL mode. ${e.message}")
@@ -395,6 +395,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
             logger.err("Brak połączenia z bazą danych.")
             return null
         }
+        logger.debug("Ustanowiono połączenie z createNewPlot()")
 
         val defaultFlags = mapOf(
             "build" to false,
@@ -406,7 +407,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
             "door" to true,
             "spawn-monsters" to false,
             "spawn-animals" to true,
-            "pasywne" to false,
+            "passives" to false,
             "flow" to false,
             "fire" to false,
             "minecart" to false,
@@ -489,7 +490,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
             logger.err("Brak połączenia z bazą danych.")
             return false
         }
-
+        logger.debug("Próba nawiązania połączenie z deletePlot()")
         try {
             connection.use { conn ->
                 conn.autoCommit = false
@@ -542,7 +543,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
 
         val sql = "UPDATE plots SET ${updates.joinToString(", ")} WHERE plot_id = ?"
-
+        logger.debug("Próba nawiązania połączenie z updatePlotDetails()")
         try {
             connection.use { conn ->
                 conn.prepareStatement(sql).use { stmt ->
@@ -605,7 +606,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
             VALUES (?, ?, ?);
         """ // dla H2, ale chyba zmienię w przyszłości miejscami na MySQL
         }.trimIndent()
-
+        logger.debug("Próba nawiązania połączenie z updatePlotFlag()")
         try {
             connection.use { conn ->
                 conn.prepareStatement(sql).use { stmt ->
@@ -638,6 +639,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
 
         val sql = "SELECT flag_name, flag_value FROM plot_flags WHERE plot_id = ?"
 
+        logger.debug("Próba nawiązania połączenie z getPlotFlags()")
         try {
             connection.use { conn ->
                 conn.prepareStatement(sql).use { stmt ->
@@ -669,6 +671,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
     fun getPlotFlag(plotId: Int, flagName: String): PlotFlagData? {
         val sql = "SELECT flag_value FROM plot_flags WHERE plot_id = ? AND flag_name = ?"
 
+        logger.debug("Próba nawiązania połączenie z getPlotFlag()")
         getConnection()?.use { conn ->
             conn.prepareStatement(sql).use { stmt ->
                 stmt.setInt(1, plotId)
@@ -719,6 +722,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         """.trimIndent() // domyślnie MySQL/MariaDB
         }
 
+        logger.debug("Próba nawiązania połączenie z addPlotMember()")
         try {
             connection.use { conn ->
                 conn.prepareStatement(sql).use { stmt ->
@@ -747,6 +751,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         WHERE plot_id = ? AND member_uuid = ?
     """.trimIndent()
 
+        logger.debug("Próba nawiązania połączenie z removePlotMember()")
         try {
             connection.use { conn ->
                 conn.prepareStatement(sql).use { stmt ->
@@ -783,6 +788,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         WHERE plot_id = ? AND member_uuid = ?
     """.trimIndent()
 
+        logger.debug("Próba nawiązania połączenie z updatePlotMemberRole()")
         try {
             connection.use { conn ->
                 conn.prepareStatement(sql).use { stmt ->
@@ -810,6 +816,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         val result = mutableListOf<PlotMemberData>()
         val sql = "SELECT member_uuid, role FROM plot_members WHERE plot_id = ?"
 
+        logger.debug("Próba nawiązania połączenie z getPlotMembers()")
         getConnection()?.use { conn ->
             conn.prepareStatement(sql).use { stmt ->
                 stmt.setInt(1, plotId)
@@ -840,6 +847,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
     fun playerOwnsPlot(ownerUuid: UUID): Boolean {
         val query = "SELECT 1 FROM plots WHERE owner_uuid = ? LIMIT 1"
 
+        logger.debug("Próba nawiązania połączenie z playerOwnsPlot()")
         getConnection()?.use { conn ->
             conn.prepareStatement(query).use { stmt ->
                 stmt.setString(1, ownerUuid.toString())
@@ -873,6 +881,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         """
         }
 
+        logger.debug("Próba nawiązania połączenie z getPlotAtLocation()")
         getConnection()?.use { conn ->
             conn.prepareStatement(query).use { stmt ->
                 stmt.setString(1, world)
@@ -897,9 +906,17 @@ class DatabaseHandler(private val plugin: PlotsX) {
         return null
     }
 
+    /**
+     * Pobranie działki po nazwie
+     *
+     * @param name
+     * @param ownerUuid
+     * @return `PlotData?`
+     */
     fun getPlotByName(name: String, ownerUuid: UUID): PlotData? {
         val query = "SELECT * FROM plots WHERE name = ? AND owner_uuid = ?"
 
+        logger.debug("Próba nawiązania połączenie z getPlotByName()")
         getConnection()?.use { conn ->
             conn.prepareStatement(query).use { stmt ->
                 stmt.setString(1, name)
@@ -944,6 +961,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
 
         val plots = mutableListOf<PlotData>()
+        logger.debug("Próba nawiązania połączenie z getPlayerPlots()")
         getConnection()?.use { conn ->
             conn.prepareStatement(query).use { stmt ->
                 stmt.setString(1, uuid.toString())
@@ -970,6 +988,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
     fun getPlotsByOwner(owner: UUID): List<PlotData> {
         val query = "SELECT * FROM plots WHERE owner_uuid = ?"
         val plots = mutableListOf<PlotData>()
+        logger.debug("Próba nawiązania połączenie z getPlotsByOwner()")
         getConnection()?.use { conn ->
             conn.prepareStatement(query).use { stmt ->
                 stmt.setString(1, owner.toString())
@@ -1035,6 +1054,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
             """.trimIndent()
             }
 
+            logger.debug("Próba nawiązania połączenie z doesPlotOverlap()")
             conn.prepareStatement(query).use { stmt ->
                 stmt.setString(1, world)
                 stmt.setInt(2, x - radius)
@@ -1071,6 +1091,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
             VALUES (?, ?, ?, ?)
         """.trimIndent()
         }
+        logger.debug("Próba nawiązania połączenie z logPlotAction()")
 
         getConnection()?.use { conn ->
             conn.prepareStatement(sql).use { stmt ->

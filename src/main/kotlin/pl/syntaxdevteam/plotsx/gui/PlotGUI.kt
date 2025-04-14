@@ -10,7 +10,6 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.SkullMeta
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
-import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -58,7 +57,7 @@ class PlotGUI(
         inventory.setItem(tpaIndex, tpaItem)
         inventory.setItem(listIndex, listItem)
 
-        plugin.guiHandler.track(player, this) // nie zapomnij trackować!
+        plugin.guiHandler.track(player, this)
         player.openInventory(inventory)
     }
 
@@ -69,8 +68,14 @@ class PlotGUI(
 
         when (clickedItem.type) {
             flagsMaterial -> {
+                if (plot != null) {
+                    plugin.guiHandler.openGUI(player, FlagsGUI(plugin, plot))
+                } else {
+                    player.sendMessage(message.getMessage("error", "no_in_plot"))
+                }
+
                 player.sendMessage("Otwieram GUI z flagami")
-                player.closeInventory()
+                //player.closeInventory()
             }
             tpaMaterial -> {
 
