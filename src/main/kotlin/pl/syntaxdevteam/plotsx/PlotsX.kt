@@ -2,6 +2,7 @@ package pl.syntaxdevteam.plotsx
 
 import org.bukkit.configuration.file.FileConfiguration
 import org.bukkit.plugin.java.JavaPlugin
+import pl.syntaxdevteam.plotsx.cache.CacheManager
 import pl.syntaxdevteam.plotsx.commands.CommandsManager
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.common.*
@@ -26,8 +27,7 @@ class PlotsX : JavaPlugin() {
     lateinit var commandsManager: CommandsManager
     lateinit var hookHandler: HookHandler
     lateinit var guiHandler: GUIHandler
-
-    //lateinit var cacheHandler: CacheHandler
+    lateinit var cacheManager: CacheManager
     //lateinit var invitationManager: InvitationManager
 
     override fun onEnable() {

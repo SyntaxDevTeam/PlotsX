@@ -826,7 +826,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                         result.add(
                             PlotMemberData(
                                 plotId = plotId,
-                                memberUUID = rs.getString("member_uuid"),
+                                memberUuid = rs.getString("member_uuid"),
                                 memberRole = rs.getString("role")
                             )
                         )
@@ -837,6 +837,34 @@ class DatabaseHandler(private val plugin: PlotsX) {
         return result
     }
 
+fun getPlotsFromAllUsers(): List<PlotData> {
+    val query = "SELECT * FROM plots"
+    val plots = mutableListOf<PlotData>()
+
+    logger.debug("Próba nawiązania połączenia z getPlotsFromAllUsers()")
+    getConnection()?.use { conn ->
+        conn.prepareStatement(query).use { stmt ->
+            stmt.executeQuery().use { rs ->
+                while (rs.next()) {
+                    plots.add(
+                        PlotData(
+                            id = rs.getInt("plot_id"),
+                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
+                            x = rs.getInt("x"),
+                            z = rs.getInt("z"),
+                            radius = rs.getInt("radius"),
+                            world = rs.getString("world"),
+                            name = rs.getString("name"),
+                            creationTime = rs.getLong("creation_time")
+                        )
+                    )
+                }
+            }
+        }
+    } ?: logger.err("Brak połączenia z bazą danych w getPlotsFromAllUsers().")
+
+    return plots
+}
 
     /**
      * Sprawdzenie, czy gracz posiada już działkę
@@ -1009,6 +1037,33 @@ class DatabaseHandler(private val plugin: PlotsX) {
             }
         }
         return plots
+    }
+
+    fun getPlotById(plotId: Int): PlotData? {
+        val query = "SELECT * FROM plots WHERE plot_id = ?"
+
+        logger.debug("Próba nawiązania połączenia z getPlotById()")
+        getConnection()?.use { conn ->
+            conn.prepareStatement(query).use { stmt ->
+                stmt.setInt(1, plotId)
+                stmt.executeQuery().use { rs ->
+                    return if (rs.next()) {
+                        PlotData(
+                            id = rs.getInt("plot_id"),
+                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
+                            x = rs.getInt("x"),
+                            z = rs.getInt("z"),
+                            radius = rs.getInt("radius"),
+                            world = rs.getString("world"),
+                            name = rs.getString("name"),
+                            creationTime = rs.getLong("creation_time")
+                        )
+                    } else null
+                }
+            }
+        }
+        logger.warning("Nie znaleziono działki o plot_id=$plotId")
+        return null
     }
 
     /**

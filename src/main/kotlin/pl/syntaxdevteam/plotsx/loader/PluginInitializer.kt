@@ -1,11 +1,13 @@
 package pl.syntaxdevteam.plotsx.loader
 
 import pl.syntaxdevteam.plotsx.PlotsX
+import pl.syntaxdevteam.plotsx.cache.CacheManager
 import pl.syntaxdevteam.plotsx.commands.CommandsManager
 import pl.syntaxdevteam.plotsx.common.*
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.gui.GUIHandler
+import pl.syntaxdevteam.plotsx.listener.PlotProtectionListener
 
 @Suppress("UnstableApiUsage")
 class PluginInitializer(private val plugin: PlotsX) {
@@ -52,6 +54,8 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.messageHandler = MessageHandler(plugin).apply { initial() }
         plugin.pluginsManager = PluginManager(plugin)
         plugin.hookHandler = HookHandler(plugin)
+        plugin.guiHandler = GUIHandler(plugin)
+        plugin.cacheManager = CacheManager(plugin)
     }
 
     private fun registerCommands() {
@@ -60,8 +64,13 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     private fun registerEvents() {
-        plugin.guiHandler = GUIHandler(plugin)
         plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)
+        // Odświeżenie cache asynchronicznie (mój CacheManager)
+        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+            plugin.cacheManager.refreshAllCachesAsync()
+        })
+        // !!!! Rejestracja listenera ochrony działek
+        plugin.server.pluginManager.registerEvents(PlotProtectionListener(plugin), plugin)
 
 
         if (plugin.hookHandler.checkPlaceholderAPI()) {
