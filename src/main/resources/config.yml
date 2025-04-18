@@ -4,18 +4,8 @@
 plots:
   # The maximum number of plots a player can own
   maxPlots: 5
-  # The minimum distance between plots
-  minDistance: 5
-  # The maximum distance between plots
-  maxDistance: 20
-  # The size of the plot in blocks
-  size: 16
-  # The world where the plots are created
+  radius: 16
   world: "world"
-  # The name of the plot type (e.g. "flat", "circular", "square")
-  type: "flat"
-  # The name of the plot owner (e.g. "owner", "admin", "user")
-  owner: "owner"
 
 # Settings for connecting to the database
 database:

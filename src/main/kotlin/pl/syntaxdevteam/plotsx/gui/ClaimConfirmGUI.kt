@@ -50,9 +50,9 @@ class ClaimConfirmGUI(private var plugin: PlotsX) : GUI {
 
                 val existingPlots = dbh.getPlotsByOwner(player.uniqueId)
                 val nextNumber = existingPlots.size + 1
-                val plotName = "${player.name}'s_Plot_$nextNumber"
+                val plotName = "${plugin.uuidManager.getPlayerName(plugin.uuidManager.getUUID("yRoshee").toString())}'s_Plot_$nextNumber"
 
-                val plotId = dbh.createNewPlot(player.uniqueId, world, x, z, radius, plotName)
+                val plotId = dbh.createNewPlot(plugin.uuidManager.getUUID("yRoshee"), world, x, z, radius, plotName)
 
                 if (plotId == null) {
                     player.sendMessage(plugin.messageHandler.getMessage("error", "create_error"))
@@ -63,7 +63,7 @@ class ClaimConfirmGUI(private var plugin: PlotsX) : GUI {
                     PlotLogEntry(
                         plotId = plotId,
                         action = "CREATE",
-                        actorUUID = player.uniqueId,
+                        actorUUID = plugin.uuidManager.getUUID("yRoshee"),
                         timestamp = System.currentTimeMillis()
                     )
                 )

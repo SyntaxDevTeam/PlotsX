@@ -7,7 +7,7 @@ import pl.syntaxdevteam.plotsx.common.*
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.gui.GUIHandler
-import pl.syntaxdevteam.plotsx.listener.PlotProtectionListener
+import pl.syntaxdevteam.plotsx.protection.PlotProtectionListener
 
 @Suppress("UnstableApiUsage")
 class PluginInitializer(private val plugin: PlotsX) {

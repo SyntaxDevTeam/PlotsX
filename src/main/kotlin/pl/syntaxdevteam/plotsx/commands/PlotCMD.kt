@@ -31,6 +31,12 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         if (plotName != null) {
             val plot = plugin.databaseHandler.getPlotByName(plotName, uuid)
             if (plot != null) {
+                if(plot.ownerUuid != uuid) {
+                    player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
+                    return
+                }
+            }
+            if (plot != null) {
                 plugin.guiHandler.openGUI(player, PlotGUI(plugin, plot))
             } else {
                 player.sendMessage(plugin.messageHandler.getMessage("error", "plot_not_found"))
@@ -45,6 +51,10 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             player.location.blockZ
         )
         if (standingPlot != null) {
+            if(standingPlot.ownerUuid != uuid) {
+                player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
+                return
+            }
             plugin.guiHandler.openGUI(player, PlotGUI(plugin, standingPlot))
             return
         }

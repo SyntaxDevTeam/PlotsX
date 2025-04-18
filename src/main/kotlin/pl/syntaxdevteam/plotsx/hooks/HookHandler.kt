@@ -39,9 +39,13 @@ class HookHandler(private val plugin: PlotsX) {
         }
     }
     fun checkAndGetCleanerXApi(): CleanerXAPI? {
-        return Bukkit.getPluginManager().getPlugin("CleanerX")
-            ?.takeIf { it.isEnabled }
-            ?.let { Bukkit.getServicesManager().load(CleanerXAPI::class.java) }
+        return if (Bukkit.getPluginManager().isPluginEnabled("CleanerX")) {
+            Bukkit.getPluginManager().getPlugin("CleanerX")
+                ?.takeIf { it.isEnabled }
+                ?.let { Bukkit.getServicesManager().load(CleanerXAPI::class.java) }
+        }else{
+            null
+        }
     }
 
     /**

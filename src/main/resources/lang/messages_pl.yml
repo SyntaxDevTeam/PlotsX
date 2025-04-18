@@ -11,7 +11,7 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 error:
   no_permission: "<red>Nie masz uprawnień do tej komendy.</red>"
   claim_not_found: "<gold>Nie znaleziono gracza o nicku {player}.</gold>"
-  not_owner: "<red>Nie możesz usunąć tej działki, ponieważ nie jesteś jej właścicielem.</red>"
+  not_owner: "<red>Nie możesz ingerować w tą działkę, ponieważ nie jesteś jej właścicielem.</red>"
   there_is_no_plot: "<red>Nie ma działki w tej lokalizacji.</red>"
   is_plot: "<red>Nie możesz postawić działki tutaj, ponieważ działka już istnieje.</red>"
   no_in_plot: "<red>Nie jesteś w działce.</red><grey>Użyj /plot <nazwa>, aby wybrać działkę lub stań na swojej działce.</grey>"

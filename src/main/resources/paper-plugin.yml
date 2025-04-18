@@ -40,6 +40,9 @@ dependencies:
     VaultUnlocked:
       load: BEFORE
       required: false
+    CleanerX:
+      load: BEFORE
+      required: false
 
 commands:
   claim:
