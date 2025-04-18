@@ -31,7 +31,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         if (plotName != null) {
             val plot = plugin.databaseHandler.getPlotByName(plotName, uuid)
             if (plot != null) {
-                if(plot.ownerUuid != uuid) {
+                if(plot.ownerUuid != uuid && !player.hasPermission("plotsx.plot.bypass")) {
                     player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
                     return
                 }
@@ -51,7 +51,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             player.location.blockZ
         )
         if (standingPlot != null) {
-            if(standingPlot.ownerUuid != uuid) {
+            if(standingPlot.ownerUuid != uuid && !player.hasPermission("plotsx.plot.bypass")) {
                 player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
                 return
             }
