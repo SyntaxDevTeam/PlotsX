@@ -12,12 +12,16 @@ import org.bukkit.event.block.BlockFromToEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerMoveEvent
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
+import java.util.UUID
 
 class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     private val logger = plugin.logger
+    private val playerLastPlot = mutableMapOf<UUID, Int?>() // UUID -> plotId or null
+
 
     private fun getPlotAtLocation(world: String, x: Int, z: Int): PlotData? {
         return plugin.cacheManager.getCachedPlots().firstOrNull { plot ->
@@ -45,6 +49,37 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     private fun hasBypass(player: Player): Boolean {
         return player.isOp || player.hasPermission("plotsx.plot.bypass")
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    fun onPlayerMove(event: PlayerMoveEvent) {
+        val player = event.player
+        if (event.from.blockX == event.to?.blockX &&
+            event.from.blockZ == event.to.blockZ &&
+            event.from.world == event.to.world
+        ) return
+
+        val uuid = player.uniqueId
+        val to = event.to
+        val newPlot = getPlotAtLocation(to.world.name, to.blockX, to.blockZ)
+        val oldPlotId = playerLastPlot[uuid]
+        val newPlotId = newPlot?.id
+
+        // Jeśli zmienił działkę
+        if (oldPlotId != newPlotId) {
+            playerLastPlot[uuid] = newPlotId
+
+            if (oldPlotId != null) {
+                val oldPlot = plugin.cacheManager.getCachedPlots().firstOrNull { it.id == oldPlotId }
+                if (oldPlot != null) {
+                    player.sendMessage("§7Opuszczono działkę §6${oldPlot.name}") //TODO: Zmienić na plik językowy
+                }
+            }
+
+            if (newPlot != null) {
+                player.sendMessage("§7Wkroczono na działkę §6${newPlot.name}") //TODO: Zmienić na plik językowy
+            }
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
