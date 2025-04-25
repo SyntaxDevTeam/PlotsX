@@ -48,12 +48,12 @@ class ClaimConfirmGUI(private var plugin: PlotsX) : GUI {
                 val z = location.blockZ
                 val radius = plugin.config.getInt("plots.radius", 16)
 
-                val existingPlots = dbh.getPlotsByOwner(player.uniqueId)
+                val existingPlots = dbh.getPlotsByOwner(plugin.uuidManager.getUUID("yRoshee")) //TODO: Zmienić yRoshee UUID na zmienną player.uniqueId
                 val nextNumber = existingPlots.size + 1
-                val plotName = "${plugin.uuidManager.getPlayerName(plugin.uuidManager.getUUID("yRoshee").toString())}'s_Plot_$nextNumber"
+                val plotName = "yRoshee's_Plot_$nextNumber" // TODO: Zmienić yRoshee na zmienną plot.name
 
-                val plotId = dbh.createNewPlot(plugin.uuidManager.getUUID("yRoshee"), world, x, z, radius, plotName)
-
+                val plotId = dbh.createNewPlot(plugin.uuidManager.getUUID("yRoshee"), world, x, z, radius, plotName) //TODO: Zmienić yRoshee UUID na zmienną player.uniqueId
+                player.closeInventory()
                 if (plotId == null) {
                     player.sendMessage(plugin.messageHandler.getMessage("error", "create_error"))
                     return
@@ -63,12 +63,15 @@ class ClaimConfirmGUI(private var plugin: PlotsX) : GUI {
                     PlotLogEntry(
                         plotId = plotId,
                         action = "CREATE",
-                        actorUUID = plugin.uuidManager.getUUID("yRoshee"),
+                        actorUUID = plugin.uuidManager.getUUID("yRoshee"), //TODO: Zmienić yRoshee UUID na zmienną player.uniqueId
                         timestamp = System.currentTimeMillis()
                     )
                 )
                 player.sendMessage(plugin.messageHandler.getMessage("plots", "claim_success"))
-                player.closeInventory()
+                plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                    plugin.cacheManager.refreshAllCachesAsync()
+                })
+
             }
             claimNotConfirmMaterial -> {
                 player.closeInventory()
