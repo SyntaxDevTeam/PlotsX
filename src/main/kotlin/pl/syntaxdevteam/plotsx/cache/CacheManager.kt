@@ -106,4 +106,20 @@ class CacheManager(private val plugin: PlotsX) {
         flagCache.remove(plotId)
         memberCache.remove(plotId)
     }
+
+    /** Synchronous clear **/
+    fun clearAllCaches() {
+        plotCache.clear()
+        flagCache.clear()
+        memberCache.clear()
+        plugin.logger.debug("Cache został wyczyszczony synchronicznie (działki, flagi, członkowie).")
+    }
+
+    /** Synchronous reload of all caches **/
+    fun reloadAllCachesSync() {
+        refreshPlotCacheSync()
+        refreshFlagCacheSync()
+        refreshMemberCacheSync()
+        plugin.logger.debug("Cache odświeżony synchronicznie (działki, flagi, członkowie).")
+    }
 }
