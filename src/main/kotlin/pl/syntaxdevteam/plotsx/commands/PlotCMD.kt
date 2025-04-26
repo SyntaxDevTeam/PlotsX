@@ -51,6 +51,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             player.location.blockZ
         )
         if (standingPlot != null) {
+            plugin.logger.debug("Nazwa działki to: ${standingPlot.name}")
             if(standingPlot.ownerUuid != uuid && !player.hasPermission("plotsx.plot.bypass")) {
                 player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
                 return

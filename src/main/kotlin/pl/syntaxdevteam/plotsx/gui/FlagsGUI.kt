@@ -121,7 +121,6 @@ class FlagsGUI(
                     "value" to updated.toString()
                 ))
             )
-            // przeładuj GUI, aby zaktualizować ikony i lore
             open(player)
         } else {
             player.sendMessage(message.getMessage("error", "flag_update_failed"))
