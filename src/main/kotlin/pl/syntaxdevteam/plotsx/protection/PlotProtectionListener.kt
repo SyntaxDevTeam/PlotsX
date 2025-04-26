@@ -11,6 +11,9 @@ import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockFromToEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
+import org.bukkit.event.player.PlayerBucketEmptyEvent
+import org.bukkit.event.player.PlayerBucketEntityEvent
+import org.bukkit.event.player.PlayerBucketFillEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import pl.syntaxdevteam.plotsx.PlotsX
@@ -20,6 +23,7 @@ import java.util.UUID
 class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     private val logger = plugin.logger
+    private val message = plugin.messageHandler
     private val playerLastPlot = mutableMapOf<UUID, Int?>() // UUID -> plotId or null
 
 
@@ -33,6 +37,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     private fun cancelAndRestore(block: Block) {
         block.state.update(true, false)
+        logger.debug("[cancelAndRestore] Restoring block at ${block.location.blockX},${block.location.blockZ} to its original state.")
     }
 
     private fun hasPlotPermission(player: Player, plot: PlotData, flag: String): Boolean {
@@ -54,7 +59,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onPlayerMove(event: PlayerMoveEvent) {
         val player = event.player
-        if (event.from.blockX == event.to?.blockX &&
+        if (event.from.blockX == event.to.blockX &&
             event.from.blockZ == event.to.blockZ &&
             event.from.world == event.to.world
         ) return
@@ -65,19 +70,18 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val oldPlotId = playerLastPlot[uuid]
         val newPlotId = newPlot?.id
 
-        // Jeśli zmienił działkę
         if (oldPlotId != newPlotId) {
             playerLastPlot[uuid] = newPlotId
 
             if (oldPlotId != null) {
                 val oldPlot = plugin.cacheManager.getCachedPlots().firstOrNull { it.id == oldPlotId }
                 if (oldPlot != null) {
-                    player.sendMessage("§7Opuszczono działkę §6${oldPlot.name}") //TODO: Zmienić na plik językowy
-                }
+                    player.sendMessage(message.getMessage("plots", "leave_plot", mapOf("plot" to oldPlot.name)))
+                    }
             }
 
             if (newPlot != null) {
-                player.sendMessage("§7Wkroczono na działkę §6${newPlot.name}") //TODO: Zmienić na plik językowy
+                player.sendMessage(message.getMessage("plots", "enter_plot", mapOf("plot" to newPlot.name)))
             }
         }
     }
@@ -95,7 +99,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             plugin.server.scheduler.runTaskLater(plugin, Runnable {
                 cancelAndRestore(event.block)
             }, 1L)
-            player.sendMessage("§cNie możesz stawiać bloków na tej działce!")
+            player.sendMessage(message.getMessage("flags", "build.not_allowed"))
         }
     }
 
@@ -112,7 +116,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             plugin.server.scheduler.runTaskLater(plugin, Runnable {
                 cancelAndRestore(event.block)
             }, 1L)
-            player.sendMessage("§cNie możesz niszczyć bloków na tej działce!")
+            player.sendMessage(message.getMessage("flags", "build.break_not_allowed"))
         }
     }
 
@@ -122,9 +126,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val block = event.clickedBlock ?: return
         val loc = block.location
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
-
+        logger.debug("PlayerInteractEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
         val containers = listOf(
-            Material.CHEST, Material.TRAPPED_CHEST, Material.BARREL, Material.ENDER_CHEST
+            Material.CHEST, Material.TRAPPED_CHEST, Material.BARREL, Material.ENDER_CHEST /* TODO: Przenieść do osobnej flagi */, Material.SHULKER_BOX
         ) + Material.entries.filter { it.name.endsWith("_SHULKER_BOX") }
 
         val doorsAndGates = listOf(
@@ -158,7 +162,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         if (flag != null && !hasPlotPermission(player, plot, flag)) {
             event.isCancelled = true
-            player.sendMessage("§cNie masz dostępu do tej akcji na działce!")
+            player.sendMessage(message.getMessage("flags", "$flag.not_allowed"))
         }
     }
 
@@ -168,7 +172,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         val loc = e.block.location
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
-
+        logger.debug("EntityChangeBlockEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
         val flags = plugin.cacheManager.getFlags(plot.id) ?: return
         if (flags["fall"] == false) {
             if (e.entityType == EntityType.FALLING_BLOCK) {
@@ -184,6 +188,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ)
             ?: getPlotAtLocation(e.toBlock.location.world.name, e.toBlock.location.blockX, e.toBlock.location.blockZ)
 
+        logger.debug("BlockFromToEvent at ${loc.blockX},${loc.blockZ} => plot=${plot?.id}")
         if (plot != null && plugin.cacheManager.getFlags(plot.id)?.get("flow") == false) {
             e.isCancelled = true
         }
