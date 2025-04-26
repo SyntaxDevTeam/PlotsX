@@ -10,19 +10,22 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 # Wiadomości obsługi błędów
 error:
   no_permission: "<red>Nie masz uprawnień do tej komendy.</red>"
-  claim_not_found: "<gold>Nie znaleziono gracza o nicku {player}.</gold>"
+  claim_not_found: "<gold>Nie znaleziono gracza o nicku {player}.</gold>" ## WTF? Co tu autor miał na myśli?
   not_owner: "<red>Nie możesz ingerować w tą działkę, ponieważ nie jesteś jej właścicielem.</red>"
   there_is_no_plot: "<red>Nie ma działki w tej lokalizacji.</red>"
   is_plot: "<red>Nie możesz postawić działki tutaj, ponieważ działka już istnieje.</red>"
   no_in_plot: "<red>Nie jesteś w działce.</red><grey>Użyj /plot <nazwa>, aby wybrać działkę lub stań na swojej działce.</grey>"
   in_collision: "<red>Nie możesz postawić działki tutaj, ponieważ koliduje z inną działką.</red>"
   create_error: "<red>Wystąpił błąd podczas tworzenia działki.</red"
+
   console: "<red>Tylko gracz może użyć tej komendy</red>"
   reload: "<red>Wystąpił błąd podczas przełądowania konfiguracji:</red> "
 
 plots:
   claim_success: "<green>Działka została pomyślnie ustawiona!</green>"
   unclaim_success: "<green>Działka została pomyślnie usunięta.</green>"
+  enter_plot: "<green>Wszedłeś na działkę <white>{plot}</white></green>"
+  leave_plot: "<green>Opuszczono działkę <white>{plot}</white></green>"
 
 
 GUI:
@@ -47,35 +50,109 @@ GUI:
     title: "<b>Ustawienia flag</b>"
 
 flags:
+  desc_title: "Opis: "
+  value_title: "Wartość: "
+  value_true: "Włączone"
+  value_false: "Wyłączone"
   toggle: "<gray>Zmieniono flagę <white>{flag}</white> na <white>{value}</white></gray>"
-  build: "Pozwala obcym stawiać i niszczyć bloki"
-  pvp: "Blokuje obrażenia od graczy i ich broni"
-  chest: "Blokuje dostęp do skrzyń dla obcych"
-  ender-chest: "Blokuje dostęp do skrzyń Endera dla obcych"
-  lever: "Blokuje używanie dźwigni i redstone"
-  button: "Blokuje używanie przycisków drewnianych i kamiennych"
-  door: "Blokuje otwieranie drzwi, trapdoorów i furtek dla obcych"
-  spawn-monsters: "Blokuje spawnowania się potworów"
-  spawn-animals: "Blokuje spawnowania się zwierząt"
-  passives: "Blokuje interakcję i ataki na pasywne moby"
-  flow: "Blokuje przepływ wody i lawy"
-  fire: "Blokuje ogień, eksplozje i ich rozprzestrzenianie"
-  minecart: "Pozwala obcym umieszczać i niszczyć wagoniki/łodzie"
-  allow-home: "Pozwala obcym używać /home i /sethome"
-  smart-door: "Pozwala otwierać żelazne drzwi i pary drzwi bez redstone"
-  use-potions: "Pozwala na używanie mikstur"
-  mob-loot: "Pozwala mobom niszczyć bloki"
-  flow-damage: "Pozwala cieczom niszczyć bloki"
-  iceform-player: "Pozwala graczom tworzyć lód (zaklęcie Frost Walker)"
-  iceform-world: "Pozwala mobom tworzyć lód (np. bałwan)"
-  allow-fly: "Zezwala na latanie w regionie"
-  teleport: "Blokuje teleportację przez perły i owoce chorus"
-  can-grow: "Blokuje wzrost roślin i farm"
-  allow-spawners: "Pozwala obcym stawiać i niszczyć spawnery"
-  leaves-decay: "Blokuje rozkładanie się liści"
-  allow-effects: "Blokuje działanie efektów mikstur"
-  redstone: "Pozwala obcym korzystać z redstone (bez dźwigni/przycisków)"
-  block-transform: "Blokuje przemiany bloków (np. beton)"
-  # extra flags
-  team: "Dodaj lub usuń wszystkich członków swojego Teamu (LegacyTeamX)"
+  build:
+    name: "Zezwolenie budowy"
+    description: "Pozwala obcym graczom stawiać i niszczyć bloki"
+    not_allowed: "<red>Nie możesz stawiać bloków w tej działce.</red>"
+    break_not_allowed: "<red>Nie możesz niszczyć bloków w tej działce.</red>"
+  pvp:
+    name: "Zezwolenie na PvP"
+    description: "Blokuje obrażenia od graczy i ich broni"
+    not_allowed: "<red>Nie możesz atakować graczy w tej działce.</red>"
+  chest:
+    name: "Blokowanie skrzyń"
+    description: "Blokuje dostęp do skrzyń dla obcych"
+    not_allowed: "<red>Nie możesz otwierać skrzyń w tej działce.</red>"
+  ender-chest:
+    name: "Blokowanie skrzyń Endu"
+    description: "Blokuje dostęp do skrzyń Endu dla obcych"
+    not_allowed: "<red>Nie możesz otwierać skrzyń Endu w tej działce.</red>"
+  lever:
+    name: "Blokowanie dźwigni"
+    description: "Blokuje używanie dźwigni i mechanizmów redstone"
+    not_allowed: "<red>Nie możesz używać dźwigni w tej działce.</red>"
+  button:
+    name: "Blokowanie przycisków"
+    description: "Blokuje używanie przycisków drewnianych i kamiennych"
+    not_allowed: "<red>Nie możesz używać przycisków w tej działce.</red>"
+  door:
+    name: "Blokowanie drzwi"
+    description: "Blokuje otwieranie drzwi, trapdoorów i furtek dla obcych"
+    not_allowed: "<red>Nie możesz otwierać drzwi w tej działce.</red>"
+  spawn-monsters:
+    name: "Spawnowanie potworów"
+    description: "Blokuje spawnowanie się potworów"
+  spawn-animals:
+    name: "Spawnowanie zwierząt"
+    description: "Blokuje spawnowanie się zwierząt"
+  passives:
+    name: "Interakcje z mobami pasywnymi"
+    description: "Blokuje interakcję i ataki na pasywne moby"
+    not_allowed: "<red>Nie możesz atakować mobów na tej działce.</red>"
+  flow:
+    name: "Blokowanie przepływu cieczy"
+    description: "Blokuje przepływ wody i lawy"
+  fire:
+    name: "Blokowanie ognia"
+    description: "Blokuje eksplozje, ogień i jego rozprzestrzenianie"
+  minecart:
+    name: "Blokowanie wagoników"
+    description: "Pozwala obcym umieszczać i niszczyć wagoniki/łodzie"
+    not_allowed: "<red>Nie możesz używać wagoników na tej działce.</red>"
+  allow-home:
+    name: "Zezwolenie na /home"
+    description: "Pozwala obcym używać /home i /sethome"
+    not_allowed: "<red>Nie możesz używać ani ustawiać home na tej działce.</red>"
+  smart-door:
+    name: "Żelazne i podwójne drzwi"
+    description: "Pozwala otwierać żelazne drzwi bez redstone oraz podwójne drzwi jednocześnie."
+    not_allowed: "<red>Nie możesz otwierać żelaznych drzwi na tej działce.</red>"
+  use-potions:
+    name: "Używanie mikstur"
+    description: "Pozwala na używanie mikstur"
+    not_allowed: "<red>Nie możesz używać mikstur na tej działce.</red>"
+  mob-loot:
+    name: "Niszczenie bloków przez moby"
+    description: "Pozwala mobom niszczyć bloki"
+  flow-damage:
+    name: "Zezwolenie na niszczenie przez ciecz"
+    description: "Pozwala cieczom niszczyć bloki"
+  iceform-player:
+    name: "Tworzenie lodu przez graczy"
+    description: "Pozwala graczom tworzyć lód (np. zaklęcie Frost Walker)"
+  iceform-world:
+    name: "Tworzenie lodu przez świat"
+    description: "Pozwala tworzyć mobom śnieg (np. bałwan), pogodzie i innym czynnikom"
+  allow-fly:
+    name: "Zezwolenie na latanie"
+    description: "Zezwala na latanie w regionie"
+  teleport:
+    name: "Blokowanie teleportacji"
+    description: "Blokuje teleportację przez perły i owoce chorus"
+  can-grow:
+    name: "Blokowanie wzrostu roślin"
+    description: "Blokuje wzrost roślin i farm"
+  allow-spawners:
+    name: "Zezwolenie na spawnery"
+    description: "Pozwala obcym stawiać i niszczyć spawnery"
+  leaves-decay:
+    name: "Blokowanie rozkładu liści"
+    description: "Blokuje rozkładanie się liści"
+  allow-effects:
+    name: "Blokowanie mikstur"
+    description: "Blokuje działanie efektów mikstur"
+  redstone:
+    name: "Zezwolenie na redstone"
+    description: "Pozwala obcym korzystać z redstone (nie wliczając dźwigni/przycisków)"
+  block-transform:
+    name: "Blokowanie przemian bloków"
+    description: "Blokuje przemiany bloków (np. beton)"
+  team:
+    name: "Zarządzanie Teamem"
+    description: "Dodaj lub usuń wszystkich członków swojego Teamu z działki"
 
