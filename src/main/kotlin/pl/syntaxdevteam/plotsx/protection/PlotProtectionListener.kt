@@ -193,4 +193,44 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             e.isCancelled = true
         }
     }
+
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onBucketEmpty(event: PlayerBucketEmptyEvent) {
+        val player = event.player
+        val loc = event.block.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+        logger.debug("PlayerBucketEmptyEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
+        if (!hasPlotPermission(player, plot, "build")) {
+            event.isCancelled = true
+            player.sendMessage("§cNie możesz wylewać cieczy na tej działce!")
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onBucketFill(event: PlayerBucketFillEvent) {
+        val player = event.player
+        val loc = event.block.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        logger.debug("PlayerBucketFillEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
+        if (!hasPlotPermission(player, plot, "build")) {
+            event.isCancelled = true
+            player.sendMessage("§cNie możesz zabierać cieczy z tej działki!")
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onBucketEntity(event: PlayerBucketEntityEvent) {
+        val player = event.player
+        val entity = event.entity
+        val loc = entity.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        logger.debug("PlayerBucketEntityEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
+        if (!hasPlotPermission(player, plot, "build")) {
+            event.isCancelled = true
+            player.sendMessage("§cNie możesz łapać stworzeń do wiadra na tej działce!")
+        }
+    }
 }
