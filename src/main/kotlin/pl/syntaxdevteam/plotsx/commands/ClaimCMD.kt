@@ -25,7 +25,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
         }
 
         if (!stack.sender.hasPermission("plotsx.cmd.claim")) {
-            plugin.messageHandler.getMessage("error", "no_permission")
+            player.sendMessage(plugin.messageHandler.getMessage("error", "no_permission"))
             return
         }
 
