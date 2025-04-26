@@ -65,10 +65,8 @@ class PluginInitializer(private val plugin: PlotsX) {
 
     private fun registerEvents() {
         plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)
-        // Odświeżenie cache asynchronicznie (mój CacheManager)
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            plugin.cacheManager.refreshAllCachesAsync()
-        })
+        plugin.cacheManager.clearAllCaches()
+        plugin.cacheManager.reloadAllCachesSync()
         // !!!! Rejestracja listenera ochrony działek
         plugin.server.pluginManager.registerEvents(PlotProtectionListener(plugin), plugin)
 
