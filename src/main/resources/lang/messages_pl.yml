@@ -58,32 +58,32 @@ flags:
   build:
     name: "Zezwolenie budowy"
     description: "Pozwala obcym graczom stawiać i niszczyć bloki"
-    not_allowed: "<red>Nie możesz stawiać bloków w tej działce.</red>"
-    break_not_allowed: "<red>Nie możesz niszczyć bloków w tej działce.</red>"
+    not_allowed: "<red>Nie możesz stawiać bloków na tej działce.</red>"
+    break_not_allowed: "<red>Nie możesz niszczyć bloków na tej działce.</red>"
   pvp:
     name: "Zezwolenie na PvP"
     description: "Blokuje obrażenia od graczy i ich broni"
-    not_allowed: "<red>Nie możesz atakować graczy w tej działce.</red>"
+    not_allowed: "<red>Nie możesz atakować graczy na tej działce.</red>"
   chest:
     name: "Blokowanie skrzyń"
     description: "Blokuje dostęp do skrzyń dla obcych"
-    not_allowed: "<red>Nie możesz otwierać skrzyń w tej działce.</red>"
+    not_allowed: "<red>Nie możesz otwierać skrzyń na tej działce.</red>"
   ender-chest:
     name: "Blokowanie skrzyń Endu"
     description: "Blokuje dostęp do skrzyń Endu dla obcych"
-    not_allowed: "<red>Nie możesz otwierać skrzyń Endu w tej działce.</red>"
+    not_allowed: "<red>Nie możesz otwierać skrzyń Endu na tej działce.</red>"
   lever:
     name: "Blokowanie dźwigni"
     description: "Blokuje używanie dźwigni i mechanizmów redstone"
-    not_allowed: "<red>Nie możesz używać dźwigni w tej działce.</red>"
+    not_allowed: "<red>Nie możesz używać dźwigni na tej działce.</red>"
   button:
     name: "Blokowanie przycisków"
     description: "Blokuje używanie przycisków drewnianych i kamiennych"
-    not_allowed: "<red>Nie możesz używać przycisków w tej działce.</red>"
+    not_allowed: "<red>Nie możesz używać przycisków na tej działce.</red>"
   door:
     name: "Blokowanie drzwi"
     description: "Blokuje otwieranie drzwi, trapdoorów i furtek dla obcych"
-    not_allowed: "<red>Nie możesz otwierać drzwi w tej działce.</red>"
+    not_allowed: "<red>Nie możesz otwierać drzwi na tej działce.</red>"
   spawn-monsters:
     name: "Spawnowanie potworów"
     description: "Blokuje spawnowanie się potworów"
@@ -97,6 +97,8 @@ flags:
   flow:
     name: "Blokowanie przepływu cieczy"
     description: "Blokuje przepływ wody i lawy"
+    not_allowed: "<red>Nie możesz używać wody i lawy na tej działce.</red>"
+    bucket_not_allowed: "<red>Nie możesz używać wiader na tej działce.</red>"
   fire:
     name: "Blokowanie ognia"
     description: "Blokuje eksplozje, ogień i jego rozprzestrzenianie"
