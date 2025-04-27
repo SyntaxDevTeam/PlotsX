@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "2.1.20"
+    kotlin("jvm") version "2.2.0-Beta1"
     id("com.gradleup.shadow") version "9.0.0-beta12"
 }
 
@@ -24,7 +24,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.5-R0.1-SNAPSHOT")
     compileOnly("org.eclipse.aether:aether-api:1.1.0")
     compileOnly("org.yaml:snakeyaml:2.4")
-    compileOnly("com.google.code.gson:gson:2.13.0")
+    compileOnly("com.google.code.gson:gson:2.13.1")
     compileOnly("net.kyori:adventure-text-serializer-legacy:4.20.0")
     compileOnly("net.kyori:adventure-text-minimessage:4.20.0")
     compileOnly("net.kyori:adventure-text-serializer-gson:4.20.0")
