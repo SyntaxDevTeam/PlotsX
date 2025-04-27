@@ -1,7 +1,7 @@
 libraries:
   - org.eclipse.aether:aether-api:1.1.0
   - org.yaml:snakeyaml:2.4
-  - com.google.code.gson:gson:2.13.0
+  - com.google.code.gson:gson:2.13.1
   - net.kyori:adventure-text-minimessage:4.20.0
   - net.kyori:adventure-text-serializer-gson:4.20.0
   - net.kyori:adventure-text-serializer-legacy:4.20.0
