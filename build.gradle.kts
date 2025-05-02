@@ -25,11 +25,11 @@ dependencies {
     compileOnly("org.eclipse.aether:aether-api:1.1.0")
     compileOnly("org.yaml:snakeyaml:2.4")
     compileOnly("com.google.code.gson:gson:2.13.1")
-    compileOnly("net.kyori:adventure-text-serializer-legacy:4.20.0")
-    compileOnly("net.kyori:adventure-text-minimessage:4.20.0")
-    compileOnly("net.kyori:adventure-text-serializer-gson:4.20.0")
-    compileOnly("net.kyori:adventure-text-serializer-plain:4.20.0")
-    compileOnly("net.kyori:adventure-text-serializer-ansi:4.20.0")
+    compileOnly("net.kyori:adventure-text-serializer-legacy:4.21.0")
+    compileOnly("net.kyori:adventure-text-minimessage:4.21.0")
+    compileOnly("net.kyori:adventure-text-serializer-gson:4.21.0")
+    compileOnly("net.kyori:adventure-text-serializer-plain:4.21.0")
+    compileOnly("net.kyori:adventure-text-serializer-ansi:4.21.0")
     compileOnly("com.zaxxer:HikariCP:6.3.0")
     compileOnly("net.luckperms:api:5.4")
     compileOnly("me.clip:placeholderapi:2.11.6")
@@ -55,4 +55,5 @@ tasks.processResources {
     filesMatching("paper-plugin.yml") {
         expand(props)
     }
+
 }
