@@ -29,28 +29,28 @@ class CacheManager(private val plugin: PlotsX) {
             refreshPlotCacheSync()
             refreshFlagCacheSync()
             refreshMemberCacheSync()
-            plugin.logger.debug("[PlotsX] Cache odświeżony (działki, flagi, członkowie).")
+            plugin.logger.debug("[Cache] Cache odświeżony (działki, flagi, członkowie).")
         })
     }
 
     fun refreshPlotCacheAsync() {
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             refreshPlotCacheSync()
-            plugin.logger.debug("[PlotsX] Plot cache odświeżony.")
+            plugin.logger.debug("[Cache] Plot cache odświeżony.")
         })
     }
 
     fun refreshFlagCacheAsync() {
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             refreshFlagCacheSync()
-            plugin.logger.debug("[PlotsX] Flag cache odświeżony.")
+            plugin.logger.debug("[Cache] Flag cache odświeżony.")
         })
     }
 
     fun refreshMemberCacheAsync() {
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             refreshMemberCacheSync()
-            plugin.logger.debug("[PlotsX] Member cache odświeżony.")
+            plugin.logger.debug("[Cache] Member cache odświeżony.")
         })
     }
 
@@ -87,10 +87,11 @@ class CacheManager(private val plugin: PlotsX) {
         })
     }
 
-    fun updateFlagCacheAsync(plotId: Int) {
+    fun updateFlagCacheAsync(plotId: Int, after: () -> Unit) {
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             val flags = databaseHandler.getPlotFlags(plotId)
             flagCache[plotId] = flags
+            plugin.server.scheduler.runTask(plugin, after)
         })
     }
 
