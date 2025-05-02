@@ -4,23 +4,27 @@ import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.block.Dispenser
 import org.bukkit.block.data.Directional
+import org.bukkit.block.data.Openable
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
+import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockDispenseEvent
 import org.bukkit.event.block.BlockFromToEvent
 import org.bukkit.event.block.BlockPistonExtendEvent
 import org.bukkit.event.block.BlockPistonRetractEvent
 import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.event.player.PlayerBucketEmptyEvent
 import org.bukkit.event.player.PlayerBucketEntityEvent
 import org.bukkit.event.player.PlayerBucketFillEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
+import org.bukkit.inventory.EquipmentSlot
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import java.util.UUID
@@ -30,6 +34,83 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     private val logger = plugin.logger
     private val message = plugin.messageHandler
     private val playerLastPlot = mutableMapOf<UUID, Int?>()
+    private val toggling: MutableSet<Block> = mutableSetOf()
+    private val aggressiveMobs = setOf(
+        EntityType.BLAZE,
+        EntityType.CAVE_SPIDER,
+        EntityType.CREAKING,
+        EntityType.CREEPER,
+        EntityType.DROWNED,
+        EntityType.ELDER_GUARDIAN,
+        EntityType.ENDERMAN,
+        EntityType.ENDERMITE,
+        EntityType.EVOKER,
+        EntityType.GHAST,
+        EntityType.GIANT,
+        EntityType.GUARDIAN,
+        EntityType.HUSK,
+        EntityType.ILLUSIONER,
+        EntityType.MAGMA_CUBE,
+        EntityType.PHANTOM,
+        EntityType.PIGLIN,
+        EntityType.PIGLIN_BRUTE,
+        EntityType.PILLAGER,
+        EntityType.RAVAGER,
+        EntityType.SHULKER,
+        EntityType.SILVERFISH,
+        EntityType.SKELETON,
+        EntityType.SLIME,
+        EntityType.SPIDER,
+        EntityType.STRAY,
+        EntityType.VEX,
+        EntityType.VINDICATOR,
+        EntityType.WITCH,
+        EntityType.WITHER,
+        EntityType.WITHER_SKELETON,
+        EntityType.WARDEN,
+        EntityType.ZOGLIN,
+        EntityType.ZOMBIFIED_PIGLIN,
+        EntityType.ZOMBIE,
+        EntityType.ZOMBIE_VILLAGER
+    )
+
+    private val passiveMobs = setOf(
+        EntityType.ALLAY,
+        EntityType.ARMADILLO,
+        EntityType.AXOLOTL,
+        EntityType.BAT,
+        EntityType.BEE,
+        EntityType.CAT,
+        EntityType.CHICKEN,
+        EntityType.COD,
+        EntityType.COW,
+        EntityType.DOLPHIN,
+        EntityType.DONKEY,
+        EntityType.FOX,
+        EntityType.FROG,
+        EntityType.GOAT,
+        EntityType.HORSE,
+        EntityType.MOOSHROOM,
+        EntityType.MULE,
+        EntityType.OCELOT,
+        EntityType.PANDA,
+        EntityType.PARROT,
+        EntityType.PIG,
+        EntityType.PUFFERFISH,
+        EntityType.RABBIT,
+        EntityType.SALMON,
+        EntityType.SHEEP,
+        EntityType.SNIFFER,
+        EntityType.SNOW_GOLEM,
+        EntityType.SQUID,
+        EntityType.STRIDER,
+        EntityType.TADPOLE,
+        EntityType.TROPICAL_FISH,
+        EntityType.TURTLE,
+        EntityType.VILLAGER,
+        EntityType.WANDERING_TRADER
+    )
+
 
     private fun getPlotAtLocation(world: String, x: Int, z: Int): PlotData? {
         return plugin.cacheManager.getCachedPlots().firstOrNull { plot ->
@@ -125,57 +206,6 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
-    fun onInteract(event: PlayerInteractEvent) {
-        val player = event.player
-        val block = event.clickedBlock ?: return
-        val loc = block.location
-        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
-        logger.debug("PlayerInteractEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
-        val containers = listOf(
-            Material.CHEST, Material.TRAPPED_CHEST, Material.BARREL, Material.SHULKER_BOX
-        ) + Material.entries.filter { it.name.endsWith("_SHULKER_BOX") }
-
-        val doorsAndGates = listOf(
-            Material.OAK_DOOR, Material.SPRUCE_DOOR, Material.BIRCH_DOOR, Material.JUNGLE_DOOR,
-            Material.ACACIA_DOOR, Material.DARK_OAK_DOOR, Material.MANGROVE_DOOR, Material.CHERRY_DOOR,
-            Material.BAMBOO_DOOR, Material.CRIMSON_DOOR, Material.WARPED_DOOR, Material.PALE_OAK_DOOR,
-            Material.OAK_TRAPDOOR, Material.SPRUCE_TRAPDOOR, Material.BIRCH_TRAPDOOR,
-            Material.JUNGLE_TRAPDOOR, Material.ACACIA_TRAPDOOR, Material.DARK_OAK_TRAPDOOR,
-            Material.MANGROVE_TRAPDOOR, Material.CHERRY_TRAPDOOR, Material.BAMBOO_TRAPDOOR,
-            Material.CRIMSON_TRAPDOOR, Material.WARPED_TRAPDOOR, Material.IRON_TRAPDOOR, Material.PALE_OAK_TRAPDOOR,
-            Material.OAK_FENCE_GATE, Material.SPRUCE_FENCE_GATE, Material.BIRCH_FENCE_GATE,
-            Material.JUNGLE_FENCE_GATE, Material.ACACIA_FENCE_GATE, Material.DARK_OAK_FENCE_GATE,
-            Material.MANGROVE_FENCE_GATE, Material.CHERRY_FENCE_GATE, Material.BAMBOO_FENCE_GATE,
-            Material.CRIMSON_FENCE_GATE, Material.WARPED_FENCE_GATE, Material.PALE_OAK_FENCE_GATE
-        )
-
-        val buttonsAndLevers = listOf(
-            Material.LEVER, Material.STONE_BUTTON, Material.OAK_BUTTON, Material.SPRUCE_BUTTON,
-            Material.BIRCH_BUTTON, Material.JUNGLE_BUTTON, Material.ACACIA_BUTTON,
-            Material.DARK_OAK_BUTTON, Material.MANGROVE_BUTTON, Material.CHERRY_BUTTON,
-            Material.BAMBOO_BUTTON, Material.CRIMSON_BUTTON, Material.WARPED_BUTTON,
-            Material.POLISHED_BLACKSTONE_BUTTON, Material.PALE_OAK_BUTTON
-        )
-
-        val enderChest = listOf(
-            Material.ENDER_CHEST
-        )
-
-        val flag = when (block.type) {
-            in containers -> "chest"
-            in doorsAndGates -> "door"
-            in buttonsAndLevers -> "button"
-            in enderChest -> "ender-chest"
-            else -> null
-        }
-
-        if (flag != null && !hasPlotPermission(player, plot, flag)) {
-            event.isCancelled = true
-            player.sendMessage(message.getMessage("flags", "$flag.not_allowed"))
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onFallingBlock(event: EntityChangeBlockEvent) {
         if (event.entityType != EntityType.FALLING_BLOCK) return
 
@@ -247,7 +277,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onPistonExtend(event: BlockPistonExtendEvent) {
-        // wektor przesunięcia tłoka
+
         val dx = event.direction.modX
         val dy = event.direction.modY
         val dz = event.direction.modZ
@@ -256,7 +286,6 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             val from = block.location
             val to   = from.clone().add(dx.toDouble(), dy.toDouble(), dz.toDouble())
 
-            // jeśli źródło lub cel leży w obrębie działki → anuluj
             if (getPlotAtLocation(from.world.name, from.blockX, from.blockZ) != null ||
                 getPlotAtLocation(to.world.name,   to.blockX,   to.blockZ)   != null
             ) {
@@ -330,6 +359,135 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 logger.debug("Dispenser próbuje wylać $mat na lub z działki – anulowane")
             }
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onCreatureSpawn(event: CreatureSpawnEvent) {
+        val loc = event.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+        val flags = plugin.cacheManager.getFlags(plot.id) ?: return
+
+        val entityType = event.entityType
+
+        if (entityType in aggressiveMobs) {
+            if (flags["spawn-monsters"] == false) {
+                event.isCancelled = true
+                plugin.logger.debug("Spawn potwora $entityType zablokowany na działce ${plot.name} (${plot.id})")
+            }
+        } else if (entityType in passiveMobs) {
+            if (flags["spawn-animals"] == false) {
+                event.isCancelled = true
+                plugin.logger.debug("Spawn zwierzęcia $entityType zablokowany na działce ${plot.name} (${plot.id})")
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onPlayaerInteract(event: PlayerInteractEvent) {
+        if (event.action != Action.RIGHT_CLICK_BLOCK || event.hand != EquipmentSlot.HAND) return
+        val player = event.player
+        val block = event.clickedBlock ?: return
+        val loc = block.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        // --- Definicje grup bloków ---
+        val containers = listOf(
+            Material.CHEST, Material.TRAPPED_CHEST, Material.BARREL,
+            Material.SHULKER_BOX
+        ) + Material.entries.filter { it.name.endsWith("_SHULKER_BOX") }
+
+        val doorsAndGates = listOf(
+            Material.OAK_DOOR, Material.SPRUCE_DOOR, Material.BIRCH_DOOR, Material.JUNGLE_DOOR,
+            Material.ACACIA_DOOR, Material.DARK_OAK_DOOR, Material.MANGROVE_DOOR, Material.CHERRY_DOOR,
+            Material.BAMBOO_DOOR, Material.CRIMSON_DOOR, Material.WARPED_DOOR, Material.PALE_OAK_DOOR,
+            Material.OAK_TRAPDOOR, Material.SPRUCE_TRAPDOOR, Material.BIRCH_TRAPDOOR,
+            Material.JUNGLE_TRAPDOOR, Material.ACACIA_TRAPDOOR, Material.DARK_OAK_TRAPDOOR,
+            Material.MANGROVE_TRAPDOOR, Material.CHERRY_TRAPDOOR, Material.BAMBOO_TRAPDOOR,
+            Material.CRIMSON_TRAPDOOR, Material.WARPED_TRAPDOOR, Material.IRON_TRAPDOOR, Material.PALE_OAK_TRAPDOOR,
+            Material.OAK_FENCE_GATE, Material.SPRUCE_FENCE_GATE, Material.BIRCH_FENCE_GATE,
+            Material.JUNGLE_FENCE_GATE, Material.ACACIA_FENCE_GATE, Material.DARK_OAK_FENCE_GATE,
+            Material.MANGROVE_FENCE_GATE, Material.CHERRY_FENCE_GATE, Material.BAMBOO_FENCE_GATE,
+            Material.CRIMSON_FENCE_GATE, Material.WARPED_FENCE_GATE, Material.PALE_OAK_FENCE_GATE
+        )
+
+        val buttonsAndLevers = listOf(
+            Material.LEVER, Material.STONE_BUTTON, Material.OAK_BUTTON, Material.SPRUCE_BUTTON,
+            Material.BIRCH_BUTTON, Material.JUNGLE_BUTTON, Material.ACACIA_BUTTON,
+            Material.DARK_OAK_BUTTON, Material.MANGROVE_BUTTON, Material.CHERRY_BUTTON,
+            Material.BAMBOO_BUTTON, Material.CRIMSON_BUTTON, Material.WARPED_BUTTON,
+            Material.POLISHED_BLACKSTONE_BUTTON, Material.PALE_OAK_BUTTON
+        )
+
+        val enderChest = listOf(
+            Material.ENDER_CHEST
+        )
+
+        // --- 1) Kontenery ---
+        when (block.type) {
+            in containers -> {
+                if (!hasPlotPermission(player, plot, "chest")) {
+                    event.isCancelled = true
+                    player.sendMessage(message.getMessage("flags", "chest.not_allowed"))
+                }
+                return
+            }
+            in buttonsAndLevers -> {
+                if (!hasPlotPermission(player, plot, "button")) {
+                    event.isCancelled = true
+                    player.sendMessage(message.getMessage("flags", "button.not_allowed"))
+                }
+                return
+            }
+            in enderChest -> {
+                if (!hasPlotPermission(player, plot, "ender-chest")) {
+                    event.isCancelled = true
+                    player.sendMessage(message.getMessage("flags", "ender-chest.not_allowed"))
+                }
+                return
+            }else -> {
+                // Do nothing
+            }
+        }
+
+        // --- 2) Drzwi / bramy / trapdoory ---
+        if (block.type in doorsAndGates) {
+            // A) SMART-DOOR dla żelaznych drzwi + automatyczne przełączenie pary
+            if (block.type == Material.IRON_DOOR && hasPlotPermission(player, plot, "smart-door")) {
+                if (!toggling.add(block)) return
+                plugin.server.scheduler.runTaskLater(plugin, Runnable { toggling.remove(block) }, 20L)
+
+                toggleOpenState(block)
+                for (face in arrayOf(
+                    org.bukkit.block.BlockFace.NORTH,
+                    org.bukkit.block.BlockFace.SOUTH,
+                    org.bukkit.block.BlockFace.EAST,
+                    org.bukkit.block.BlockFace.WEST
+                )) {
+                    val neighbor = block.getRelative(face)
+                    if (neighbor.type == block.type) {
+                        toggleOpenState(neighbor)
+                        break
+                    }
+                }
+
+                event.isCancelled = true
+                return
+            }
+
+            // B) Zwykłe drzwi/trapdoory/fence_gate
+            if (!hasPlotPermission(player, plot, "door")) {
+                event.isCancelled = true
+                player.sendMessage(message.getMessage("flags", "door.not_allowed"))
+            }
+            // jeżeli ma flagę "door", to pozwalamy na domyślną obsługę
+            return
+        }
+    }
+
+    private fun toggleOpenState(block: Block) {
+        val openable = block.blockData as? Openable ?: return
+        openable.isOpen = !openable.isOpen
+        block.blockData = openable
     }
 
 }

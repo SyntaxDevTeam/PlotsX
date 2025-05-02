@@ -23,7 +23,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             return
         }
 
-        val player = stack.sender as Player
+        val player = sender
         val uuid = plugin.uuidManager.getUUID(player.name)
         val plotName = args.getOrNull(0)
 
@@ -31,13 +31,11 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         if (plotName != null) {
             val plot = plugin.databaseHandler.getPlotByName(plotName, uuid)
             if (plot != null) {
-                if(plot.ownerUuid != uuid && !player.hasPermission("plotsx.plot.bypass")) {
+                if (plot.ownerUuid != uuid && !player.hasPermission("plotsx.plot.bypass")) {
                     player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
                     return
                 }
-            }
-            if (plot != null) {
-                plugin.guiHandler.openGUI(player, PlotGUI(plugin, plot))
+                plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot))
             } else {
                 player.sendMessage(plugin.messageHandler.getMessage("error", "plot_not_found"))
             }
@@ -51,19 +49,18 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             player.location.blockZ
         )
         if (standingPlot != null) {
-            plugin.logger.debug("Nazwa działki to: ${standingPlot.name}")
-            if(standingPlot.ownerUuid != uuid && !player.hasPermission("plotsx.plot.bypass")) {
+            if (standingPlot.ownerUuid != uuid && !player.hasPermission("plotsx.plot.bypass")) {
                 player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
                 return
             }
-            plugin.guiHandler.openGUI(player, PlotGUI(plugin, standingPlot))
+            plugin.guiHandler.registerGui(player, PlotGUI(plugin, standingPlot))
             return
         }
 
         // 3. Jeśli nie podano argumentu i nie stoi na działce — pokaż listę działek
         val playerPlots = plugin.databaseHandler.getPlayerPlots(uuid)
         if (playerPlots.isNotEmpty()) {
-            plugin.guiHandler.openGUI(player, PlotListGUI(plugin, playerPlots))
+            plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots))
         } else {
             player.sendMessage(plugin.messageHandler.getMessage("error", "no_plot_found"))
         }
@@ -75,6 +72,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
 
         val player = stack.sender as? Player ?: return emptyList()
         val uuid = plugin.uuidManager.getUUID(player.name)
+
         return plugin.databaseHandler
             .getPlayerPlots(uuid)
             .map { it.name }

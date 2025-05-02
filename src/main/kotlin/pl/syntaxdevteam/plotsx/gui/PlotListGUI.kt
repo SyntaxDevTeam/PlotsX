@@ -3,7 +3,6 @@ package pl.syntaxdevteam.plotsx.gui
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
-import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
@@ -11,37 +10,47 @@ import org.bukkit.inventory.ItemStack
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
 
-class PlotListGUI(private val plugin: PlotsX, private val plots: List<PlotData>) : GUI {
+class PlotListGUI(
+    private val plugin: PlotsX,
+    private val plots: List<PlotData>
+) : AbstractGUI(
+    title = plugin.messageHandler.getLogMessage("GUI", "plot.list_title"),
+    size  = calculateSize(plots.size)
+) {
 
     override fun open(player: Player) {
-        val size = calculateInventorySize(plots.size)
-        val inventory = Bukkit.createInventory(null, size, getTitle())
+        inventory.clear()
 
         plots.forEachIndexed { index, plot ->
-            val head = createPlotItem(plot, index)
-            inventory.setItem(index, head)
+            if (index >= inventory.size) return@forEachIndexed
+
+            inventory.setItem(index, createPlotItem(plot, index))
         }
 
-        plugin.guiHandler.track(player, this)
-        player.openInventory(inventory)
+        super.open(player)
     }
 
     override fun handleClick(event: InventoryClickEvent) {
-        val player = event.whoClicked as? Player ?: return
-        val clickedItem = event.currentItem ?: return
+        if (!isThisInventory(event.inventory)) return
+
         event.isCancelled = true
+        val player      = event.whoClicked as? Player ?: return
+        val clickedItem = event.currentItem ?: return
+        val meta        = clickedItem.itemMeta ?: return
 
-        val displayName = clickedItem.itemMeta?.displayName() ?: return
-        val plotName = PlainTextComponentSerializer.plainText().serialize(displayName)
-        val plot = plots.firstOrNull { it.name.equals(plotName, ignoreCase = true) } ?: return
+        // zamknij i wyrejestruj aktualne GUI
+        plugin.guiHandler.unregisterGui(player)
+        player.closeInventory()
 
-        plugin.guiHandler.openGUI(player, PlotGUI(plugin, plot))
-    }
+        // odczytaj nazwę plotu z wyświetlanej nazwy
+        val displayName = meta.displayName() ?: return
+        val plotName    = PlainTextComponentSerializer.plainText().serialize(displayName)
 
-    override fun getTitle(): Component {
-        return plugin.messageHandler.getLogMessage("GUI", "plot.list_title")
+        // znajdź obiekt PlotData i otwórz PlotGUI
+        plots.firstOrNull { it.name.equals(plotName, ignoreCase = true) }
+            ?.let { plugin.guiHandler.registerGui(player, PlotGUI(plugin, it)) }
     }
 
     private fun createPlotItem(plot: PlotData, index: Int): ItemStack {
@@ -53,26 +62,29 @@ class PlotListGUI(private val plugin: PlotsX, private val plots: List<PlotData>)
             Material.ROOTED_DIRT,
             Material.MYCELIUM
         )
-
         val material = dirtVariants[index % dirtVariants.size]
-        val item = ItemStack(material)
-        val meta = item.itemMeta
+        val item     = ItemStack(material)
+        val meta     = item.itemMeta!!
 
         meta.displayName(Component.text(plot.name, NamedTextColor.GREEN))
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm")
-        val createdDate = dateFormat.format(Date(plot.creationTime))
+        val created    = dateFormat.format(Date(plot.creationTime))
         meta.lore(listOf(
             Component.text("Location: ${plot.x}, ${plot.z} (${plot.world})"),
-            Component.text("Created: $createdDate"),
-            Component.text("Click to manage this plot.")
+            Component.text("Created: $created"),
+            plugin.messageHandler.getMessage("GUI", "plot.list_click_hint")
         ))
 
         item.itemMeta = meta
         return item
     }
 
-    private fun calculateInventorySize(amount: Int): Int {
-        return ((amount / 9) + 1).coerceAtMost(6) * 9
+    companion object {
+        private fun calculateSize(amount: Int): Int {
+            // 1–6 wierszy
+            val rows = ((amount + 8) / 9).coerceAtMost(6)
+            return rows * 9
+        }
     }
 }

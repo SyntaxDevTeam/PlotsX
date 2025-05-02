@@ -1,11 +1,12 @@
 package pl.syntaxdevteam.plotsx.gui
 
-import net.kyori.adventure.text.Component
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.inventory.Inventory
 
 interface GUI {
+    val inventory: Inventory
     fun open(player: Player)
     fun handleClick(event: InventoryClickEvent)
-    fun getTitle(): Component
+    fun isThisInventory(inv: Inventory): Boolean
 }

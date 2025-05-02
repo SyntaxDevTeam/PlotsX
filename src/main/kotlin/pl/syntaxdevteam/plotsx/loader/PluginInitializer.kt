@@ -67,7 +67,7 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)
         plugin.cacheManager.clearAllCaches()
         plugin.cacheManager.reloadAllCachesSync()
-        // !!!! Rejestracja listenera ochrony działek
+        plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)
         plugin.server.pluginManager.registerEvents(PlotProtectionListener(plugin), plugin)
 
 

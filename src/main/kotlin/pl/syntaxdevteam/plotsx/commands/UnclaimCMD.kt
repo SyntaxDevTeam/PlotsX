@@ -51,7 +51,7 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
 
         player.sendMessage(plugin.messageHandler.getMessage("plots", "unclaim_success"))
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            plugin.cacheManager.refreshAllCachesAsync()
+            plugin.cacheManager.invalidatePlot(currentPlot.id)
         })
     }
 

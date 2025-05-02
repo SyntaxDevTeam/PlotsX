@@ -2,7 +2,6 @@ package pl.syntaxdevteam.plotsx.gui
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
-import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
@@ -15,11 +14,15 @@ import pl.syntaxdevteam.plotsx.databases.PlotData
 class FlagsGUI(
     private val plugin: PlotsX,
     private val plot: PlotData
-) : GUI {
+) : AbstractGUI(
+    title = plugin.messageHandler.getLogMessage("GUI", "flags.title"),
+    size  = 54
+) {
 
     private val message = plugin.messageHandler
     private val keyFlag = NamespacedKey(plugin, "plot_flag_key")
 
+    // Kolekcja materiałów – tak jak w starej wersji
     private val flagMaterials = mapOf(
         "build"          to Material.STONE,
         "pvp"            to Material.WOODEN_SWORD,
@@ -53,80 +56,95 @@ class FlagsGUI(
     )
 
     override fun open(player: Player) {
-        val size = ((flagMaterials.size + 8) / 9) * 9
-        val inventory = Bukkit.createInventory(null, size.coerceAtMost(54), getTitle())
+        // Wyczyść inventory (bo może być re-użyte)
+        inventory.clear()
 
-        val flags = plugin.databaseHandler.getPlotFlags(plot.id)
+        // Pobranie aktualnych wartości flag z cache
+        val flags = plugin.cacheManager.getFlags(plot.id) ?: plugin.databaseHandler.getPlotFlags(plot.id)
 
-        flagMaterials.entries.forEachIndexed { index, (flagKey, material) ->
-            val value = flags[flagKey] ?: false
+        flagMaterials.entries.forEachIndexed { idx, (flagKey, material) ->
+            // Jeśli przekroczyliśmy rozmiar – pomiń
+            if (idx >= inventory.size) return@forEachIndexed
 
-            val displayName = message.getCleanMessage("flags", "$flagKey.name")
-            val descTitle = message.getCleanMessage("flags", "desc_title")
-            val description = message.getCleanMessage("flags", "$flagKey.description")
-            val valueTitle = message.getCleanMessage("flags", "value_title")
-            val valueStr = if (value)
+            val current = flags[flagKey] ?: false
+
+            // Teksty
+            val name    = message.getCleanMessage("flags", "$flagKey.name")
+            val desc    = message.getCleanMessage("flags", "$flagKey.description")
+            val descTl  = message.getCleanMessage("flags", "desc_title")
+            val valTl   = message.getCleanMessage("flags", "value_title")
+            val valStr  = if (current)
                 "<green><bold>✔</bold> ${message.getCleanMessage("flags", "value_true")}"
             else
                 "<red><bold>✘</bold> ${message.getCleanMessage("flags", "value_false")}"
 
+            // Item
             val item = ItemStack(material)
             val meta = item.itemMeta!!
-            val pdc = meta.persistentDataContainer
-            pdc.set(keyFlag, PersistentDataType.STRING, flagKey)
-
+            meta.persistentDataContainer.set(keyFlag, PersistentDataType.STRING, flagKey)
             meta.displayName(
-                message.formatMixedTextToMiniMessage("<gold>=> <bold>$displayName</bold> <=", TagResolver.empty())
+                message.formatMixedTextToMiniMessage("<gold>=> <bold>$name</bold> <=", TagResolver.empty())
             )
-
-            meta.lore(
-                listOf(
-                    message.formatMixedTextToMiniMessage("<aqua>     $valueTitle: $valueStr", TagResolver.empty()),
-                    Component.empty(),
-                    message.formatMixedTextToMiniMessage("<aqua>$descTitle<gray>$description", TagResolver.empty())
-                )
-            )
-
+            meta.lore(listOf(
+                message.formatMixedTextToMiniMessage("<aqua>     $valTl: $valStr", TagResolver.empty()),
+                Component.empty(),
+                message.formatMixedTextToMiniMessage("<aqua>$descTl<gray>$desc", TagResolver.empty())
+            ))
             item.itemMeta = meta
-            inventory.setItem(index, item)
+
+            inventory.setItem(idx, item)
         }
 
-        plugin.guiHandler.track(player, this)
-        player.openInventory(inventory)
+        super.open(player)
     }
-
 
     override fun handleClick(event: InventoryClickEvent) {
-        val player = event.whoClicked as? Player ?: return
+        if (!isThisInventory(event.inventory)) return
+
         event.isCancelled = true
+        val player = event.whoClicked as? Player ?: return
+        val clicked = event.currentItem ?: return
+        val meta    = clicked.itemMeta ?: return
 
-        val item = event.currentItem ?: return
-        val meta = item.itemMeta ?: return
+        // Wyrejestruj i zamknij
+        plugin.guiHandler.unregisterGui(player)
+        player.closeInventory()
 
+        // Odczyt klucza flagi
         val flagKey = meta.persistentDataContainer
-            .get(keyFlag, PersistentDataType.STRING) ?: return
+            .get(keyFlag, PersistentDataType.STRING)
+            ?: return
 
-        val current = plugin.databaseHandler
-            .getPlotFlag(plot.id, flagKey)
-            ?.value
-            ?.toBooleanStrictOrNull() ?: false
+        // Toggle w bazie
+        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+            val current = plugin.databaseHandler
+                .getPlotFlag(plot.id, flagKey)
+                ?.value
+                ?.toBooleanStrictOrNull() ?: false
+            val updated = !current
 
-        val updated = !current
-        val success = plugin.databaseHandler.updatePlotFlag(plot.id, flagKey, updated)
-
-        if (success) {
-            player.sendMessage(
-                message.getMessage("flags", "toggle", mapOf(
+            if (plugin.databaseHandler.updatePlotFlag(plot.id, flagKey, updated)) {
+                player.sendMessage(message.getMessage("flags", "toggle", mapOf(
                     "flag" to flagKey,
                     "value" to updated.toString()
-                ))
-            )
-            open(player)
-        } else {
-            player.sendMessage(message.getMessage("error", "flag_update_failed"))
-        }
-    }
+                )))
 
-    override fun getTitle(): Component =
-        message.getLogMessage("GUI", "flags.title")
+                // Tymczasowe logowanie do debugowania stanu flag
+                val cacheFlags = plugin.cacheManager.getFlags(plot.id) ?: emptyMap()
+                val dbFlags = plugin.databaseHandler.getPlotFlags(plot.id)
+
+                plugin.logger.warning("[DEBUG] Flagi dla działki ID=${plot.id}")
+                plugin.logger.warning("[DEBUG] → Z cache: ${cacheFlags.entries.joinToString()}")
+                plugin.logger.warning("[DEBUG] → Z bazy: ${dbFlags.entries.joinToString()}")
+
+                plugin.cacheManager.updateFlagCacheAsync(plot.id) {
+                    plugin.server.scheduler.runTask(plugin, Runnable {
+                        plugin.guiHandler.registerGui(player, FlagsGUI(plugin, plot))
+                    })
+                }
+            } else {
+                player.sendMessage(message.getMessage("error", "flag_update_failed"))
+            }
+        })
+    }
 }

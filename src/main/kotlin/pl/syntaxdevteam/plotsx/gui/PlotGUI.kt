@@ -10,34 +10,30 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.SkullMeta
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
+import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 import java.text.SimpleDateFormat
 import java.util.*
 
 class PlotGUI(
     private val plugin: PlotsX,
     private val plot: PlotData? = null
-) : GUI {
+) : AbstractGUI(
+    title = plugin.messageHandler.getLogMessage("GUI", "plot.title_plot"),
+    size  = 45
+) {
 
     private val message = plugin.messageHandler
-    private val plotIndex = 13
 
-    private val flagsTitleMaterialName = message.getCleanMessage("GUI", "plot.material_name.flags")
-    private val flagsMaterial = Material.CALIBRATED_SCULK_SENSOR
+    // sloty
+    private val plotIndex  = 13
     private val flagsIndex = 20
-
-    private val tpaTitleMaterialName = message.getCleanMessage("GUI", "plot.material_name.teleport")
-    private val tpaMaterial = Material.MINECART
-    private val tpaIndex = 24
-
-    private val listTitleMaterialName = message.getCleanMessage("GUI", "plot.material_name.list")
-    private val listMaterial = Material.GRASS_BLOCK
-    private val listIndex = 31
+    private val tpaIndex   = 24
+    private val listIndex  = 31
 
     override fun open(player: Player) {
-        val inventory = Bukkit.createInventory(null, 45, getTitle())
-
+        // pobierz działkę (jeśli nie w konstruktorze)
         val targetPlot = plot ?: plugin.databaseHandler.getPlotAtLocation(
-            player.location.world.name,
+            player.location.world!!.name,
             player.location.blockX,
             player.location.blockZ
         )
@@ -47,57 +43,66 @@ class PlotGUI(
             return
         }
 
-        val flagsItem = createItem(flagsMaterial, flagsTitleMaterialName)
-        val tpaItem = createItem(tpaMaterial, tpaTitleMaterialName)
-        val plotItem = createPlotHead(player, targetPlot)
-        val listItem = createItem(listMaterial, listTitleMaterialName)
+        // przygotuj itemy
+        inventory.setItem(plotIndex,  createPlotHead(player, targetPlot))
+        inventory.setItem(flagsIndex, createItem(
+            Material.CALIBRATED_SCULK_SENSOR,
+            message.getCleanMessage("GUI", "plot.material_name.flags")
+        ))
+        inventory.setItem(tpaIndex,   createItem(
+            Material.MINECART,
+            message.getCleanMessage("GUI", "plot.material_name.teleport")
+        ))
+        inventory.setItem(listIndex,  createItem(
+            Material.GRASS_BLOCK,
+            message.getCleanMessage("GUI", "plot.material_name.list")
+        ))
 
-        inventory.setItem(plotIndex, plotItem)
-        inventory.setItem(flagsIndex, flagsItem)
-        inventory.setItem(tpaIndex, tpaItem)
-        inventory.setItem(listIndex, listItem)
-
-        plugin.guiHandler.track(player, this)
-        player.openInventory(inventory)
+        super.open(player)  // otwiera inventory i zostawia ślad w GUIHandlerze
     }
 
     override fun handleClick(event: InventoryClickEvent) {
-        val player = event.whoClicked as? Player ?: return
-        val clickedItem = event.currentItem ?: return
+        // tylko nasze inventory
+        if (!isThisInventory(event.inventory)) return
+
         event.isCancelled = true
+        val player = event.whoClicked as? Player ?: return
 
-        when (clickedItem.type) {
-            flagsMaterial -> {
-                if (plot != null) {
-                    plugin.guiHandler.openGUI(player, FlagsGUI(plugin, plot))
-                } else {
+        // najpierw wyrejestruj i zamknij
+        plugin.guiHandler.unregisterGui(player)
+        player.closeInventory()
+
+        when (event.slot) {
+            flagsIndex -> {
+                val pd = plot ?: plugin.databaseHandler.getPlotAtLocation(
+                    player.location.world!!.name,
+                    player.location.blockX,
+                    player.location.blockZ
+                )
+                if (pd == null) {
                     player.sendMessage(message.getMessage("error", "no_in_plot"))
+                } else {
+                    plugin.guiHandler.registerGui(player, FlagsGUI(plugin, pd))
                 }
-
-                player.sendMessage("Otwieram GUI z flagami")
-                //player.closeInventory()
             }
-            tpaMaterial -> {
-
-                player.sendMessage("Teleportuje na działkę")
-                player.closeInventory()
+            tpaIndex -> {
+                // tu wstaw swoją logikę TP
+                player.sendMessage("Teleportuję na działkę…")
             }
-            listMaterial -> {
+            listIndex -> {
                 val uuid = plugin.uuidManager.getUUID(player.name)
                 val playerPlots = plugin.databaseHandler.getPlayerPlots(uuid)
-                plugin.guiHandler.openGUI(player, PlotListGUI(plugin, playerPlots))
+                plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots))
             }
-            else -> {}
+            plotIndex -> {
+                // np. otwarcie dodatkowych info albo nic
+            }
         }
-    }
-
-    override fun getTitle(): Component {
-        return message.getLogMessage("GUI", "plot.title_plot")
     }
 
     private fun createItem(material: Material, name: String): ItemStack {
         val item = ItemStack(material)
-        val meta = item.itemMeta
+        val meta = item.itemMeta!!
         meta.displayName(message.formatMixedTextToMiniMessage(name, TagResolver.empty()))
         item.itemMeta = meta
         return item
@@ -108,16 +113,18 @@ class PlotGUI(
         val meta = skull.itemMeta as SkullMeta
 
         meta.owningPlayer = player
-        meta.displayName(message.getLogMessage("GUI", "plot.material_name.info", mapOf("plot" to plot.name)))
+        meta.displayName(message.getLogMessage(
+            "GUI", "plot.material_name.info",
+            mapOf("plot" to plot.name)
+        ))
 
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm")
+        val dateFormat   = SimpleDateFormat("yyyy-MM-dd HH:mm")
         val creationTime = dateFormat.format(Date(plot.creationTime))
         val lore = listOf(
-            message.getLogMessage("GUI", "plot.info.plot_name", mapOf("plot" to plot.name)),
-            message.getLogMessage("GUI", "plot.info.id", mapOf("id" to plot.id.toString())),
-            message.getLogMessage("GUI", "plot.info.creation_time", mapOf("time" to creationTime))
+            message.getLogMessage("GUI", "plot.info.plot_name",    mapOf("plot" to plot.name)),
+            message.getLogMessage("GUI", "plot.info.id",           mapOf("id"   to plot.id.toString())),
+            message.getLogMessage("GUI", "plot.info.creation_time",mapOf("time" to creationTime))
         )
-
         meta.lore(lore)
         skull.itemMeta = meta
         return skull
