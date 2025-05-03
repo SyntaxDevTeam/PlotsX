@@ -5,14 +5,18 @@ import io.papermc.paper.command.brigadier.CommandSourceStack
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.NotNull
 import pl.syntaxdevteam.plotsx.PlotsX
+import pl.syntaxdevteam.plotsx.databases.Helpers
 import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 import pl.syntaxdevteam.plotsx.gui.ClaimConfirmGUI
+import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 
 @Suppress("UnstableApiUsage")
 class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
+    val dbh = plugin.databaseHandler
+    val helpers = Helpers(plugin)
 
     override fun execute(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>) {
-        val dbh = plugin.databaseHandler
+
         val player = stack.sender as Player
         val location = player.location
         val world = location.world.name
@@ -25,7 +29,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             return
         }
 
-        if (!stack.sender.hasPermission("plotsx.cmd.claim")) {
+        if (!PermissionChecker.canCreatePlot(player)) {
             player.sendMessage(plugin.messageHandler.getMessage("error", "no_permission"))
             return
         }
@@ -49,7 +53,6 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             plugin = plugin,
             player = player,
             onConfirm = { p ->
-                val dbh      = plugin.databaseHandler
                 val loc      = p.location
                 val uuid     = p.uniqueId
                 val world    = loc.world!!.name
@@ -68,17 +71,28 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                     } else {
                         dbh.logPlotAction(
                             PlotLogEntry(
-                                plotId = plotId,
-                                action = "CREATE",
-                                actorUUID = uuid,
-                                timestamp = System.currentTimeMillis()
+                                plotId   = plotId,
+                                action   = "CREATE",
+                                actorUUID= uuid,
+                                timestamp= System.currentTimeMillis()
                             )
                         )
                         p.sendMessage(plugin.messageHandler.getMessage("plots", "claim_success"))
 
-                        // odśwież cache
                         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
                             plugin.cacheManager.refreshAllCachesAsync()
+                        })
+
+                        plugin.server.scheduler.runTask(plugin, Runnable {
+                            helpers.visualizePlotBorder3D(
+                                player    = p,
+                                centerX   = x,
+                                centerZ   = z,
+                                radius    = radius,
+                                durationSec = 10,
+                                stepXZ      = 2,
+                                stepY    = 8
+                            )
                         })
                     }
                 })
