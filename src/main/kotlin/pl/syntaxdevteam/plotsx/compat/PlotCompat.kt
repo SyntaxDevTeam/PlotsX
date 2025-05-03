@@ -1,0 +1,102 @@
+// src/main/kotlin/pl/syntaxdevteam/plotsx/compat/PlotCompat.kt
+package pl.syntaxdevteam.plotsx.compat
+
+import org.bukkit.Material
+import org.bukkit.entity.EntityType
+
+object PlotCompat {
+    // ----- Nazwy mobów -----
+    val aggressiveMobNames = listOf(
+        "BLAZE", "CAVE_SPIDER", "CREAKING", "CREEPER", "DROWNED",
+        "ELDER_GUARDIAN", "ENDERMAN", "ENDERMITE", "EVOKER", "GHAST",
+        "GIANT", "GUARDIAN", "HUSK", "ILLUSIONER", "MAGMA_CUBE",
+        "PHANTOM", "PIGLIN", "PIGLIN_BRUTE", "PILLAGER", "RAVAGER",
+        "SHULKER", "SILVERFISH", "SKELETON", "SLIME", "SPIDER",
+        "STRAY", "VEX", "VINDICATOR", "WITCH", "WITHER",
+        "WITHER_SKELETON", "WARDEN", "ZOGLIN", "ZOMBIFIED_PIGLIN",
+        "ZOMBIE", "ZOMBIE_VILLAGER"
+    )
+
+    val passiveMobNames = listOf(
+        "ALLAY", "ARMADILLO", "AXOLOTL", "BAT", "BEE",
+        "CAT", "CHICKEN", "COD", "COW", "DOLPHIN",
+        "DONKEY", "FOX", "FROG", "GOAT", "HORSE",
+        "MOOSHROOM", "MULE", "OCELOT", "PANDA", "PARROT",
+        "PIG", "PUFFERFISH", "RABBIT", "SALMON", "SHEEP",
+        "SNIFFER", "SNOW_GOLEM", "SQUID", "STRIDER", "TADPOLE",
+        "TROPICAL_FISH", "TURTLE", "VILLAGER", "WANDERING_TRADER"
+    )
+
+    // ----- Nazwy bloków -----
+    val doorNames = listOf(
+        "OAK_DOOR", "SPRUCE_DOOR", "BIRCH_DOOR", "JUNGLE_DOOR",
+        "ACACIA_DOOR", "DARK_OAK_DOOR", "MANGROVE_DOOR", "CHERRY_DOOR",
+        "BAMBOO_DOOR", "CRIMSON_DOOR", "WARPED_DOOR", "PALE_OAK_DOOR",
+        "COPPER_DOOR", "EXPOSED_COPPER_DOOR", "WEATHERED_COPPER_DOOR",
+        "OXIDIZED_COPPER_DOOR", "WAXED_COPPER_DOOR", "WAXED_EXPOSED_COPPER_DOOR",
+        "WAXED_WEATHERED_COPPER_DOOR", "WAXED_OXIDIZED_COPPER_DOOR"
+    )
+
+    val trapdoorNames = listOf(
+        "OAK_TRAPDOOR", "SPRUCE_TRAPDOOR", "BIRCH_TRAPDOOR",
+        "JUNGLE_TRAPDOOR", "ACACIA_TRAPDOOR", "DARK_OAK_TRAPDOOR",
+        "MANGROVE_TRAPDOOR", "CHERRY_TRAPDOOR", "BAMBOO_TRAPDOOR",
+        "CRIMSON_TRAPDOOR", "WARPED_TRAPDOOR", "IRON_TRAPDOOR",
+        "PALE_OAK_TRAPDOOR"
+    )
+
+    val fenceGateNames = listOf(
+        "OAK_FENCE_GATE", "SPRUCE_FENCE_GATE", "BIRCH_FENCE_GATE",
+        "JUNGLE_FENCE_GATE", "ACACIA_FENCE_GATE", "DARK_OAK_FENCE_GATE",
+        "MANGROVE_FENCE_GATE", "CHERRY_FENCE_GATE", "BAMBOO_FENCE_GATE",
+        "CRIMSON_FENCE_GATE", "WARPED_FENCE_GATE", "PALE_OAK_FENCE_GATE"
+    )
+
+    val buttonNames = listOf(
+        "LEVER", "STONE_BUTTON", "OAK_BUTTON", "SPRUCE_BUTTON",
+        "BIRCH_BUTTON", "JUNGLE_BUTTON", "ACACIA_BUTTON", "DARK_OAK_BUTTON",
+        "MANGROVE_BUTTON", "CHERRY_BUTTON", "BAMBOO_BUTTON",
+        "CRIMSON_BUTTON", "WARPED_BUTTON", "POLISHED_BLACKSTONE_BUTTON",
+        "PALE_OAK_BUTTON"
+    )
+
+    val containerNames = listOf("CHEST", "TRAPPED_CHEST", "BARREL", "SHULKER_BOX")
+    val enderChestNames = listOf("ENDER_CHEST")
+
+    // ----- Nazwy materiałów używanych w onDispenserDispense -----
+    val dispenserBucketNames = listOf(
+        "WATER_BUCKET", "LAVA_BUCKET", "POWDER_SNOW_BUCKET",
+        "BUCKET", "EGG", "BLUE_EGG", "BROWN_EGG",
+        "SNIFFER_EGG", "TURTLE_EGG"
+    )
+
+    // ----- Bezpieczne funkcje -----
+    fun safeEntityType(name: String): EntityType? =
+        try { EntityType.valueOf(name) } catch (_: IllegalArgumentException) { null }
+
+    fun safeMaterial(name: String): Material? = Material.matchMaterial(name)
+
+    // ----- Mapowania w zbiory -----
+    fun loadAggressiveMobs(): Set<EntityType> =
+        aggressiveMobNames.mapNotNull(::safeEntityType).toSet()
+
+    fun loadPassiveMobs(): Set<EntityType> =
+        passiveMobNames.mapNotNull(::safeEntityType).toSet()
+
+    fun loadDoorsAndGates(): Set<Material> = (
+            doorNames + trapdoorNames + fenceGateNames
+            ).mapNotNull(::safeMaterial).toSet()
+
+    fun loadButtonsAndLevers(): Set<Material> =
+        buttonNames.mapNotNull(::safeMaterial).toSet()
+
+    fun loadContainers(): Set<Material> = (
+            containerNames + Material.entries.map { it.name }.filter { it.endsWith("_SHULKER_BOX") }
+            ).mapNotNull(::safeMaterial).toSet()
+
+    fun loadEnderChest(): Set<Material> =
+        enderChestNames.mapNotNull(::safeMaterial).toSet()
+
+    fun loadDispenserBucketMaterials(): Set<Material> =
+        dispenserBucketNames.mapNotNull(::safeMaterial).toSet()
+}

@@ -10,6 +10,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
+import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 
 class FlagsGUI(
     private val plugin: PlotsX,
@@ -56,14 +57,11 @@ class FlagsGUI(
     )
 
     override fun open(player: Player) {
-        // Wyczyść inventory (bo może być re-użyte)
         inventory.clear()
 
-        // Pobranie aktualnych wartości flag z cache
         val flags = plugin.cacheManager.getFlags(plot.id) ?: plugin.databaseHandler.getPlotFlags(plot.id)
 
         flagMaterials.entries.forEachIndexed { idx, (flagKey, material) ->
-            // Jeśli przekroczyliśmy rozmiar – pomiń
             if (idx >= inventory.size) return@forEachIndexed
 
             val current = flags[flagKey] ?: false
@@ -106,16 +104,13 @@ class FlagsGUI(
         val clicked = event.currentItem ?: return
         val meta    = clicked.itemMeta ?: return
 
-        // Wyrejestruj i zamknij
         plugin.guiHandler.unregisterGui(player)
         player.closeInventory()
 
-        // Odczyt klucza flagi
         val flagKey = meta.persistentDataContainer
             .get(keyFlag, PersistentDataType.STRING)
             ?: return
 
-        // Toggle w bazie
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             val current = plugin.databaseHandler
                 .getPlotFlag(plot.id, flagKey)
@@ -129,17 +124,26 @@ class FlagsGUI(
                     "value" to updated.toString()
                 )))
 
-                // Tymczasowe logowanie do debugowania stanu flag
-                val cacheFlags = plugin.cacheManager.getFlags(plot.id) ?: emptyMap()
-                val dbFlags = plugin.databaseHandler.getPlotFlags(plot.id)
-
-                plugin.logger.warning("[DEBUG] Flagi dla działki ID=${plot.id}")
-                plugin.logger.warning("[DEBUG] → Z cache: ${cacheFlags.entries.joinToString()}")
-                plugin.logger.warning("[DEBUG] → Z bazy: ${dbFlags.entries.joinToString()}")
-
                 plugin.cacheManager.updateFlagCacheAsync(plot.id) {
                     plugin.server.scheduler.runTask(plugin, Runnable {
                         plugin.guiHandler.registerGui(player, FlagsGUI(plugin, plot))
+
+                        plugin.databaseHandler.logPlotAction(
+                            PlotLogEntry(
+                                plotId = plot.id,
+                                action = "UpdateFlag: $flagKey: $updated",
+                                actorUUID = player.uniqueId,
+                                timestamp = System.currentTimeMillis()
+                            )
+                        )
+                        if(plugin.config.getBoolean("debug", false)){
+                            val cacheFlags = plugin.cacheManager.getFlags(plot.id) ?: emptyMap()
+                            val dbFlags = plugin.databaseHandler.getPlotFlags(plot.id)
+
+                            plugin.logger.debug("Flagi dla działki ID=${plot.id}")
+                            plugin.logger.debug(" → Z cache: ${cacheFlags.entries.joinToString()}")
+                            plugin.logger.debug(" → Z bazy: ${dbFlags.entries.joinToString()}")
+                        }
                     })
                 }
             } else {

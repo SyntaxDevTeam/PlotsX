@@ -398,42 +398,41 @@ class DatabaseHandler(private val plugin: PlotsX) {
         logger.debug("Ustanowiono połączenie z createNewPlot()")
 
         val defaultFlags = mapOf(
-            "build" to false,
-            "pvp" to false,
-            "chest" to false,
-            "ender-chest" to true,
-            "lever" to false,
-            "button" to false,
-            "door" to true,
-            "spawn-monsters" to false,
-            "spawn-animals" to true,
-            "passives" to false,
-            "flow" to false,
-            "fire" to false,
-            "minecart" to false,
-            "allow-home" to true,
-            "smart-door" to false,
-            "use-potions" to false,
-            "mob-loot" to false,
-            "flow-damage" to false,
-            "iceform-player" to false,
-            "iceform-world" to true,
-            "allow-fly" to true,
-            "teleport" to false,
-            "can-grow" to true,
-            "allow-spawners" to false,
-            "leaves-decay" to false,
-            "allow-effects" to false,
-            "redstone" to false,
-            "block-transform" to false,
-            "team" to false
+            "build"           to false,
+            "pvp"             to false,
+            "chest"           to true,
+            "ender-chest"     to true,
+            "lever"           to true,
+            "butn"            to true,
+            "door"            to true,
+            "smart-door"      to false,
+            "spawn-monsters"  to false,
+            "spawn-animals"   to true,
+            "passives"        to false,
+            "flow"            to true,
+            "flow-damage"     to false,
+            "fire"            to true,
+            "minecart"        to true,
+            "allow-home"      to false,
+            "use-potions"     to false,
+            "mob-loot"        to false,
+            "iceform-player"  to false,
+            "iceform-world"   to false,
+            "allow-fly"       to false,
+            "teleport"        to true,
+            "cant-grow"       to true,
+            "allow-spawners"  to false,
+            "leaves-decay"    to true,
+            "effects"         to true,
+            "redsne"          to false,
+            "block-transform" to true,
+            "team"            to false
         )
 
         try {
             connection.use { conn ->
                 conn.autoCommit = false 
 
-                // 1. Dodajemy działkę
                 val plotId: Int
                 val insertPlotSql = """
                 INSERT INTO plots (owner_uuid, x, z, radius, world, name, creation_time)
@@ -525,7 +524,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
 
         if (newName == null && newRadius == null) {
-            logger.warning("Brak danych do aktualizacji dla plot_id=$plotId.")
+            logger.debug("Brak danych do aktualizacji dla plot_id=$plotId.")
             return false
         }
 
