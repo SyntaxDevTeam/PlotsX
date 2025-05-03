@@ -6,6 +6,7 @@ import org.bukkit.entity.Player
 import org.jetbrains.annotations.NotNull
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
+import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 
 @Suppress("UnstableApiUsage")
 class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
@@ -18,8 +19,8 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
         val x = location.blockX
         val z = location.blockZ
 
-        if (!stack.sender.hasPermission("plotsx.cmd.unclaim")) {
-            plugin.messageHandler.getMessage("error", "no_permission")
+        if (!PermissionChecker.canUnclaimPlot(player)) {
+            player.sendMessage(plugin.messageHandler.getMessage("error", "no_permission"))
             return
         }
         // TODO: Pozmieniać komunikaty na messages.yml
@@ -39,15 +40,6 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
             player.sendMessage("§cWystąpił błąd podczas usuwania działki.")
             return
         }
-
-        dbh.logPlotAction(
-            PlotLogEntry(
-                plotId = currentPlot.id,
-                action = "DELETE",
-                actorUUID = player.uniqueId,
-                timestamp = System.currentTimeMillis()
-            )
-        )
 
         player.sendMessage(plugin.messageHandler.getMessage("plots", "unclaim_success"))
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
