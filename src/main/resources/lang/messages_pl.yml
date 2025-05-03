@@ -45,6 +45,7 @@ GUI:
       plot_name: "<green>Nazwa:</green> <white>{plot}"
       id: "<green>ID:</green> <white>{id}"
       creation_time: "<green>Utworzona:</green> <white>{time}"
+      click: "<newline><white>Kliknij, aby zobaczyć granice</white>"
     list_title: "<b>Lista Twoich działek:</b>"
   flags:
     title: "<b>Ustawienia flag</b>"
