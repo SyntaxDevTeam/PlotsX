@@ -87,11 +87,13 @@ class CacheManager(private val plugin: PlotsX) {
         })
     }
 
-    fun updateFlagCacheAsync(plotId: Int, after: () -> Unit) {
+    fun updateFlagCacheAsync(plotId: Int, onComplete: () -> Unit = {}) {
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+            //plugin.logger.warning("[DEBUG] → Rozpoczynam updateFlagCacheAsync($plotId)")
             val flags = databaseHandler.getPlotFlags(plotId)
             flagCache[plotId] = flags
-            plugin.server.scheduler.runTask(plugin, after)
+            //plugin.logger.warning("[DEBUG] → Cache po update: ${flags.entries.joinToString()}")
+            plugin.server.scheduler.runTask(plugin, onComplete)
         })
     }
 
@@ -113,7 +115,7 @@ class CacheManager(private val plugin: PlotsX) {
         plotCache.clear()
         flagCache.clear()
         memberCache.clear()
-        plugin.logger.debug("Cache został wyczyszczony synchronicznie (działki, flagi, członkowie).")
+        //plugin.logger.debug("Cache został wyczyszczony synchronicznie (działki, flagi, członkowie).")
     }
 
     /** Synchronous reload of all caches **/
@@ -121,6 +123,6 @@ class CacheManager(private val plugin: PlotsX) {
         refreshPlotCacheSync()
         refreshFlagCacheSync()
         refreshMemberCacheSync()
-        plugin.logger.debug("Cache odświeżony synchronicznie (działki, flagi, członkowie).")
+        //plugin.logger.debug("Cache odświeżony synchronicznie (działki, flagi, członkowie).")
     }
 }
