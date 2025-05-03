@@ -1,16 +1,14 @@
 package pl.syntaxdevteam.plotsx.gui
 
-import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
-import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.SkullMeta
 import pl.syntaxdevteam.plotsx.PlotsX
+import pl.syntaxdevteam.plotsx.databases.Helpers
 import pl.syntaxdevteam.plotsx.databases.PlotData
-import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -23,8 +21,7 @@ class PlotGUI(
 ) {
 
     private val message = plugin.messageHandler
-
-    // sloty
+    private val helpers = Helpers(plugin)
     private val plotIndex  = 13
     private val flagsIndex = 20
     private val tpaIndex   = 24
@@ -43,7 +40,6 @@ class PlotGUI(
             return
         }
 
-        // przygotuj itemy
         inventory.setItem(plotIndex,  createPlotHead(player, targetPlot))
         inventory.setItem(flagsIndex, createItem(
             Material.CALIBRATED_SCULK_SENSOR,
@@ -58,27 +54,25 @@ class PlotGUI(
             message.getCleanMessage("GUI", "plot.material_name.list")
         ))
 
-        super.open(player)  // otwiera inventory i zostawia ślad w GUIHandlerze
+        super.open(player)
     }
 
     override fun handleClick(event: InventoryClickEvent) {
-        // tylko nasze inventory
         if (!isThisInventory(event.inventory)) return
 
         event.isCancelled = true
         val player = event.whoClicked as? Player ?: return
 
-        // najpierw wyrejestruj i zamknij
         plugin.guiHandler.unregisterGui(player)
         player.closeInventory()
+        val pd = plot ?: plugin.databaseHandler.getPlotAtLocation(
+            player.location.world!!.name,
+            player.location.blockX,
+            player.location.blockZ
+        )
 
         when (event.slot) {
             flagsIndex -> {
-                val pd = plot ?: plugin.databaseHandler.getPlotAtLocation(
-                    player.location.world!!.name,
-                    player.location.blockX,
-                    player.location.blockZ
-                )
                 if (pd == null) {
                     player.sendMessage(message.getMessage("error", "no_in_plot"))
                 } else {
@@ -86,7 +80,7 @@ class PlotGUI(
                 }
             }
             tpaIndex -> {
-                // tu wstaw swoją logikę TP
+                // tu wstawię logikę TP ale... nieco później xD
                 player.sendMessage("Teleportuję na działkę…")
             }
             listIndex -> {
@@ -95,7 +89,17 @@ class PlotGUI(
                 plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots))
             }
             plotIndex -> {
-                // np. otwarcie dodatkowych info albo nic
+                plugin.server.scheduler.runTask(plugin, Runnable {
+                    helpers.visualizePlotBorder3D(
+                        player    = player,
+                        centerX   = pd!!.x,
+                        centerZ   = pd.z,
+                        radius    = pd.radius,
+                        durationSec = 10,
+                        stepXZ      = 2,
+                        stepY    = 8
+                    )
+                })
             }
         }
     }
@@ -123,7 +127,8 @@ class PlotGUI(
         val lore = listOf(
             message.getLogMessage("GUI", "plot.info.plot_name",    mapOf("plot" to plot.name)),
             message.getLogMessage("GUI", "plot.info.id",           mapOf("id"   to plot.id.toString())),
-            message.getLogMessage("GUI", "plot.info.creation_time",mapOf("time" to creationTime))
+            message.getLogMessage("GUI", "plot.info.creation_time",mapOf("time" to creationTime)),
+            message.getLogMessage("GUI", "plot.info.click")
         )
         meta.lore(lore)
         skull.itemMeta = meta
