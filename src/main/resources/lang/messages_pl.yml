@@ -37,7 +37,7 @@ GUI:
   plot:
     title_plot: "<b>Ustawienia dla działki"
     material_name:
-      info: "<gold>Informacje o działce</gold>"
+      info: "<gold><bold>Informacje o działce</bold></gold>"
       flags: "<color:#852579>Ustawienia flag</color>"
       teleport: "<color:#aa2244>Teleportuj się do działki</color>"
       list: "<gold>Lista działek</gold>"
@@ -45,7 +45,7 @@ GUI:
       plot_name: "<green>Nazwa:</green> <white>{plot}"
       id: "<green>ID:</green> <white>{id}"
       creation_time: "<green>Utworzona:</green> <white>{time}"
-      click: "<newline><white>Kliknij, aby zobaczyć granice</white>"
+      click: "<white>Kliknij, aby zobaczyć granice</white>"
     list_title: "<b>Lista Twoich działek:</b>"
   flags:
     title: "<b>Ustawienia flag</b>"
@@ -150,8 +150,11 @@ flags:
     name: "Blokowanie mikstur"
     description: "Blokuje działanie efektów mikstur"
   redstone:
-    name: "Zezwolenie na redstone"
-    description: "Pozwala obcym korzystać z redstone (nie wliczając dźwigni/przycisków)"
+    name: "Zezwolenie na użycie redstone"
+    description: "Pozwala obcym korzystać z redstone (nie wliczając dźwigni, przycisków i płytek naciskowych)"
+  utility:
+    name: "Zezwolenie na użycie bloków użytkowych"
+    description: "Pozwala obcym używać bloków użytkowych (np. piecyki, kowadłą, strzały)"
   block-transform:
     name: "Blokowanie przemian bloków"
     description: "Blokuje przemiany bloków (np. beton)"
