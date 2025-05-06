@@ -2,6 +2,7 @@ package pl.syntaxdevteam.plotsx.protection
 
 import org.bukkit.Material
 import org.bukkit.block.Block
+import org.bukkit.block.BlockFace
 import org.bukkit.block.Dispenser
 import org.bukkit.block.data.Directional
 import org.bukkit.block.data.Openable
@@ -14,6 +15,7 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockDispenseEvent
 import org.bukkit.event.block.BlockFromToEvent
+import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.block.BlockPistonExtendEvent
 import org.bukkit.event.block.BlockPistonRetractEvent
 import org.bukkit.event.block.BlockPlaceEvent
@@ -36,7 +38,6 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     private val message = plugin.messageHandler
     private val playerLastPlot = mutableMapOf<UUID, Int?>()
     private val toggling: MutableSet<Block> = mutableSetOf()
-
     private val aggressiveMobs: Set<EntityType> by lazy { PlotCompat.loadAggressiveMobs() }
     private val passiveMobs: Set<EntityType>   by lazy { PlotCompat.loadPassiveMobs() }
     private val doorsAndGates: Set<Material>   by lazy { PlotCompat.loadDoorsAndGates() }
@@ -44,8 +45,18 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     private val containers: Set<Material>      by lazy { PlotCompat.loadContainers() }
     private val enderChest: Set<Material>      by lazy { PlotCompat.loadEnderChest() }
     private val dispenserBuckets: Set<Material> by lazy { PlotCompat.loadDispenserBucketMaterials() }
+    private val damageableByFlow: Set<Material> by lazy { PlotCompat.loadDamageableByFlow() }
+    private val utilityBlocks: Set<Material> by lazy { PlotCompat.loadUtilityBlocks() }
 
 
+
+    /**
+     * Sprawdza, czy dany blok znajduje się w obrębie działki.
+     * @param world Świat, w którym znajduje się działka.
+     * @param x X-koordynata bloku.
+     * @param z Z-koordynata bloku.
+     * @return Obiekt PlotData, jeśli blok znajduje się w obrębie działki, lub null, jeśli nie.
+     */
     private fun getPlotAtLocation(world: String, x: Int, z: Int): PlotData? {
         return plugin.cacheManager.getCachedPlots().firstOrNull { plot ->
             plot.world.equals(world, ignoreCase = true) &&
@@ -54,11 +65,25 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
+    /**
+     * Przywraca blok do jego oryginalnego stanu.
+     * Zapobiega powstawaniu bloków ducha
+     * @param block Blok, który ma zostać przywrócony.
+     */
     private fun cancelAndRestore(block: Block) {
         block.state.update(true, false)
         logger.debug("[cancelAndRestore] Restoring block at ${block.location.blockX},${block.location.blockZ} to its original state.")
     }
 
+    /**
+     * Sprawdza, czy gracz ma odpowiednie uprawnienia do działania na działce.
+     * Sprawdza po uprawnieniach, czy jest członkiem lub właścicielem działki oraz flagi.
+     *
+     * @param player Gracz, którego uprawnienia mają zostać sprawdzone.
+     * @param plot Działka, na której gracz chce działać.
+     * @param flag Flaga, która ma zostać sprawdzona.
+     * @return true, jeśli gracz ma odpowiednie uprawnienia, false w przeciwnym razie.
+     */
     private fun hasPlotPermission(player: Player, plot: PlotData, flag: String): Boolean {
         if (hasBypass(player)) return true
         if (player.uniqueId == plot.ownerUuid) return true
@@ -87,7 +112,11 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
-
+    /**
+     * Funkcja debugująca
+     * Wypisuje wszystkie flagi i ich domyślne wartości.
+     */
+    @Suppress("unused")
     private fun printAllFlagBehaviors() {
         PlotFlagRegistry.allFlags.forEach { (key, def) ->
             println("Flaga $key: default=${def.defaultValue}, typ=${def.type}, efektDlaObcego=${when (def.type) {
@@ -97,10 +126,22 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
+    /**
+     * Has bypass (TODO: użyć PermissionChecker)
+     *
+     * @param player
+     * @return
+     */
     private fun hasBypass(player: Player): Boolean {
         return player.isOp //|| player.hasPermission("plotsx.plot.bypass")
     }
 
+    /**
+     * Zdarzenie wywoływane, gdy gracz wchodzi na działkę.
+     * Sprawdza, czy gracz zmienił działkę i wysyła odpowiednie wiadomości.
+     *
+     * @param event Zdarzenie ruchu gracza.
+     */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     fun onPlayerMove(event: PlayerMoveEvent) {
         val player = event.player
@@ -131,6 +172,12 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
+    /**
+     * Zdarzenie wywoływane, gdy gracz umieszcza blok.
+     * Sprawdza, czy gracz ma odpowiednie uprawnienia do umieszczania bloków na działce.
+     *
+     * @param event Zdarzenie umieszczania bloku.
+     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onBlockPlace(event: BlockPlaceEvent) {
         val player = event.player
@@ -148,6 +195,12 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
+    /**
+     * Zdarzenie wywoływane, gdy gracz niszczy blok.
+     * Sprawdza, czy gracz ma odpowiednie uprawnienia do niszczenia bloków na działce.
+     *
+     * @param event Zdarzenie niszczenia bloku.
+     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onBlockBreak(event: BlockBreakEvent) {
         val player = event.player
@@ -165,6 +218,12 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
+    /**
+     * Zdarzenie wywoływane, gdy blok zmienia się w inny blok (np. przez grawitację). TODO: Przetestować ponownie!!!
+     * Sprawdza, czy gracz ma odpowiednie uprawnienia do zmiany bloków na działce.
+     *
+     * @param event Zdarzenie zmiany bloku.
+     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onFallingBlock(event: EntityChangeBlockEvent) {
         if (event.entityType != EntityType.FALLING_BLOCK) return
@@ -181,57 +240,6 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
-    fun onLiquidFlow(event: BlockFromToEvent) {
-        val loc = event.block.location
-        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ)
-            ?: getPlotAtLocation(event.toBlock.location.world.name, event.toBlock.location.blockX, event.toBlock.location.blockZ)
-
-        logger.debug("BlockFromToEvent at ${loc.blockX},${loc.blockZ} => plot=${plot?.id}")
-        if (plot != null && plugin.cacheManager.getFlags(plot.id)?.get("flow") == false) {
-            event.isCancelled = true
-        }
-    }
-
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
-    fun onBucketEmpty(event: PlayerBucketEmptyEvent) {
-        val player = event.player
-        val loc = event.block.location
-        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
-        logger.debug("PlayerBucketEmptyEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
-        if (!hasPlotPermission(player, plot, "build")) {
-            event.isCancelled = true
-            player.sendMessage(message.getMessage("flags", "flow.not_allowed"))
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
-    fun onBucketFill(event: PlayerBucketFillEvent) {
-        val player = event.player
-        val loc = event.block.location
-        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
-
-        logger.debug("PlayerBucketFillEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
-        if (!hasPlotPermission(player, plot, "build")) {
-            event.isCancelled = true
-            player.sendMessage(message.getMessage("flags", "flow.bucket_not_allowed"))
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
-    fun onBucketEntity(event: PlayerBucketEntityEvent) {
-        val player = event.player
-        val entity = event.entity
-        val loc = entity.location
-        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
-
-        logger.debug("PlayerBucketEntityEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
-        if (!hasPlotPermission(player, plot, "build")) {
-            event.isCancelled = true
-            player.sendMessage(message.getMessage("flags", "flow.bucket_not_allowed"))
-        }
-    }
     /**
     * Zablokuj wpychanie/przesuwanie bloków na lub z działek.
     */
@@ -262,7 +270,6 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     fun onPistonRetract(event: BlockPistonRetractEvent) {
         if (!event.isSticky) return
 
-        // wektor „przyciągania” – odwrotność extend, ale dla simplicity patrzymy tylko na miejsce tłoka
         for (block in event.blocks) {
             val from = block.location
             val to   = event.block.location
@@ -311,6 +318,11 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
+    /**
+     * Spawnowanie potworów i zwierząt na działkach
+     *
+     * @param event
+     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onCreatureSpawn(event: CreatureSpawnEvent) {
         val loc = event.location
@@ -333,15 +345,16 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
-    fun onPlayaerInteract(event: PlayerInteractEvent) {
+    fun onPlayerInteract(event: PlayerInteractEvent) {
         if (event.action != Action.RIGHT_CLICK_BLOCK || event.hand != EquipmentSlot.HAND) return
+
         val player = event.player
         val block = event.clickedBlock ?: return
-        val loc = block.location
-        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+        val plot = getPlotAtLocation(block.world.name, block.x, block.z) ?: return
 
-        // --- 1) Kontenery ---
-        when (block.type) {
+        val mat = block.type
+
+        when (mat) {
             in containers -> {
                 if (!hasPlotPermission(player, plot, "chest")) {
                     event.isCancelled = true
@@ -362,28 +375,35 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                     player.sendMessage(message.getMessage("flags", "ender-chest.not_allowed"))
                 }
                 return
-            }else -> {
-                // Do nothing
+            }
+            in utilityBlocks -> {
+                if (block.type in utilityBlocks) {
+                    if (!hasPlotPermission(player, plot, "utility")) {
+                        event.isCancelled = true
+                        player.sendMessage(message.getMessage("flags", "utility.not_allowed"))
+                    }
+                    return
+                }
+            }
+            else -> {
+                // nic nie rób xD
             }
         }
 
-        // --- 2) Drzwi / bramy / trapdoory ---
-        if (block.type in doorsAndGates) {
-            // A) SMART-DOOR dla żelaznych drzwi + automatyczne przełączenie pary
-            if (block.type == Material.IRON_DOOR && hasPlotPermission(player, plot, "smart-door")) {
+        if (mat in doorsAndGates) {
+            val data = block.blockData
+            if (data is Openable && hasPlotPermission(player, plot, "smart-door")) {
                 if (!toggling.add(block)) return
                 plugin.server.scheduler.runTaskLater(plugin, Runnable { toggling.remove(block) }, 20L)
 
                 toggleOpenState(block)
-                for (face in arrayOf(
-                    org.bukkit.block.BlockFace.NORTH,
-                    org.bukkit.block.BlockFace.SOUTH,
-                    org.bukkit.block.BlockFace.EAST,
-                    org.bukkit.block.BlockFace.WEST
+                for (face in listOf(
+                    BlockFace.NORTH, BlockFace.SOUTH,
+                    BlockFace.EAST,  BlockFace.WEST
                 )) {
-                    val neighbor = block.getRelative(face)
-                    if (neighbor.type == block.type) {
-                        toggleOpenState(neighbor)
+                    val neighbour = block.getRelative(face)
+                    if (neighbour.type == mat) {
+                        toggleOpenState(neighbour)
                         break
                     }
                 }
@@ -392,12 +412,10 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 return
             }
 
-            // B) Zwykłe drzwi/trapdoory/fence_gate
             if (!hasPlotPermission(player, plot, "door")) {
                 event.isCancelled = true
                 player.sendMessage(message.getMessage("flags", "door.not_allowed"))
             }
-            // jeżeli ma flagę "door", to pozwalamy na domyślną obsługę
             return
         }
     }
@@ -408,4 +426,77 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         block.blockData = openable
     }
 
+    private fun isFlowAllowed(plotId: Int): Boolean =
+        plugin.cacheManager.getFlags(plotId)?.get("flow") != false
+
+    private fun isFlowDamageAllowed(plotId: Int): Boolean =
+        plugin.cacheManager.getFlags(plotId)?.get("flow-damage") != false
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onBucketEmpty(event: PlayerBucketEmptyEvent) {
+        val player = event.player
+        val plot = getPlotAtLocation(
+            event.block.world.name, event.block.x, event.block.z
+        ) ?: return
+
+        if (!hasPlotPermission(player, plot, "build")) {
+            event.isCancelled = true
+            player.sendMessage(message.getMessage("flags", "build.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onBucketFill(event: PlayerBucketFillEvent) {
+        val player = event.player
+        val plot = getPlotAtLocation(
+            event.block.world.name, event.block.x, event.block.z
+        ) ?: return
+
+        if (!hasPlotPermission(player, plot, "build")) {
+            event.isCancelled = true
+            player.sendMessage(message.getMessage("flags", "build.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onBucketEntity(event: PlayerBucketEntityEvent) {
+        val player = event.player
+        val loc = event.entity.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!hasPlotPermission(player, plot, "build")) {
+            event.isCancelled = true
+            player.sendMessage(message.getMessage("flags", "build.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onLiquidFlow(event: BlockFromToEvent) {
+        val plot = getPlotAtLocation(
+            event.block.world.name, event.block.x, event.block.z
+        ) ?: getPlotAtLocation(
+            event.toBlock.world.name, event.toBlock.x, event.toBlock.z
+        ) ?: return
+
+        if (!isFlowAllowed(plot.id)) {
+            event.isCancelled = true
+            return
+        }
+
+        if (!isFlowDamageAllowed(plot.id) && event.toBlock.type in damageableByFlow) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onBlockPhysics(event: BlockPhysicsEvent) {
+        if (event.changedType != Material.WATER && event.changedType != Material.LAVA) return
+        val block = event.block
+        if (block.type !in damageableByFlow) return
+
+        val plot = getPlotAtLocation(block.world.name, block.x, block.z) ?: return
+        if (!isFlowDamageAllowed(plot.id)) {
+            event.isCancelled = true
+        }
+    }
 }
