@@ -403,7 +403,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
             "chest"           to true,
             "ender-chest"     to true,
             "lever"           to true,
-            "butn"            to true,
+            "button"          to true,
             "door"            to true,
             "smart-door"      to false,
             "spawn-monsters"  to false,
@@ -424,7 +424,8 @@ class DatabaseHandler(private val plugin: PlotsX) {
             "allow-spawners"  to false,
             "leaves-decay"    to true,
             "effects"         to true,
-            "redsne"          to false,
+            "redstone"        to false,
+            "utility"         to false,
             "block-transform" to true,
             "team"            to false
         )
