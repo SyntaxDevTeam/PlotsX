@@ -11,56 +11,65 @@ class Helpers(private var plugin: PlotsX) {
      */
     fun visualizePlotBorder3D(
         player: Player,
-        centerX: Int,
-        centerZ: Int,
+        centerX: Int, centerZ: Int,
         radius: Int,
         durationSec: Int = 10,
-        stepXZ: Int = 2,
-        stepY: Int = 8
+        stepXZ: Int = 1,
+        stepY: Int = 4
     ) {
         val world = player.world
         val minX = centerX - radius
         val maxX = centerX + radius
         val minZ = centerZ - radius
         val maxZ = centerZ + radius
-        val minY = world.minHeight          // np. -64
-        val maxY = world.maxHeight - 1      // np. 319
+        val minY = world.minHeight
+        val maxY = world.maxHeight - 1
 
         val task = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
-            // 1) poziome krawędzie na ziemi
-            for (x in minX..maxX step stepXZ) {
-                listOf(minZ, maxZ).forEach { z ->
-                    val y = world.getHighestBlockYAt(x, z) + 1
-                    player.spawnParticle(Particle.END_ROD, x + .5, y.toDouble(), z + .5,
-                        1, 0.0,0.0,0.0, 0.0, null, true)
+            fun drawHorizontalAt(y: Int) {
+                for (x in minX..maxX step stepXZ) {
+                    listOf(minZ, maxZ).forEach { z ->
+                        player.spawnParticle(
+                            Particle.END_ROD,
+                            x + .5, y + .5, z + .5,
+                            1, 0.0, 0.0, 0.0, 0.0, null, true
+                        )
+                    }
                 }
-            }
-            for (z in minZ..maxZ step stepXZ) {
-                listOf(minX, maxX).forEach { x ->
-                    val y = world.getHighestBlockYAt(x, z) + 1
-                    player.spawnParticle(Particle.END_ROD, x + .5, y.toDouble(), z + .5,
-                        1, 0.0,0.0,0.0, 0.0, null, true)
+                for (z in minZ..maxZ step stepXZ) {
+                    listOf(minX, maxX).forEach { x ->
+                        player.spawnParticle(
+                            Particle.END_ROD,
+                            x + .5, y + .5, z + .5,
+                            1, 0.0, 0.0, 0.0, 0.0, null, true
+                        )
+                    }
                 }
             }
 
-            // 2) pionowe słupy cząsteczek w narożnikach
-            listOf(
-                Pair(minX, minZ),
-                Pair(minX, maxZ),
-                Pair(maxX, minZ),
-                Pair(maxX, maxZ)
-            ).forEach { (x, z) ->
-                for (y in minY..maxY step stepY) {
-                    player.spawnParticle(Particle.END_ROD, x + .5, y + .5, z + .5,
-                        1, 0.0,0.0,0.0, 0.0, null, true)
+            val groundY = world.getHighestBlockYAt(centerX, centerZ) + 1
+            drawHorizontalAt(groundY)
+
+            for (y in minY..maxY step stepY) {
+                drawHorizontalAt(y)
+                listOf(
+                    Pair(minX, minZ),
+                    Pair(minX, maxZ),
+                    Pair(maxX, minZ),
+                    Pair(maxX, maxZ)
+                ).forEach { (x, z) ->
+                    player.spawnParticle(
+                        Particle.END_ROD,
+                        x + .5, y + .5, z + .5,
+                        1, 0.0, 0.0, 0.0, 0.0, null, true
+                    )
                 }
             }
         }, 0L, 2L)
 
-        // anuluj po durationSec sekundach
         plugin.server.scheduler.runTaskLater(plugin, Runnable {
             task.cancel()
-            player.sendMessage("§e3D–Wizualizacja granic zakończona.")
+            player.sendRichMessage("[DEBUG] " + plugin.messageHandler.getPrefix() + " <gold>3D‐wizualizacja granic zakończona.")
         }, durationSec * 20L)
     }
 }
