@@ -9,6 +9,7 @@ import org.bukkit.inventory.meta.SkullMeta
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.Helpers
 import pl.syntaxdevteam.plotsx.databases.PlotData
+import net.kyori.adventure.text.Component
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -95,9 +96,9 @@ class PlotGUI(
                         centerX   = pd!!.x,
                         centerZ   = pd.z,
                         radius    = pd.radius,
-                        durationSec = 10,
+                        durationSec = 20,
                         stepXZ      = 2,
-                        stepY    = 8
+                        stepY    = 4
                     )
                 })
             }
@@ -128,6 +129,7 @@ class PlotGUI(
             message.getLogMessage("GUI", "plot.info.plot_name",    mapOf("plot" to plot.name)),
             message.getLogMessage("GUI", "plot.info.id",           mapOf("id"   to plot.id.toString())),
             message.getLogMessage("GUI", "plot.info.creation_time",mapOf("time" to creationTime)),
+            Component.text(" "),
             message.getLogMessage("GUI", "plot.info.click")
         )
         meta.lore(lore)
