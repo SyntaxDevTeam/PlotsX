@@ -23,7 +23,8 @@ object PlotCompat {
         "MOOSHROOM", "MULE", "OCELOT", "PANDA", "PARROT",
         "PIG", "PUFFERFISH", "RABBIT", "SALMON", "SHEEP",
         "SNIFFER", "SNOW_GOLEM", "SQUID", "STRIDER", "TADPOLE",
-        "TROPICAL_FISH", "TURTLE", "VILLAGER", "WANDERING_TRADER"
+        "TROPICAL_FISH", "TURTLE", "VILLAGER", "WANDERING_TRADER",
+        "WOLF", "ZOMBIE_HORSE", "LAMA"
     )
 
     val doorNames = listOf(
@@ -69,7 +70,7 @@ object PlotCompat {
         "IRON_PRESSURE_PLATE", "GOLD_PRESSURE_PLATE"
     )
 
-    val containerNames = listOf("CHEST", "TRAPPED_CHEST", "BARREL", "SHULKER_BOX")
+    val containerNames = listOf("CHEST", "TRAPPED_CHEST", "BARREL", "SHULKER_BOX", "CHEST_MINECART")
 
     val enderChestNames = listOf("ENDER_CHEST")
 
@@ -200,7 +201,34 @@ object PlotCompat {
         "CARTOGRAPHY_TABLE",
         "FLETCHING_TABLE",
         "LOOM",
-        "STONECUTTER"
+        "STONECUTTER",
+        "CHISELED_BOOKSHELF",
+        "JUKEBOX"
+    )
+
+    private val redstoneNames = listOf(
+        "REDSTONE_BLOCK",
+        "REDSTONE_TORCH",
+        "REDSTONE_WALL_TORCH",
+        "REDSTONE_LAMP",
+        "REPEATER",
+        "COMPARATOR",
+        "DAYLIGHT_DETECTOR",
+        "DAYLIGHT_DETECTOR_INVERTED",
+        "NOTE_BLOCK",
+        "DISPENSER",
+        "DROPPER",
+        "HOPPER",
+        "TARGET_BLOCK",
+        "CRAFTER",
+        "OBSERVER"
+    )
+
+    private val containerMinecartNames = listOf(
+        "CHEST_MINECART",
+        "HOPPER_MINECART",
+        "CHEST_BOAT",
+        "BARREL_BOAT"
     )
 
     // ----- Bezpieczne funkcje -----
@@ -239,4 +267,9 @@ object PlotCompat {
     fun loadUtilityBlocks(): Set<Material> =
         utilityBlockNames.mapNotNull(::safeMaterial).toSet()
 
+    fun loadRedstoneBlocks(): Set<Material> =
+        redstoneNames.mapNotNull(::safeMaterial).toSet()
+
+    fun loadContainerEntities(): Set<EntityType> =
+        containerMinecartNames.mapNotNull(::safeEntityType).toSet()
 }
