@@ -9,7 +9,7 @@ object PlotFlagRegistry {
         "lever"            to FlagDefinition("lever", true, FlagType.BLACKLIST), // ✅ ok
         "button"           to FlagDefinition("button", true, FlagType.BLACKLIST), // ✅ ok
         "redstone"         to FlagDefinition("redstone", false, FlagType.WHITELIST),
-        "utility"          to FlagDefinition("utility", false, FlagType.WHITELIST),
+        "utility"          to FlagDefinition("utility", false, FlagType.WHITELIST), // ✅ ok
         "door"             to FlagDefinition("door", true, FlagType.BLACKLIST), // ✅ ok
         "smart-door"       to FlagDefinition("smart-door", false, FlagType.WHITELIST), // ✅ ok
         "spawn-monsters"   to FlagDefinition("spawn-monsters", false, FlagType.WHITELIST), // ??
