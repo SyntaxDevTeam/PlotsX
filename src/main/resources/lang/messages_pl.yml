@@ -94,7 +94,7 @@ flags:
   passives:
     name: "Interakcje z mobami pasywnymi"
     description: "Blokuje interakcję i ataki na pasywne moby"
-    not_allowed: "<red>Nie możesz atakować mobów na tej działce.</red>"
+    not_allowed: "<red>Nie możesz wchodzić w interakcję z mobami na tej działce.</red>"
   flow:
     name: "Blokowanie przepływu cieczy"
     description: "Blokuje przepływ wody i lawy"
@@ -103,6 +103,7 @@ flags:
   fire:
     name: "Blokowanie ognia"
     description: "Blokuje eksplozje, ogień i jego rozprzestrzenianie"
+    not_allowed: "<red>Nie możesz używać ognia na tej działce.</red>"
   minecart:
     name: "Blokowanie wagoników"
     description: "Pozwala obcym umieszczać i niszczyć wagoniki/łodzie"
@@ -152,9 +153,11 @@ flags:
   redstone:
     name: "Zezwolenie na użycie redstone"
     description: "Pozwala obcym korzystać z redstone (nie wliczając dźwigni, przycisków i płytek naciskowych)"
+    not_allowed: "<red>Nie możesz używać redstone na tej działce.</red>"
   utility:
     name: "Zezwolenie na użycie bloków użytkowych"
     description: "Pozwala obcym używać bloków użytkowych (np. piecyki, kowadłą, strzały)"
+    not_allowed: "<red>Nie możesz używać bloków użytkowych na tej działce.</red>"
   block-transform:
     name: "Blokowanie przemian bloków"
     description: "Blokuje przemiany bloków (np. beton)"
