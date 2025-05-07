@@ -7,23 +7,31 @@ import org.bukkit.block.Dispenser
 import org.bukkit.block.data.Directional
 import org.bukkit.block.data.Openable
 import org.bukkit.entity.EntityType
+import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockBurnEvent
 import org.bukkit.event.block.BlockDispenseEvent
+import org.bukkit.event.block.BlockFadeEvent
 import org.bukkit.event.block.BlockFromToEvent
+import org.bukkit.event.block.BlockIgniteEvent
 import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.block.BlockPistonExtendEvent
 import org.bukkit.event.block.BlockPistonRetractEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
+import org.bukkit.event.entity.EntityDamageByBlockEvent
+import org.bukkit.event.entity.EntityDamageByEntityEvent
+import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.player.PlayerBucketEmptyEvent
 import org.bukkit.event.player.PlayerBucketEntityEvent
 import org.bukkit.event.player.PlayerBucketFillEvent
+import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.inventory.EquipmentSlot
@@ -47,8 +55,8 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     private val dispenserBuckets: Set<Material> by lazy { PlotCompat.loadDispenserBucketMaterials() }
     private val damageableByFlow: Set<Material> by lazy { PlotCompat.loadDamageableByFlow() }
     private val utilityBlocks: Set<Material> by lazy { PlotCompat.loadUtilityBlocks() }
-
-
+    private val redstoneNames: Set<Material> by lazy { PlotCompat.loadRedstoneBlocks() }
+    private val containerEntities: Set<EntityType> by lazy { PlotCompat.loadContainerEntities() }
 
     /**
      * Sprawdza, czy dany blok znajduje się w obrębie działki.
@@ -107,10 +115,27 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         )
 
         return when (flagDefinition.type) {
-            FlagType.WHITELIST -> value     // true = pozwól obcemu
-            FlagType.BLACKLIST -> !value    // true = blokuj → !true = false
+            FlagType.WHITELIST -> value
+            FlagType.BLACKLIST -> !value
         }
     }
+
+    /**
+     * Sprawdza, jak flaga na działce jest/powinna być ustawiona.
+     * @param plotId ID działki.
+     * @param flag Flaga, która ma zostać sprawdzona.
+     * @return true, jeśli flaga jest dozwolona, false w przeciwnym razie.
+     */
+    private fun isFlagAllowed(plotId: Int, flag: String): Boolean {
+        val def = PlotFlagRegistry.allFlags[flag] ?: return false
+        val flags = plugin.cacheManager.getFlags(plotId) ?: emptyMap()
+        val value = flags[flag] ?: def.defaultValue
+        return when (def.type) {
+            FlagType.WHITELIST -> value
+            FlagType.BLACKLIST -> !value
+        }
+    }
+
 
     /**
      * Funkcja debugująca
@@ -385,6 +410,15 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                     return
                 }
             }
+            in redstoneNames -> {
+                if (block.type in redstoneNames) {
+                    if (!hasPlotPermission(player, plot, "redstone")) {
+                        event.isCancelled = true
+                        player.sendMessage(message.getMessage("flags", "redstone.not_allowed"))
+                    }
+                    return
+                }
+            }
             else -> {
                 // nic nie rób xD
             }
@@ -420,17 +454,27 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onPlayerInteractContainerEntity(event: PlayerInteractEntityEvent) {
+        val player = event.player
+        val clicked = event.rightClicked
+
+        if (clicked.type !in containerEntities) return
+
+        val loc = clicked.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!hasPlotPermission(player, plot, "minecart")) {
+            event.isCancelled = true
+            player.sendMessage(message.getMessage("flags", "minecart.not_allowed"))
+        }
+    }
+
     private fun toggleOpenState(block: Block) {
         val openable = block.blockData as? Openable ?: return
         openable.isOpen = !openable.isOpen
         block.blockData = openable
     }
-
-    private fun isFlowAllowed(plotId: Int): Boolean =
-        plugin.cacheManager.getFlags(plotId)?.get("flow") != false
-
-    private fun isFlowDamageAllowed(plotId: Int): Boolean =
-        plugin.cacheManager.getFlags(plotId)?.get("flow-damage") != false
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onBucketEmpty(event: PlayerBucketEmptyEvent) {
@@ -458,6 +502,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
+    // TODO: Sprawdzić, czy można podpiąć to pod inną flagę
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onBucketEntity(event: PlayerBucketEntityEvent) {
         val player = event.player
@@ -478,12 +523,12 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             event.toBlock.world.name, event.toBlock.x, event.toBlock.z
         ) ?: return
 
-        if (!isFlowAllowed(plot.id)) {
+        if (!isFlagAllowed(plot.id, "flow")) {
             event.isCancelled = true
             return
         }
 
-        if (!isFlowDamageAllowed(plot.id) && event.toBlock.type in damageableByFlow) {
+        if (!isFlagAllowed(plot.id, "flow-damage") && event.toBlock.type in damageableByFlow) {
             event.isCancelled = true
         }
     }
@@ -495,8 +540,111 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         if (block.type !in damageableByFlow) return
 
         val plot = getPlotAtLocation(block.world.name, block.x, block.z) ?: return
-        if (!isFlowDamageAllowed(plot.id)) {
+        if (!isFlagAllowed(plot.id, "flow-damage")) {
             event.isCancelled = true
         }
     }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onPlayerInteractPassiveMob(event: PlayerInteractEntityEvent) {
+        val clicked = event.rightClicked as? LivingEntity ?: return
+        if (clicked.type !in passiveMobs) return
+
+        val plot = getPlotAtLocation(
+            clicked.world.name,
+            clicked.location.blockX,
+            clicked.location.blockZ
+        ) ?: return
+
+        if (!hasPlotPermission(event.player, plot, "passives")) {
+            event.isCancelled = true
+            event.player.sendMessage(
+                message.getMessage("flags", "passives.not_allowed")
+            )
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onEntityDamageByPlayer(event: EntityDamageByEntityEvent) {
+        val attacker = event.damager as? Player ?: return
+        val victim = event.entity
+        if (victim.type !in passiveMobs) return
+
+        val plot = getPlotAtLocation(
+            victim.world.name,
+            victim.location.blockX,
+            victim.location.blockZ
+        ) ?: return
+        if (plot.ownerUuid == attacker.uniqueId) return
+        if (!hasPlotPermission(attacker, plot, "passives")) {
+            event.isCancelled = true
+            attacker.sendMessage(message.getMessage("flags", "passives.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onPlayerUseFlintAndSteel(event: PlayerInteractEvent) {
+        if (event.action != Action.RIGHT_CLICK_BLOCK) return
+        val item = event.player.inventory.itemInMainHand.type
+        if (item != Material.FLINT_AND_STEEL) return
+
+        val block = event.clickedBlock ?: return
+        val plot = getPlotAtLocation(block.world.name, block.x, block.z) ?: return
+
+        if (!isFlagAllowed(plot.id, "fire")) {
+            event.isCancelled = true
+            event.player.sendMessage(message.getMessage("flags", "fire.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onBlockIgnite(event: BlockIgniteEvent) {
+        val loc = event.block.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!isFlagAllowed(plot.id, "fire")) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onBlockBurn(event: BlockBurnEvent) {
+        val plot = getPlotAtLocation(
+            event.block.world.name, event.block.x, event.block.z
+        ) ?: return
+
+        if (!isFlagAllowed(plot.id, "fire")) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onBlockFade(event: BlockFadeEvent) {
+        val plot = getPlotAtLocation(
+            event.block.world.name, event.block.x, event.block.z
+        ) ?: return
+
+        if (!isFlagAllowed(plot.id, "fire")) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onEntityDamageByBlock(event: EntityDamageByBlockEvent) {
+        val cause = event.cause
+        if (cause != EntityDamageEvent.DamageCause.FIRE && cause != EntityDamageEvent.DamageCause.FIRE_TICK && cause != EntityDamageEvent.DamageCause.LAVA) return
+
+        val plot = getPlotAtLocation(
+            event.entity.world.name,
+            event.entity.location.blockX,
+            event.entity.location.blockZ
+        ) ?: return
+
+        if (!isFlagAllowed(plot.id, "fire")) {
+            event.isCancelled = true
+        }
+    }
+
+
+
 }
