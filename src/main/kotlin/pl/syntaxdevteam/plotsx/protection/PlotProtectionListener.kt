@@ -9,6 +9,7 @@ import org.bukkit.block.data.Openable
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -34,6 +35,7 @@ import org.bukkit.event.player.PlayerBucketFillEvent
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
+import org.bukkit.event.vehicle.VehicleEnterEvent
 import org.bukkit.inventory.EquipmentSlot
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.compat.PlotCompat
@@ -454,22 +456,6 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
-    fun onPlayerInteractContainerEntity(event: PlayerInteractEntityEvent) {
-        val player = event.player
-        val clicked = event.rightClicked
-
-        if (clicked.type !in containerEntities) return
-
-        val loc = clicked.location
-        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
-
-        if (!hasPlotPermission(player, plot, "minecart")) {
-            event.isCancelled = true
-            player.sendMessage(message.getMessage("flags", "minecart.not_allowed"))
-        }
-    }
-
     private fun toggleOpenState(block: Block) {
         val openable = block.blockData as? Openable ?: return
         openable.isOpen = !openable.isOpen
@@ -502,7 +488,6 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
-    // TODO: Sprawdzić, czy można podpiąć to pod inną flagę
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onBucketEntity(event: PlayerBucketEntityEvent) {
         val player = event.player
@@ -542,25 +527,6 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = getPlotAtLocation(block.world.name, block.x, block.z) ?: return
         if (!isFlagAllowed(plot.id, "flow-damage")) {
             event.isCancelled = true
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
-    fun onPlayerInteractPassiveMob(event: PlayerInteractEntityEvent) {
-        val clicked = event.rightClicked as? LivingEntity ?: return
-        if (clicked.type !in passiveMobs) return
-
-        val plot = getPlotAtLocation(
-            clicked.world.name,
-            clicked.location.blockX,
-            clicked.location.blockZ
-        ) ?: return
-
-        if (!hasPlotPermission(event.player, plot, "passives")) {
-            event.isCancelled = true
-            event.player.sendMessage(
-                message.getMessage("flags", "passives.not_allowed")
-            )
         }
     }
 
@@ -645,6 +611,57 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onPlayerInteractEntity(event: PlayerInteractEntityEvent) {
+        val player = event.player
+        val ent    = event.rightClicked
+        val plot = getPlotAtLocation(ent.world.name, ent.location.blockX, ent.location.blockZ)
+            ?: return
 
+        // 1) Pasywne moby (karmienie, name-tag, wsiadanie etc.)
+        if (ent is LivingEntity && ent.type in passiveMobs) {
+            if (!hasPlotPermission(player, plot, "passives")) {
+                event.isCancelled = true
+                player.sendMessage(message.getMessage("flags","passives.not_allowed"))
+            }
+            return
+        }
 
+        // 2) Kontenerowe encje (chest‐minecart, chest‐boat, hopper‐minecart, boarding)
+        if (ent.type in containerEntities) {
+            if (!hasPlotPermission(player, plot, "minecart")) {
+                event.isCancelled = true
+                player.sendMessage(message.getMessage("flags","minecart.not_allowed"))
+            }
+            return
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onEntityDamageByEntity(event: EntityDamageByEntityEvent) {
+        val player = event.damager as? Player ?: return
+        val veh    = event.entity
+        if (veh.type in containerEntities) {
+            val plot = getPlotAtLocation(veh.world.name, veh.location.blockX, veh.location.blockZ)
+                ?: return
+            if (!hasPlotPermission(player, plot, "minecart")) {
+                event.isCancelled = true
+                player.sendMessage(message.getMessage("flags","minecart.not_allowed"))
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    fun onVehicleEnter(event: VehicleEnterEvent) {
+        val player  = event.entered as? Player ?: return
+        val vehicle = event.vehicle
+        if (vehicle.type in containerEntities) {
+            val plot = getPlotAtLocation(vehicle.world.name, vehicle.location.blockX, vehicle.location.blockZ)
+                ?: return
+            if (!hasPlotPermission(player, plot, "minecart")) {
+                event.isCancelled = true
+                player.sendMessage(message.getMessage("flags","minecart.not_allowed"))
+            }
+        }
+    }
 }
