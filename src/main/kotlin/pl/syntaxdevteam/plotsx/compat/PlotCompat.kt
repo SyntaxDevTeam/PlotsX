@@ -225,10 +225,16 @@ object PlotCompat {
     )
 
     private val containerMinecartNames = listOf(
-        "CHEST_MINECART",
-        "HOPPER_MINECART",
-        "CHEST_BOAT",
-        "BARREL_BOAT"
+        "CHEST_MINECART", "HOPPER_MINECART", "TNT_MINECART",
+        "MINECART", "CHEST_BOAT", "BARREL_BOAT",
+        "OAK_BOAT", "WARPED_BOAT", "PALE_OAK_BOAT",
+        "SPRUCE_BOAT", "BIRCH_BOAT", "JUNGLE_BOAT",
+        "ACACIA_BOAT", "DARK_OAK_BOAT", "MANGROVE_BOAT",
+        "CRIMSON_BOAT", "BAMBOO_CHEST_RAFT",
+        "CHERRY_BOAT", "BAMBOO_RAFT", "OAK_CHEST_BOAT",
+        "SPRUCE_CHEST_BOAT", "BIRCH_CHEST_BOAT", "JUNGLE_CHEST_BOAT",
+        "ACACIA_CHEST_BOAT", "DARK_OAK_CHEST_BOAT", "MANGROVE_CHEST_BOAT",
+        "CHERRY_CHEST_BOAT", "BAMBOO_CHEST_BOAT", "CRIMSON_CHEST_BOAT"
     )
 
     // ----- Bezpieczne funkcje -----
