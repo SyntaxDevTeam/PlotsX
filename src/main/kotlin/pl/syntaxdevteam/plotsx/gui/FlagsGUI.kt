@@ -40,7 +40,7 @@ class FlagsGUI(
         "fire"            to Material.FLINT_AND_STEEL,
         "minecart"        to Material.MINECART,
         "allow-home"      to Material.COMPASS,
-        "use-potions"     to Material.SPLASH_POTION,
+        "use-potions"     to Material.EXPERIENCE_BOTTLE,
         "mob-loot"        to Material.MYCELIUM,
         "iceform-player"  to Material.SNOWBALL,
         "iceform-world"   to Material.ICE,
