@@ -29,17 +29,21 @@ import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.event.entity.EntityDamageByBlockEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.entity.PotionSplashEvent
 import org.bukkit.event.player.PlayerBucketEmptyEvent
 import org.bukkit.event.player.PlayerBucketEntityEvent
 import org.bukkit.event.player.PlayerBucketFillEvent
+import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.vehicle.VehicleEnterEvent
 import org.bukkit.inventory.EquipmentSlot
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.compat.PlotCompat
 import pl.syntaxdevteam.plotsx.databases.PlotData
+import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 import java.util.UUID
 
 class PlotProtectionListener(private val plugin: PlotsX) : Listener {
@@ -153,14 +157,8 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
-    /**
-     * Has bypass (TODO: użyć PermissionChecker)
-     *
-     * @param player
-     * @return
-     */
     private fun hasBypass(player: Player): Boolean {
-        return player.isOp //|| player.hasPermission("plotsx.plot.bypass")
+        return PermissionChecker.canBypassPlots(player)
     }
 
     /**
@@ -664,4 +662,60 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             }
         }
     }
+
+    /**
+     * Blokada komend /sethome i /home na cudzej działce, jeśli allow-home = false.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPlayerCommandPreprocess(event: PlayerCommandPreprocessEvent) {
+        val msg = event.message.lowercase()
+        if (!msg.startsWith("/home") && !msg.startsWith("/sethome")) return
+
+        val player = event.player
+        val loc = player.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        // jeśli nie ma prawa (bypass/owner/member) i flaga allow-home = false → cancel
+        if (!hasPlotPermission(player, plot, "allow-home")) {
+            event.isCancelled = true
+            player.sendMessage(message.getMessage("flags", "allow-home.not_allowed"))
+        }
+    }
+
+    /**
+     * Blokada picia mikstur (regularnych, splash, lingering), jeśli use-potions = false.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPlayerItemConsume(event: PlayerItemConsumeEvent) {
+        val player = event.player
+        val item = event.item.type
+        if (item != Material.POTION && item != Material.SPLASH_POTION && item != Material.LINGERING_POTION) return
+
+        val loc = player.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!hasPlotPermission(player, plot, "use-potions")) {
+            event.isCancelled = true
+            player.sendMessage(message.getMessage("flags", "use-potions.not_allowed"))
+        }
+    }
+
+    /**
+     * Blokada rzucania splash/lingering mikstur, jeśli use-potions = false.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPotionSplash(event: PotionSplashEvent) {
+        val shooter = event.entity.shooter as? Player ?: return
+
+        // lokalizacja GRACZA-rzucającego decyduje o pozwoleniu
+        val loc = shooter.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!hasPlotPermission(shooter, plot, "use-potions")) {
+            event.isCancelled = true
+            shooter.sendMessage(message.getMessage("flags", "use-potions.not_allowed"))
+        }
+    }
+
+    // TODO: DODAĆ METODE OBSŁUGI MIKSTUR TRWAŁYCH!
 }
