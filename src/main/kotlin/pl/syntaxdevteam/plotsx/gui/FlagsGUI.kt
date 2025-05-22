@@ -41,15 +41,15 @@ class FlagsGUI(
         "minecart"        to Material.MINECART,
         "allow-home"      to Material.COMPASS,
         "use-potions"     to Material.EXPERIENCE_BOTTLE,
-        "mob-loot"        to Material.MYCELIUM,
+        //"mob-loot"        to Material.MYCELIUM,
         "iceform-player"  to Material.SNOWBALL,
         "iceform-world"   to Material.ICE,
-        "allow-fly"       to Material.ELYTRA,
+        //"allow-fly"       to Material.ELYTRA,
         "teleport"        to Material.ENDER_PEARL,
         "can-grow"        to Material.WHEAT,
         "allow-spawners"  to Material.SPAWNER,
         "leaves-decay"    to Material.OAK_LEAVES,
-        "allow-effects"   to Material.BEACON,
+        "effects"         to Material.BEACON,
         "redstone"        to Material.REDSTONE,
         "utility"         to Material.FURNACE,
         "block-transform" to Material.MOSS_BLOCK,
@@ -66,7 +66,6 @@ class FlagsGUI(
 
             val current = flags[flagKey] ?: false
 
-            // Teksty
             val name    = message.getCleanMessage("flags", "$flagKey.name")
             val desc    = message.getCleanMessage("flags", "$flagKey.description")
             val descTl  = message.getCleanMessage("flags", "desc_title")
