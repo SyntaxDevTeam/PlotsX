@@ -47,8 +47,10 @@ GUI:
       creation_time: "<green>Utworzona:</green> <white>{time}"
       click: "<white>Kliknij, aby zobaczyć granice</white>"
     list_title: "<b>Lista Twoich działek:</b>"
+    list_click_hint: "<gray>Kliknij, aby zobaczyć opcję działki</gray>"
   flags:
     title: "<b>Ustawienia flag</b>"
+
 
 flags:
   desc_title: "Opis: "
@@ -144,12 +146,13 @@ flags:
   allow-spawners:
     name: "Zezwolenie na spawnery"
     description: "Pozwala obcym stawiać i niszczyć spawnery"
+    not_allowed: "<red>Nie możesz stawiać ani niszczyć spawnerów na tej działce.</red>"
   leaves-decay:
     name: "Blokowanie rozkładu liści"
     description: "Blokuje rozkładanie się liści"
-  allow-effects:
-    name: "Blokowanie mikstur"
-    description: "Blokuje działanie efektów mikstur"
+  effects:
+    name: "Blokowanie efektów"
+    description: "Blokuje działanie efektów (w tym mikstur)."
   redstone:
     name: "Zezwolenie na użycie redstone"
     description: "Pozwala obcym korzystać z redstone (nie wliczając dźwigni, przycisków i płytek naciskowych)"
