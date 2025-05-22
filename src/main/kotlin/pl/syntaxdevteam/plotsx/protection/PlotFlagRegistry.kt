@@ -13,18 +13,18 @@ object PlotFlagRegistry {
         "door"             to FlagDefinition("door", true, FlagType.BLACKLIST), // ✅ ok
         "smart-door"       to FlagDefinition("smart-door", false, FlagType.WHITELIST), // ✅ ok
         "spawn-monsters"   to FlagDefinition("spawn-monsters", false, FlagType.WHITELIST), // ??
-        "spawn-animals"    to FlagDefinition("spawn-animals", true, FlagType.BLACKLIST), // ??
+        "spawn-animals"    to FlagDefinition("spawn-animals", true, FlagType.WHITELIST), // ??
         "passives"         to FlagDefinition("passives", false, FlagType.WHITELIST),
         "flow"             to FlagDefinition("flow", true, FlagType.BLACKLIST), // ✅ ok
         "flow-damage"      to FlagDefinition("flow-damage", false, FlagType.WHITELIST), // ✅ ok
-        "fire"             to FlagDefinition("fire", true, FlagType.BLACKLIST),
-        "minecart"         to FlagDefinition("minecart", true, FlagType.BLACKLIST),
-        "allow-home"       to FlagDefinition("allow-home", false, FlagType.WHITELIST),
-        "use-potions"      to FlagDefinition("use-potions", false, FlagType.WHITELIST),
-        "mob-loot"         to FlagDefinition("mob-loot", false, FlagType.WHITELIST),
-        "iceform-player"   to FlagDefinition("iceform-player", false, FlagType.WHITELIST),
-        "iceform-world"    to FlagDefinition("iceform-world", false, FlagType.WHITELIST),
-        "allow-fly"        to FlagDefinition("allow-fly", false, FlagType.WHITELIST),
+        "fire"             to FlagDefinition("fire", true, FlagType.BLACKLIST), // ✅ ok
+        "minecart"         to FlagDefinition("minecart", true, FlagType.BLACKLIST), // ✅ ok
+        "allow-home"       to FlagDefinition("allow-home", false, FlagType.WHITELIST), // ✅ ok
+        "use-potions"      to FlagDefinition("use-potions", false, FlagType.WHITELIST), // ✅ ok
+        //"mob-loot"         to FlagDefinition("mob-loot", false, FlagType.WHITELIST),
+        "iceform-player"   to FlagDefinition("iceform-player", false, FlagType.WHITELIST), // ✅ ok
+        "iceform-world"    to FlagDefinition("iceform-world", false, FlagType.WHITELIST), // ✅ ok
+        //"allow-fly"        to FlagDefinition("allow-fly", false, FlagType.WHITELIST),
         "teleport"         to FlagDefinition("teleport", true, FlagType.BLACKLIST),
         "cant-grow"        to FlagDefinition("cant-grow", true, FlagType.BLACKLIST),
         "allow-spawners"   to FlagDefinition("allow-spawners", false, FlagType.WHITELIST),
