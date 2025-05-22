@@ -40,15 +40,12 @@ class PlotListGUI(
         val clickedItem = event.currentItem ?: return
         val meta        = clickedItem.itemMeta ?: return
 
-        // zamknij i wyrejestruj aktualne GUI
         plugin.guiHandler.unregisterGui(player)
         player.closeInventory()
 
-        // odczytaj nazwę plotu z wyświetlanej nazwy
         val displayName = meta.displayName() ?: return
         val plotName    = PlainTextComponentSerializer.plainText().serialize(displayName)
 
-        // znajdź obiekt PlotData i otwórz PlotGUI
         plots.firstOrNull { it.name.equals(plotName, ignoreCase = true) }
             ?.let { plugin.guiHandler.registerGui(player, PlotGUI(plugin, it)) }
     }
@@ -73,7 +70,7 @@ class PlotListGUI(
         meta.lore(listOf(
             Component.text("Location: ${plot.x}, ${plot.z} (${plot.world})"),
             Component.text("Created: $created"),
-            plugin.messageHandler.getMessage("GUI", "plot.list_click_hint")
+            plugin.messageHandler.getLogMessage("GUI", "plot.list_click_hint")
         ))
 
         item.itemMeta = meta
@@ -82,7 +79,6 @@ class PlotListGUI(
 
     companion object {
         private fun calculateSize(amount: Int): Int {
-            // 1–6 wierszy
             val rows = ((amount + 8) / 9).coerceAtMost(6)
             return rows * 9
         }
