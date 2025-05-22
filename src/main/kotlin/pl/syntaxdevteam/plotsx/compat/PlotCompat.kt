@@ -24,7 +24,7 @@ object PlotCompat {
         "PIG", "PUFFERFISH", "RABBIT", "SALMON", "SHEEP",
         "SNIFFER", "SNOW_GOLEM", "SQUID", "STRIDER", "TADPOLE",
         "TROPICAL_FISH", "TURTLE", "VILLAGER", "WANDERING_TRADER",
-        "WOLF", "ZOMBIE_HORSE", "LAMA"
+        "WOLF", "ZOMBIE_HORSE", "LAMA", "LLAMA", "TRADER_LLAMA"
     )
 
     val doorNames = listOf(
@@ -203,7 +203,6 @@ object PlotCompat {
         "LOOM",
         "STONECUTTER",
         "CHISELED_BOOKSHELF",
-        "JUKEBOX"
     )
 
     private val redstoneNames = listOf(
@@ -235,6 +234,10 @@ object PlotCompat {
         "SPRUCE_CHEST_BOAT", "BIRCH_CHEST_BOAT", "JUNGLE_CHEST_BOAT",
         "ACACIA_CHEST_BOAT", "DARK_OAK_CHEST_BOAT", "MANGROVE_CHEST_BOAT",
         "CHERRY_CHEST_BOAT", "BAMBOO_CHEST_BOAT", "CRIMSON_CHEST_BOAT"
+    )
+
+    private val containerSpawnerBlocks = listOf(
+        "SPAWNER", "CREAKING_HEART", "TRIAL_SPAWNER"
     )
 
     // ----- Bezpieczne funkcje -----
@@ -278,4 +281,7 @@ object PlotCompat {
 
     fun loadContainerEntities(): Set<EntityType> =
         containerMinecartNames.mapNotNull(::safeEntityType).toSet()
+
+    fun loadContainerSpawner(): Set<Material> =
+        containerSpawnerBlocks.mapNotNull(::safeMaterial).toSet()
 }
