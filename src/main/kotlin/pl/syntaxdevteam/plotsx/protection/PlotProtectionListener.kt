@@ -9,7 +9,7 @@ import org.bukkit.block.data.Openable
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
-import org.bukkit.event.Event
+import org.bukkit.entity.ThrownPotion
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -18,18 +18,25 @@ import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockBurnEvent
 import org.bukkit.event.block.BlockDispenseEvent
 import org.bukkit.event.block.BlockFadeEvent
+import org.bukkit.event.block.BlockFormEvent
 import org.bukkit.event.block.BlockFromToEvent
+import org.bukkit.event.block.BlockGrowEvent
 import org.bukkit.event.block.BlockIgniteEvent
 import org.bukkit.event.block.BlockPhysicsEvent
 import org.bukkit.event.block.BlockPistonExtendEvent
 import org.bukkit.event.block.BlockPistonRetractEvent
 import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.block.BlockSpreadEvent
+import org.bukkit.event.block.EntityBlockFormEvent
 import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.event.entity.EntityDamageByBlockEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
+import org.bukkit.event.entity.EntityPotionEffectEvent
+import org.bukkit.event.entity.LingeringPotionSplashEvent
 import org.bukkit.event.entity.PotionSplashEvent
+import org.bukkit.event.entity.ProjectileHitEvent
 import org.bukkit.event.player.PlayerBucketEmptyEvent
 import org.bukkit.event.player.PlayerBucketEntityEvent
 import org.bukkit.event.player.PlayerBucketFillEvent
@@ -38,8 +45,10 @@ import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.event.player.PlayerMoveEvent
+import org.bukkit.event.player.PlayerTeleportEvent
 import org.bukkit.event.vehicle.VehicleEnterEvent
 import org.bukkit.inventory.EquipmentSlot
+import org.bukkit.inventory.ItemStack
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.compat.PlotCompat
 import pl.syntaxdevteam.plotsx.databases.PlotData
@@ -63,6 +72,8 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     private val utilityBlocks: Set<Material> by lazy { PlotCompat.loadUtilityBlocks() }
     private val redstoneNames: Set<Material> by lazy { PlotCompat.loadRedstoneBlocks() }
     private val containerEntities: Set<EntityType> by lazy { PlotCompat.loadContainerEntities() }
+    private val spawnerBlocks: Set<Material> by lazy { PlotCompat.loadContainerSpawner() }
+
 
     /**
      * Sprawdza, czy dany blok znajduje się w obrębie działki.
@@ -195,6 +206,12 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 player.sendMessage(message.getMessage("plots", "enter_plot", mapOf("plot" to newPlot.name)))
             }
         }
+        if (newPlot != null && !isFlagAllowed(newPlot.id, "effects")) {
+
+            player.activePotionEffects
+                .map { it.type }
+                .forEach { player.removePotionEffect(it) }
+        }
     }
 
     /**
@@ -208,33 +225,55 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val player = event.player
         val loc = event.block.location
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ)
+        val mat = event.block.type
 
-        logger.debug("BlockPlaceEvent at ${loc.blockX},${loc.blockZ} => plot=${plot?.id}")
+        if (mat in spawnerBlocks) {
+            logger.debug("Block należy do spawnerBlocks")
+            if (plot != null && !hasPlotPermission(player, plot, "allow-spawners")) {
+                event.isCancelled = true
+                plugin.server.scheduler.runTaskLater(plugin, Runnable {
+                    cancelAndRestore(event.block)
+                }, 1L)
+                player.sendMessage(message.getMessage("flags", "allow-spawners.not_allowed"))
+            }else{
+                return
+            }
+        }
 
         if (plot != null && !hasPlotPermission(player, plot, "build")) {
+            logger.debug("BlockPlaceEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
             event.isCancelled = true
             plugin.server.scheduler.runTaskLater(plugin, Runnable {
                 cancelAndRestore(event.block)
             }, 1L)
             player.sendMessage(message.getMessage("flags", "build.not_allowed"))
+        }else{
+            logger.debug("Sprawdzanie flagi nic nie dało...")
         }
     }
 
-    /**
-     * Zdarzenie wywoływane, gdy gracz niszczy blok.
-     * Sprawdza, czy gracz ma odpowiednie uprawnienia do niszczenia bloków na działce.
-     *
-     * @param event Zdarzenie niszczenia bloku.
-     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onBlockBreak(event: BlockBreakEvent) {
         val player = event.player
-        val loc = event.block.location
-        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ)
+        val loc    = event.block.location
+        val plot   = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ)
+        val mat    = event.block.type
 
-        logger.debug("BlockBreakEvent at ${loc.blockX},${loc.blockZ} => plot=${plot?.id}")
+        if (mat in spawnerBlocks) {
+            logger.debug("Block należy do spawnerBlocks")
+            if (plot != null && !hasPlotPermission(player, plot, "allow-spawners")) {
+                event.isCancelled = true
+                plugin.server.scheduler.runTaskLater(plugin, Runnable {
+                    cancelAndRestore(event.block)
+                }, 1L)
+                player.sendMessage(message.getMessage("flags", "allow-spawners.not_allowed"))
+            }else{
+                return
+            }
+        }
 
         if (plot != null && !hasPlotPermission(player, plot, "build")) {
+            logger.debug("BlockBreakEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
             event.isCancelled = true
             plugin.server.scheduler.runTaskLater(plugin, Runnable {
                 cancelAndRestore(event.block)
@@ -352,17 +391,16 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     fun onCreatureSpawn(event: CreatureSpawnEvent) {
         val loc = event.location
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
-        val flags = plugin.cacheManager.getFlags(plot.id) ?: return
 
         val entityType = event.entityType
 
         if (entityType in aggressiveMobs) {
-            if (flags["spawn-monsters"] == false) {
+            if (!isFlagAllowed(plot.id, "spawn-monsters")) {
                 event.isCancelled = true
                 plugin.logger.debug("Spawn potwora $entityType zablokowany na działce ${plot.name} (${plot.id})")
             }
         } else if (entityType in passiveMobs) {
-            if (flags["spawn-animals"] == false) {
+            if (!isFlagAllowed(plot.id, "spawn-animals")) {
                 event.isCancelled = true
                 plugin.logger.debug("Spawn zwierzęcia $entityType zablokowany na działce ${plot.name} (${plot.id})")
             }
@@ -378,6 +416,14 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = getPlotAtLocation(block.world.name, block.x, block.z) ?: return
 
         val mat = block.type
+
+        if (mat == Material.CHISELED_BOOKSHELF) {
+            if (!hasPlotPermission(player, plot, "utility")) {
+                event.isCancelled = true
+                player.sendMessage(message.getMessage("flags", "utility.not_allowed"))
+            }
+            return
+        }
 
         when (mat) {
             in containers -> {
@@ -417,6 +463,12 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                         player.sendMessage(message.getMessage("flags", "redstone.not_allowed"))
                     }
                     return
+                }
+            }
+            in damageableByFlow -> {
+                if (!isFlagAllowed(plot.id, "cant-grow")) {
+                    event.isCancelled = true
+                    event.player.sendMessage(message.getMessage("flags", "cant-grow.not_allowed"))
                 }
             }
             else -> {
@@ -584,13 +636,21 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onBlockFade(event: BlockFadeEvent) {
-        val plot = getPlotAtLocation(
-            event.block.world.name, event.block.x, event.block.z
-        ) ?: return
+        val block = event.block
+        val loc = block.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+        val type = block.type
 
+        if (type == Material.ICE || type == Material.SNOW) {
+            if (!isFlagAllowed(plot.id, "iceform-world")) {
+                event.isCancelled = true
+                //logger.debug("Tworzenie lodu/śniegu zablokowane na działce ${plot.name} (${plot.id})")
+            }
+        }
+/*
         if (!isFlagAllowed(plot.id, "fire")) {
             event.isCancelled = true
-        }
+        }*/
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
@@ -616,22 +676,22 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = getPlotAtLocation(ent.world.name, ent.location.blockX, ent.location.blockZ)
             ?: return
 
-        // 1) Pasywne moby (karmienie, name-tag, wsiadanie etc.)
         if (ent is LivingEntity && ent.type in passiveMobs) {
             if (!hasPlotPermission(player, plot, "passives")) {
                 event.isCancelled = true
                 player.sendMessage(message.getMessage("flags","passives.not_allowed"))
+            }else{
+                return
             }
-            return
         }
 
-        // 2) Kontenerowe encje (chest‐minecart, chest‐boat, hopper‐minecart, boarding)
         if (ent.type in containerEntities) {
             if (!hasPlotPermission(player, plot, "minecart")) {
                 event.isCancelled = true
                 player.sendMessage(message.getMessage("flags","minecart.not_allowed"))
+            }else{
+                return
             }
-            return
         }
     }
 
@@ -675,7 +735,6 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val loc = player.location
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
 
-        // jeśli nie ma prawa (bypass/owner/member) i flaga allow-home = false → cancel
         if (!hasPlotPermission(player, plot, "allow-home")) {
             event.isCancelled = true
             player.sendMessage(message.getMessage("flags", "allow-home.not_allowed"))
@@ -683,7 +742,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     }
 
     /**
-     * Blokada picia mikstur (regularnych, splash, lingering), jeśli use-potions = false.
+     * Blokada picia mikstur regularnych, jeśli use-potions = false.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerItemConsume(event: PlayerItemConsumeEvent) {
@@ -701,13 +760,29 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     }
 
     /**
-     * Blokada rzucania splash/lingering mikstur, jeśli use-potions = false.
+     * Blokada rzucania splash mikstur, jeśli use-potions = false.
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPotionSplash(event: PotionSplashEvent) {
+        val potion = event.entity
+        val shooter = potion.shooter as? Player ?: return
+
+        val loc = potion.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!hasPlotPermission(shooter, plot, "use-potions")) {
+            event.isCancelled = true
+            shooter.sendMessage(message.getMessage("flags", "use-potions.not_allowed"))
+        }
+    }
+
+    /**
+     * Blokada rzucania lingering mikstur, jeśli use-potions = false.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPotionLingering(event: LingeringPotionSplashEvent) {
         val shooter = event.entity.shooter as? Player ?: return
 
-        // lokalizacja GRACZA-rzucającego decyduje o pozwoleniu
         val loc = shooter.location
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
 
@@ -717,5 +792,111 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
-    // TODO: DODAĆ METODE OBSŁUGI MIKSTUR TRWAŁYCH!
+    /**
+     * Blokada lingering‐mikstur (AreaEffectCloud po trafieniu).
+     * Kasujemy obłoczek, jeżeli ma się pojawić na zakazanej działce.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onProjectileHit(event: ProjectileHitEvent) {
+        val potion = event.entity as? ThrownPotion ?: return
+        if (potion.shooter !is Player) return
+
+        val item: ItemStack = potion.item
+        if (item.type != Material.LINGERING_POTION) return
+
+        val loc = potion.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+        val player = potion.shooter as Player
+
+        if (!hasPlotPermission(player, plot, "use-potions")) {
+            potion.remove()
+            player.sendMessage(message.getMessage("flags", "use-potions.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onEntityBlockForm(event: EntityBlockFormEvent) {
+
+        if (event.entity.type != EntityType.PLAYER) return
+        val player = event.entity as Player
+        val loc = event.block.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!hasPlotPermission(player, plot, "iceform-player")) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onBlockFormByWorld(event: BlockFormEvent) {
+        val newType = event.newState.type
+        if (newType != Material.ICE && newType != Material.SNOW && newType != Material.SNOW_BLOCK) return
+
+        val loc = event.block.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!isFlagAllowed(plot.id, "iceform-world")) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onBlockSpread(event: BlockSpreadEvent) {
+        val type = event.block.type
+        if (type != Material.ICE && type != Material.SNOW && type != Material.SNOW_BLOCK) return
+
+        val loc = event.block.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!isFlagAllowed(plot.id, "iceform-world")) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onBlockGrow(event: BlockGrowEvent) {
+        // dotyczy np. kukurydzy, pszenicy, trawy automatycznie
+        val loc = event.block.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!isFlagAllowed(plot.id, "cant-grow")) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPotionEffectAdd(event: EntityPotionEffectEvent) {
+        val entity = event.entity as? Player ?: return
+
+
+        val loc = entity.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!isFlagAllowed(plot.id, "effects")) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPlayerTeleport(event: PlayerTeleportEvent) {
+        val cause = event.cause
+        if (cause != PlayerTeleportEvent.TeleportCause.ENDER_PEARL
+            && cause != PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT
+        ) return
+
+        val player = event.player
+        val fromPlot = getPlotAtLocation(
+            event.from.world.name, event.from.blockX, event.from.blockZ
+        )
+        val toPlot   = getPlotAtLocation(
+            event.to.world.name,   event.to.blockX,   event.to.blockZ
+        )
+
+        val plot = fromPlot ?: toPlot ?: return
+        if (!hasPlotPermission(player, plot, "teleport")) {
+            event.isCancelled = true
+            player.sendMessage(message.getMessage("flags", "teleport.not_allowed"))
+        }
+    }
+
 }
