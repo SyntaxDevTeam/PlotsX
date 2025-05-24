@@ -54,6 +54,8 @@ import pl.syntaxdevteam.plotsx.compat.PlotCompat
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 import java.util.UUID
+import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
+import pl.syntaxdevteam.plotsx.protection.FlagMeta
 
 class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
@@ -117,21 +119,21 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             ?.any { it.memberUuid == player.uniqueId.toString() } ?: false
         if (isMember) return true
 
-        val flagDefinition = PlotFlagRegistry.allFlags[flag]
+        val flagMeta = PlotFlagRegistry.allFlags[flag]
             ?: run {
                 plugin.logger.debug("[hasPlotPermission] Nieznana flaga '$flag' na działce ${plot.id} (${plot.name})")
                 return false
             }
 
-        val flags = plugin.cacheManager.getFlags(plot.id) ?: emptyMap()
-        val value = flags[flag] ?: flagDefinition.defaultValue
+        val flags = plugin.cacheManager.getFlags(plot.id) ?: emptyList()
+        val value = flags.firstOrNull { it.name == flag }?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
 
         plugin.logger.debug(
-            "[hasPlotPermission] Flaga '$flag' = $value (domyślnie=${flagDefinition.defaultValue}, typ=${flagDefinition.type}) " +
+            "[hasPlotPermission] Flaga '$flag' = $value (domyślnie=${flagMeta.defaultValue}, typ=${flagMeta.type}) " +
                     "dla gracza ${player.name} na działce ${plot.id} (${plot.name})"
         )
 
-        return when (flagDefinition.type) {
+        return when (flagMeta.type) {
             FlagType.WHITELIST -> value
             FlagType.BLACKLIST -> !value
         }
@@ -144,10 +146,10 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
      * @return true, jeśli flaga jest dozwolona, false w przeciwnym razie.
      */
     private fun isFlagAllowed(plotId: Int, flag: String): Boolean {
-        val def = PlotFlagRegistry.allFlags[flag] ?: return false
-        val flags = plugin.cacheManager.getFlags(plotId) ?: emptyMap()
-        val value = flags[flag] ?: def.defaultValue
-        return when (def.type) {
+        val flagMeta = PlotFlagRegistry.allFlags[flag] ?: return false
+        val flags = plugin.cacheManager.getFlags(plotId) ?: emptyList()
+        val value = flags.firstOrNull { it.name == flag }?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
+        return when (flagMeta.type) {
             FlagType.WHITELIST -> value
             FlagType.BLACKLIST -> !value
         }
@@ -296,7 +298,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
         logger.debug("EntityChangeBlockEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
         val flags = plugin.cacheManager.getFlags(plot.id) ?: return
-        if (flags["fall"] == false) {
+        val fallFlagMeta = PlotFlagRegistry.allFlags["fall"]
+        val fallValue = flags.firstOrNull { it.name == "fall" }?.value?.toBooleanStrictOrNull() ?: fallFlagMeta?.defaultValue ?: true
+        if (!fallValue) {
             if (event.entityType == EntityType.FALLING_BLOCK) {
                 event.isCancelled = true
                 event.block.blockData = event.block.blockData

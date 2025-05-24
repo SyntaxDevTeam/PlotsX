@@ -11,13 +11,13 @@ class CacheManager(private val plugin: PlotsX) {
     private val databaseHandler = plugin.databaseHandler
 
     private val plotCache = ConcurrentHashMap<Int, PlotData>()
-    private val flagCache = ConcurrentHashMap<Int, Map<String, Boolean>>()
+    private val flagCache = ConcurrentHashMap<Int, List<PlotFlagData>>()
     private val memberCache = ConcurrentHashMap<Int, List<PlotMemberData>>()
 
     /** Public API - dostęp do cache */
 
     fun getPlot(plotId: Int): PlotData? = plotCache[plotId]
-    fun getFlags(plotId: Int): Map<String, Boolean>? = flagCache[plotId]
+    fun getFlags(plotId: Int): List<PlotFlagData>? = flagCache[plotId]
     fun getMembers(plotId: Int): List<PlotMemberData>? = memberCache[plotId]
 
     fun getCachedPlots(): Collection<PlotData> = plotCache.values
@@ -89,10 +89,8 @@ class CacheManager(private val plugin: PlotsX) {
 
     fun updateFlagCacheAsync(plotId: Int, onComplete: () -> Unit = {}) {
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            //plugin.logger.warning("[DEBUG] → Rozpoczynam updateFlagCacheAsync($plotId)")
             val flags = databaseHandler.getPlotFlags(plotId)
             flagCache[plotId] = flags
-            //plugin.logger.warning("[DEBUG] → Cache po update: ${flags.entries.joinToString()}")
             plugin.server.scheduler.runTask(plugin, onComplete)
         })
     }

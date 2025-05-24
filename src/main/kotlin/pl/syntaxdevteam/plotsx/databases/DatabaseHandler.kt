@@ -7,6 +7,7 @@ import java.io.File
 import java.io.IOException
 import java.sql.*
 import java.util.*
+import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 
 class DatabaseHandler(private val plugin: PlotsX) {
     private var dataSource: HikariDataSource? = null
@@ -397,38 +398,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
         logger.debug("Ustanowiono połączenie z createNewPlot()")
 
-        val defaultFlags = mapOf(
-            "build"           to false,
-            "pvp"             to false,
-            "chest"           to true,
-            "ender-chest"     to true,
-            "lever"           to true,
-            "button"          to true,
-            "door"            to true,
-            "smart-door"      to false,
-            "spawn-monsters"  to false,
-            "spawn-animals"   to true,
-            "passives"        to false,
-            "flow"            to true,
-            "flow-damage"     to false,
-            "fire"            to true,
-            "minecart"        to true,
-            "allow-home"      to false,
-            "use-potions"     to false,
-            //"mob-loot"        to false,
-            "iceform-player"  to false,
-            "iceform-world"   to false,
-            //"allow-fly"       to false,
-            "teleport"        to true,
-            "cant-grow"       to true,
-            "allow-spawners"  to false,
-            "leaves-decay"    to true,
-            "effects"         to true,
-            "redstone"        to false,
-            "utility"         to false,
-            "block-transform" to true,
-            "team"            to false
-        )
+        val defaultFlags = PlotFlagRegistry.allFlags.values.associate { it.name to it.defaultValue }
 
         try {
             connection.use { conn ->
@@ -628,10 +598,10 @@ class DatabaseHandler(private val plugin: PlotsX) {
      * Pobranie flag działki
      *
      * @param plotId
-     * @return `Map<String, Boolean>`
+     * @return `List<PlotFlagData>`
      */
-    fun getPlotFlags(plotId: Int): Map<String, Boolean> {
-        val flags = mutableMapOf<String, Boolean>()
+    fun getPlotFlags(plotId: Int): List<PlotFlagData> {
+        val flags = mutableListOf<PlotFlagData>()
         val connection = getConnection() ?: run {
             logger.err("Brak połączenia z bazą danych.")
             return flags
@@ -647,9 +617,8 @@ class DatabaseHandler(private val plugin: PlotsX) {
                     stmt.executeQuery().use { rs ->
                         while (rs.next()) {
                             val name = rs.getString("flag_name")
-                            val valueRaw = rs.getString("flag_value").lowercase()
-                            val value = valueRaw == "true" || valueRaw == "1" || valueRaw == "yes"
-                            flags[name] = value
+                            val value = rs.getString("flag_value")
+                            flags.add(PlotFlagData(plotId, name, value))
                         }
                     }
                 }
@@ -657,7 +626,6 @@ class DatabaseHandler(private val plugin: PlotsX) {
         } catch (ex: SQLException) {
             logger.err("Błąd podczas pobierania flag działki plot_id=$plotId: ${ex.message}")
         }
-
         return flags
     }
 

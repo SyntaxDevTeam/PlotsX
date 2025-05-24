@@ -10,7 +10,9 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
+import pl.syntaxdevteam.plotsx.databases.PlotFlagData
 import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
+import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 
 class FlagsGUI(
     private val plugin: PlotsX,
@@ -23,51 +25,19 @@ class FlagsGUI(
     private val message = plugin.messageHandler
     private val keyFlag = NamespacedKey(plugin, "plot_flag_key")
 
-    private val flagMaterials = mapOf(
-        "build"           to Material.STONE,
-        "pvp"             to Material.WOODEN_SWORD,
-        "chest"           to Material.CHEST,
-        "ender-chest"     to Material.ENDER_CHEST,
-        "lever"           to Material.LEVER,
-        "button"          to Material.STONE_BUTTON,
-        "door"            to Material.BAMBOO_DOOR,
-        "smart-door"      to Material.IRON_DOOR,
-        "spawn-monsters"  to Material.CARVED_PUMPKIN,
-        "spawn-animals"   to Material.EGG,
-        "passives"        to Material.SADDLE,
-        "flow"            to Material.WATER_BUCKET,
-        "flow-damage"     to Material.LAVA_BUCKET,
-        "fire"            to Material.FLINT_AND_STEEL,
-        "minecart"        to Material.MINECART,
-        "allow-home"      to Material.COMPASS,
-        "use-potions"     to Material.EXPERIENCE_BOTTLE,
-        //"mob-loot"        to Material.MYCELIUM,
-        "iceform-player"  to Material.SNOWBALL,
-        "iceform-world"   to Material.ICE,
-        //"allow-fly"       to Material.ELYTRA,
-        "teleport"        to Material.ENDER_PEARL,
-        "can-grow"        to Material.WHEAT,
-        "allow-spawners"  to Material.SPAWNER,
-        "leaves-decay"    to Material.OAK_LEAVES,
-        "effects"         to Material.BEACON,
-        "redstone"        to Material.REDSTONE,
-        "utility"         to Material.FURNACE,
-        "block-transform" to Material.MOSS_BLOCK,
-        "team"            to Material.NAME_TAG
-    )
-
     override fun open(player: Player) {
         inventory.clear()
 
         val flags = plugin.cacheManager.getFlags(plot.id) ?: plugin.databaseHandler.getPlotFlags(plot.id)
 
-        flagMaterials.entries.forEachIndexed { idx, (flagKey, material) ->
+        PlotFlagRegistry.allFlags.values.forEachIndexed { idx: Int, flagMeta ->
             if (idx >= inventory.size) return@forEachIndexed
 
-            val current = flags[flagKey] ?: false
+            val flagData = flags.firstOrNull { it.name == flagMeta.name }
+            val current = flagData?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
 
-            val name    = message.getCleanMessage("flags", "$flagKey.name")
-            val desc    = message.getCleanMessage("flags", "$flagKey.description")
+            val name    = message.getCleanMessage("flags", flagMeta.displayKey)
+            val desc    = message.getCleanMessage("flags", flagMeta.descriptionKey)
             val descTl  = message.getCleanMessage("flags", "desc_title")
             val valTl   = message.getCleanMessage("flags", "value_title")
             val valStr  = if (current)
@@ -76,9 +46,9 @@ class FlagsGUI(
                 "<red><bold>✘</bold> ${message.getCleanMessage("flags", "value_false")}"
 
             // Item
-            val item = ItemStack(material)
+            val item = ItemStack(flagMeta.material)
             val meta = item.itemMeta!!
-            meta.persistentDataContainer.set(keyFlag, PersistentDataType.STRING, flagKey)
+            meta.persistentDataContainer.set(keyFlag, PersistentDataType.STRING, flagMeta.name)
             meta.displayName(
                 message.formatMixedTextToMiniMessage("<gold>=> <bold>$name</bold> <=", TagResolver.empty())
             )
@@ -91,6 +61,7 @@ class FlagsGUI(
 
             inventory.setItem(idx, item)
         }
+        inventory.setItem(49, plugin.guiHandler.createItem(Material.BARRIER, message.getCleanMessage("GUI", "flags.back")))
 
         super.open(player)
     }
@@ -108,7 +79,14 @@ class FlagsGUI(
 
         val flagKey = meta.persistentDataContainer
             .get(keyFlag, PersistentDataType.STRING)
-            ?: return
+
+        // Obsługa przycisku "back" (slot 49)
+        if (event.slot == 49) {
+            plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot, plot.ownerUuid))
+            return
+        }
+
+        if (flagKey == null) return
 
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             val current = plugin.databaseHandler
@@ -136,12 +114,10 @@ class FlagsGUI(
                             )
                         )
                         if(plugin.config.getBoolean("debug", false)){
-                            val cacheFlags = plugin.cacheManager.getFlags(plot.id) ?: emptyMap()
+                            val cacheFlags = plugin.cacheManager.getFlags(plot.id) ?: emptyList()
                             val dbFlags = plugin.databaseHandler.getPlotFlags(plot.id)
-
-                            plugin.logger.debug("Flagi dla działki ID=${plot.id}")
-                            plugin.logger.debug(" → Z cache: ${cacheFlags.entries.joinToString()}")
-                            plugin.logger.debug(" → Z bazy: ${dbFlags.entries.joinToString()}")
+                            val table = formatFlagComparison(cacheFlags, dbFlags)
+                            plugin.logger.debug("Flagi dla działki ID=${plot.id}\n$table")
                         }
                     })
                 }
@@ -149,5 +125,20 @@ class FlagsGUI(
                 player.sendMessage(message.getMessage("error", "flag_update_failed"))
             }
         })
+    }
+
+    fun formatFlagComparison(cacheFlags: List<PlotFlagData>, dbFlags: List<PlotFlagData>): String {
+        val cacheMap = cacheFlags.associateBy { it.name }
+        val dbMap = dbFlags.associateBy { it.name }
+        val allFlagNames = (cacheMap.keys + dbMap.keys).toSortedSet()
+        val header = String.format("%-18s | %-8s | %-8s | %s", "Flaga", "Cache", "Baza", "OK?")
+        val separator = "-".repeat(header.length)
+        val rows = allFlagNames.map { name ->
+            val cacheVal = cacheMap[name]?.value ?: "-"
+            val dbVal = dbMap[name]?.value ?: "-"
+            val ok = if (cacheVal == dbVal) "✔" else "✘"
+            String.format("%-18s | %-8s | %-8s | %s", name, cacheVal, dbVal, ok)
+        }
+        return (listOf(header, separator) + rows).joinToString("\n")
     }
 }
