@@ -52,6 +52,7 @@ GUI:
     list_click_hint: "<gray>Kliknij, aby zobaczyć opcję działki</gray>"
   flags:
     title: "<b>Ustawienia flag</b>"
+    back: "<gray>Wróć do ustawień działki</gray>"
 
 
 flags:
@@ -142,7 +143,7 @@ flags:
   teleport:
     name: "Blokowanie teleportacji"
     description: "Blokuje teleportację przez perły i owoce chorus"
-  can-grow:
+  cant-grow:
     name: "Blokowanie wzrostu roślin"
     description: "Blokuje wzrost roślin i farm"
   allow-spawners:

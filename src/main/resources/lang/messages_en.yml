@@ -52,6 +52,7 @@ GUI:
     list_click_hint: "<gray>Click to open plot options</gray>"
   flags:
     title: "<b>Flag Settings</b>"
+    back: "<gray>Back to plot settings</gray>"
 
 flags:
   desc_title: "Description: "
@@ -141,7 +142,7 @@ flags:
   teleport:
     name: "Teleportation Blocking"
     description: "Blocks teleportation with pearls and chorus fruit"
-  can-grow:
+  cant-grow:
     name: "Plant Growth"
     description: "Prevents crop and plant growth"
   allow-spawners:
