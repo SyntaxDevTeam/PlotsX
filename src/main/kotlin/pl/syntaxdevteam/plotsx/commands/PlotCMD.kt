@@ -13,12 +13,12 @@ import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 class PlotCMD(private val plugin: PlotsX) : BasicCommand {
 
     override fun execute(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>) {
-        val player = stack.sender as Player
         if (stack.sender !is Player) {
-            player.sendMessage(plugin.messageHandler.getMessage("error", "console"))
+            stack.sender.sendMessage(plugin.messageHandler.getMessage("error", "console"))
             return
         }
 
+        val player = stack.sender as Player
         if (!PermissionChecker.canManagePlot(player)) {
             player.sendMessage(plugin.messageHandler.getMessage("error", "no_permission"))
             return
@@ -34,7 +34,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
                     player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
                     return
                 }
-                plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot))
+                plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot, plot.ownerUuid))
             } else {
                 player.sendMessage(plugin.messageHandler.getMessage("error", "plot_not_found"))
             }
@@ -51,13 +51,13 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
                 player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
                 return
             }
-            plugin.guiHandler.registerGui(player, PlotGUI(plugin, standingPlot))
+            plugin.guiHandler.registerGui(player, PlotGUI(plugin, standingPlot, standingPlot.ownerUuid))
             return
         }
 
         val playerPlots = plugin.databaseHandler.getPlayerPlots(uuid)
         if (playerPlots.isNotEmpty()) {
-            plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots))
+            plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, uuid))
         } else {
             player.sendMessage(plugin.messageHandler.getMessage("error", "no_plot_found"))
         }

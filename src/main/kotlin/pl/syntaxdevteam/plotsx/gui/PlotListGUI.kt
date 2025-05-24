@@ -11,10 +11,12 @@ import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.UUID
 
 class PlotListGUI(
     private val plugin: PlotsX,
-    private val plots: List<PlotData>
+    private val plots: List<PlotData>,
+    private val ownerUuid: UUID
 ) : AbstractGUI(
     title = plugin.messageHandler.getLogMessage("GUI", "plot.list_title"),
     size  = calculateSize(plots.size)
@@ -47,7 +49,7 @@ class PlotListGUI(
         val plotName    = PlainTextComponentSerializer.plainText().serialize(displayName)
 
         plots.firstOrNull { it.name.equals(plotName, ignoreCase = true) }
-            ?.let { plugin.guiHandler.registerGui(player, PlotGUI(plugin, it)) }
+            ?.let { plugin.guiHandler.registerGui(player, PlotGUI(plugin, it, ownerUuid)) }
     }
 
     private fun createPlotItem(plot: PlotData, index: Int): ItemStack {

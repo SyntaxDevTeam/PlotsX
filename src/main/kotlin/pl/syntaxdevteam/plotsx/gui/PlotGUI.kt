@@ -15,7 +15,8 @@ import java.util.*
 
 class PlotGUI(
     private val plugin: PlotsX,
-    private val plot: PlotData? = null
+    private val plot: PlotData? = null ,
+    private val ownerUuid: UUID
 ) : AbstractGUI(
     title = plugin.messageHandler.getLogMessage("GUI", "plot.title_plot"),
     size  = 45
@@ -85,9 +86,14 @@ class PlotGUI(
                 player.sendMessage("Teleportuję na działkę…")
             }
             listIndex -> {
-                val uuid = plugin.uuidManager.getUUID(player.name)
-                val playerPlots = plugin.databaseHandler.getPlayerPlots(uuid)
-                plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots))
+                val playerPlots = plugin.databaseHandler.getPlayerPlots(ownerUuid)
+                if (playerPlots.isNotEmpty()) {
+                    plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, ownerUuid))
+                } else {
+                    player.sendMessage(plugin.messageHandler.getMessage("error", "no_plot_found"))
+                    player.closeInventory()
+                }
+                plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, ownerUuid))
             }
             plotIndex -> {
                 plugin.server.scheduler.runTask(plugin, Runnable {

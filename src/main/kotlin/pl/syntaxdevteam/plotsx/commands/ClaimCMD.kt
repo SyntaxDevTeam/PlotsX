@@ -89,9 +89,9 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                                 centerX   = x,
                                 centerZ   = z,
                                 radius    = radius,
-                                durationSec = 10,
+                                durationSec = 20,
                                 stepXZ      = 2,
-                                stepY    = 8
+                                stepY    = 4
                             )
                         })
                     }
