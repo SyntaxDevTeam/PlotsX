@@ -12,6 +12,10 @@ import pl.syntaxdevteam.plotsx.databases.PlotData
 import net.kyori.adventure.text.Component
 import java.text.SimpleDateFormat
 import java.util.*
+import org.bukkit.Bukkit
+import org.bukkit.Location
+import org.bukkit.World
+import pl.syntaxdevteam.plotsx.protection.SafeTeleportUtil
 
 class PlotGUI(
     private val plugin: PlotsX,
@@ -82,8 +86,18 @@ class PlotGUI(
                 }
             }
             tpaIndex -> {
-                // tu wstawię logikę TP ale... nieco później xD
-                player.sendMessage("Teleportuję na działkę…")
+                if (pd == null) {
+                    player.sendMessage(message.getMessage("error", "no_in_plot"))
+                } else {
+                    plugin.server.scheduler.runTask(plugin, Runnable {
+                        val success = SafeTeleportUtil.safeTeleport(player, pd)
+                        if (success) {
+                            player.sendMessage(message.getMessage("plots", "teleport"))
+                        } else {
+                            player.sendMessage(message.getMessage("plots", "teleport_failed"))
+                        }
+                    })
+                }
             }
             listIndex -> {
                 val playerPlots = plugin.databaseHandler.getPlayerPlots(ownerUuid)
