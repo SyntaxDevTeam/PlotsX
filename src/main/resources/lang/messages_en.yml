@@ -1,0 +1,163 @@
+# Ver. 1.0.0
+# Author: WieszczY
+# Message text formatting:
+# You can use MiniMessage or Legacy (Minecraft) formatting.
+# Examples on how to use MiniMessage: https://docs.advntr.dev/minimessage/format.html
+# Do not mix formats in a single message. If you use Legacy, do not insert MiniMessage formatting, otherwise only MiniMessage will be used.
+
+prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</gradient>"
+
+# Error messages
+error:
+  no_permission: "<red>You don't have permission to use this command.</red>"
+  claim_not_found: "<gold>No player found with the nickname {player}.</gold>" # Unclear message in PL, kept literal
+  not_owner: "<red>You cannot interact with this plot because you are not the owner.</red>"
+  there_is_no_plot: "<red>There is no plot in this location.</red>"
+  is_plot: "<red>You can't claim here because a plot already exists.</red>"
+  no_in_plot: "<red>You are not inside a plot.</red><grey>Use /plot <name> to select a plot or stand on your plot.</grey>"
+  in_collision: "<red>You can't claim here because it overlaps with another plot.</red>"
+  create_error: "<red>An error occurred while creating the plot.</red>"
+  no_plot_found: "<red>You do not own any plots.</red>"
+  plot_not_found: "<red>Nie znaleziono działki.</red>"
+
+
+  console: "<red>Only players can use this command.</red>"
+  reload: "<red>An error occurred while reloading the configuration:</red> "
+
+plots:
+  claim_success: "<green>Plot has been successfully created!</green>"
+  unclaim_success: "<green>Plot has been successfully removed.</green>"
+  enter_plot: "<green>You entered plot <white>{plot}</white></green>"
+  leave_plot: "<green>You left plot <white>{plot}</white></green>"
+
+GUI:
+  claim:
+    title_claim: "Confirm plot creation!"
+    material_name:
+      confirm: "<green>Create plot</green>"
+      cancel: "<red>Cancel</red>"
+  plot:
+    title_plot: "<b>Plot Settings"
+    material_name:
+      info: "<gold><bold>Plot Information</bold></gold>"
+      flags: "<color:#852579>Flag Settings</color>"
+      teleport: "<color:#aa2244>Teleport to plot</color>"
+      list: "<gold>Plot List</gold>"
+    info:
+      plot_name: "<green>Name:</green> <white>{plot}"
+      id: "<green>ID:</green> <white>{id}"
+      creation_time: "<green>Created:</green> <white>{time}"
+      click: "<white>Click to see boundaries</white>"
+    list_title: "<b>Your plot list:</b>"
+    list_click_hint: "<gray>Click to open plot options</gray>"
+  flags:
+    title: "<b>Flag Settings</b>"
+
+flags:
+  desc_title: "Description: "
+  value_title: "Value: "
+  value_true: "Enabled"
+  value_false: "Disabled"
+  toggle: "<gray>Flag <white>{flag}</white> set to <white>{value}</white></gray>"
+  build:
+    name: "Build Permission"
+    description: "Allows non-members to place and break blocks"
+    not_allowed: "<red>You can't place blocks on this plot.</red>"
+    break_not_allowed: "<red>You can't break blocks on this plot.</red>"
+  pvp:
+    name: "PvP Permission"
+    description: "Blocks damage from players and their weapons"
+    not_allowed: "<red>You can't attack players on this plot.</red>"
+  chest:
+    name: "Chest Access"
+    description: "Blocks chest access for non-members"
+    not_allowed: "<red>You can't open chests on this plot.</red>"
+  ender-chest:
+    name: "Ender Chest Access"
+    description: "Blocks Ender chest access for non-members"
+    not_allowed: "<red>You can't open Ender chests on this plot.</red>"
+  lever:
+    name: "Lever Use"
+    description: "Blocks use of levers and redstone mechanisms"
+    not_allowed: "<red>You can't use levers on this plot.</red>"
+  button:
+    name: "Button Use"
+    description: "Blocks use of wooden and stone buttons"
+    not_allowed: "<red>You can't use buttons on this plot.</red>"
+  door:
+    name: "Door Access"
+    description: "Blocks opening doors, trapdoors, and gates by non-members"
+    not_allowed: "<red>You can't open doors on this plot.</red>"
+  spawn-monsters:
+    name: "Monster Spawning"
+    description: "Prevents monsters from spawning"
+  spawn-animals:
+    name: "Animal Spawning"
+    description: "Prevents animals from spawning"
+  passives:
+    name: "Passive Mob Interaction"
+    description: "Blocks interaction and damage to passive mobs"
+    not_allowed: "<red>You can't interact with mobs on this plot.</red>"
+  flow:
+    name: "Liquid Flow"
+    description: "Blocks the flow of water and lava"
+    not_allowed: "<red>You can't use water or lava on this plot.</red>"
+    bucket_not_allowed: "<red>You can't use buckets on this plot.</red>"
+  fire:
+    name: "Fire Spread"
+    description: "Blocks explosions, fire and its spread"
+    not_allowed: "<red>You can't use fire on this plot.</red>"
+  minecart:
+    name: "Minecart/Boat Usage"
+    description: "Allows non-members to place and break minecarts/boats"
+    not_allowed: "<red>You can't use minecarts on this plot.</red>"
+  allow-home:
+    name: "Allow /home"
+    description: "Allows non-members to use /home and /sethome"
+    not_allowed: "<red>You can't use or set home on this plot.</red>"
+  smart-door:
+    name: "Iron and Double Doors"
+    description: "Allows opening iron doors without redstone and double doors together"
+    not_allowed: "<red>You can't open iron doors on this plot.</red>"
+  use-potions:
+    name: "Potion Usage"
+    description: "Allows the use of potions"
+    not_allowed: "<red>You can't use potions on this plot.</red>"
+  mob-loot:
+    name: "Mob Griefing"
+    description: "Allows mobs to break blocks"
+  flow-damage:
+    name: "Liquid Block Breaking"
+    description: "Allows liquids to break blocks"
+  iceform-player:
+    name: "Player Ice Creation"
+    description: "Allows players to create ice (e.g., Frost Walker)"
+  iceform-world:
+    name: "World Ice/Snow Creation"
+    description: "Allows snow golems, weather, and other sources to form ice/snow"
+  allow-fly:
+    name: "Allow Flying"
+    description: "Allows flying in the region"
+  teleport:
+    name: "Teleportation Blocking"
+    description: "Blocks teleportation with pearls and chorus fruit"
+  can-grow:
+    name: "Plant Growth"
+    description: "Prevents crop and plant growth"
+  allow-spawners:
+    name: "Spawner Access"
+    description: "Allows non-members to place and break spawners"
+    not_allowed: "<red>You can't place or break spawners on this plot.</red>"
+  leaves-decay:
+    name: "Leaf Decay"
+    description: "Prevents leaves from decaying"
+  effects:
+    name: "Effect Blocking"
+    description: "Blocks effects (including potions)"
+  redstone:
+    name: "Redstone Use"
+    description: "Allows non-members to use redstone (excluding levers, buttons, and pressure plates)"
+    not_allowed: "<red>You can't use redstone on this plot.</red>"
+  utility:
+    name: "Utility Block Use"
+    description: "Allows non-members to use..."

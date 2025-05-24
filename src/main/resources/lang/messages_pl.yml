@@ -16,7 +16,9 @@ error:
   is_plot: "<red>Nie możesz postawić działki tutaj, ponieważ działka już istnieje.</red>"
   no_in_plot: "<red>Nie jesteś w działce.</red><grey>Użyj /plot <nazwa>, aby wybrać działkę lub stań na swojej działce.</grey>"
   in_collision: "<red>Nie możesz postawić działki tutaj, ponieważ koliduje z inną działką.</red>"
-  create_error: "<red>Wystąpił błąd podczas tworzenia działki.</red"
+  create_error: "<red>Wystąpił błąd podczas tworzenia działki.</red>"
+  no_plot_found: "<red>Nie posiadasz działki.</red>"
+  plot_not_found: "<red>Nie znaleziono działki.</red>"
 
   console: "<red>Tylko gracz może użyć tej komendy</red>"
   reload: "<red>Wystąpił błąd podczas przełądowania konfiguracji:</red> "
