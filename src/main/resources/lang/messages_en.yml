@@ -29,6 +29,8 @@ plots:
   unclaim_success: "<green>Plot has been successfully removed.</green>"
   enter_plot: "<green>You entered plot <white>{plot}</white></green>"
   leave_plot: "<green>You left plot <white>{plot}</white></green>"
+  teleport: "<green>Teleported to the plot!</green>"
+  teleport_failed: "<red>No safe location found to teleport to this plot.</red>"
 
 GUI:
   claim:

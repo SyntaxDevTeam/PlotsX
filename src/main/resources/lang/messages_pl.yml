@@ -28,6 +28,8 @@ plots:
   unclaim_success: "<green>Działka została pomyślnie usunięta.</green>"
   enter_plot: "<green>Wszedłeś na działkę <white>{plot}</white></green>"
   leave_plot: "<green>Opuszczono działkę <white>{plot}</white></green>"
+  teleport: "<green>Teleportowano na działkę!</green>"
+  teleport_failed: "<red>Nie znaleziono bezpiecznego miejsca do teleportacji na tą działkę.</red>"
 
 
 GUI:
