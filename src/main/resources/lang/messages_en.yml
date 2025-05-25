@@ -18,7 +18,7 @@ error:
   in_collision: "<red>You can't claim here because it overlaps with another plot.</red>"
   create_error: "<red>An error occurred while creating the plot.</red>"
   no_plot_found: "<red>You do not own any plots.</red>"
-  plot_not_found: "<red>Nie znaleziono działki.</red>"
+  plot_not_found: "<red>Plot not found.</red>"
 
 
   console: "<red>Only players can use this command.</red>"
@@ -31,7 +31,12 @@ plots:
   leave_plot: "<green>You left plot <white>{plot}</white></green>"
   teleport: "<green>Teleported to the plot!</green>"
   teleport_failed: "<red>No safe location found to teleport to this plot.</red>"
-  rename_hint: "To rename the plot, use: /rename <old_name> <new_name>"
+  rename_hint: "Type the new plot name in chat (you have 60 seconds)."
+  rename_timeout: "<red>Time to enter a new name has expired. Process cancelled.</red>"
+  rename_success: "<green>Plot name changed to: <white>{name}</white></green>"
+  rename_exists: "<red>A plot with this name already exists!</red>"
+  rename_not_found: "<red>Plot not found.</red>"
+  rename_fail: "<red>Failed to change the plot name.</red>"
 
 GUI:
   claim:

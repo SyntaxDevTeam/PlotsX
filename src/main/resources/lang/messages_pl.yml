@@ -30,7 +30,12 @@ plots:
   leave_plot: "<green>Opuszczono działkę <white>{plot}</white></green>"
   teleport: "<green>Teleportowano na działkę!</green>"
   teleport_failed: "<red>Nie znaleziono bezpiecznego miejsca do teleportacji na tą działkę.</red>"
-  rename_hint: "Aby zmienić nazwę działki, użyj: /rename <stara_nazwa> <nowa_nazwa>"
+  rename_hint: "Wpisz nową nazwę działki na czacie (masz 60 sekund)."
+  rename_timeout: "<red>Czas na wpisanie nowej nazwy minął. Proces anulowany." 
+  rename_success: "<green>Zmieniono nazwę działki na: <white>{name}</white>" 
+  rename_exists: "<red>Działka o tej nazwie już istnieje!" 
+  rename_not_found: "<red>Działka nie istnieje." 
+  rename_fail: "<red>Nie udało się zmienić nazwy działki."
 
 
 GUI:
