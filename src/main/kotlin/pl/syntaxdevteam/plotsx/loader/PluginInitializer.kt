@@ -8,6 +8,7 @@ import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.gui.GUIHandler
 import pl.syntaxdevteam.plotsx.protection.PlotProtectionListener
+import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
 
 @Suppress("UnstableApiUsage")
 class PluginInitializer(private val plugin: PlotsX) {
@@ -56,6 +57,7 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.hookHandler = HookHandler(plugin)
         plugin.guiHandler = GUIHandler(plugin)
         plugin.cacheManager = CacheManager(plugin)
+        plugin.renamePlotChatListener = RenamePlotChatListener(plugin)
     }
 
     private fun registerCommands() {
@@ -69,6 +71,7 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.cacheManager.reloadAllCachesSync()
         plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)
         plugin.server.pluginManager.registerEvents(PlotProtectionListener(plugin), plugin)
+        plugin.server.pluginManager.registerEvents(plugin.renamePlotChatListener, plugin)
 
 
         if (plugin.hookHandler.checkPlaceholderAPI()) {

@@ -38,11 +38,6 @@ class CommandsManager(private val plugin: PlotsX) {
                 "PlotsX plugin command. Type /ptx help to check available commands",
                 PlotCMD(plugin)
             )
-            commands.register(
-                "rename",
-                "Zmień nazwę swojej działki",
-                RenamePlotCMD(plugin)
-            )
 
             val aliases = plugin.config.getConfigurationSection("aliases")
             aliases?.getKeys(false)?.forEach { key ->

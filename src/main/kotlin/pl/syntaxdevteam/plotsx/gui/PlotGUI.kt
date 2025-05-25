@@ -111,8 +111,7 @@ class PlotGUI(
                     player.sendMessage(message.getMessage("error", "no_in_plot"))
                 } else {
                     player.closeInventory()
-                    player.sendMessage(message.getMessage("plots", "rename_hint", mapOf("plot" to pd.name)))
-                    player.sendMessage("§7Wpisz: §e/plotsx rename <nowa_nazwa>")
+                    plugin.renamePlotChatListener.startRenameProcess(player, pd.id)
                 }
             }
             listIndex -> {
