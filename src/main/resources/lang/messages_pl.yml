@@ -54,6 +54,7 @@ GUI:
       rename: "<gold>Zmień nazwę działki</gold>"
       expand: "<gold>Rozszerz działkę</gold>"
     info:
+      owner: "<green>Właściciel:</green> <white>{owner}</white>"
       plot_name: "<green>Nazwa:</green> <white>{plot}"
       id: "<green>ID:</green> <white>{id}"
       creation_time: "<green>Utworzona:</green> <white>{time}"

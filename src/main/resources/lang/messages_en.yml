@@ -54,6 +54,7 @@ GUI:
       rename: "<gold>Rename Plot</gold>"
       expand: "<gold>Expand Plot</gold>"
     info:
+      owner: "<green>Owner:</green> <white>{owner}</white>"
       plot_name: "<green>Name:</green> <white>{plot}"
       id: "<green>ID:</green> <white>{id}"
       creation_time: "<green>Created:</green> <white>{time}"
