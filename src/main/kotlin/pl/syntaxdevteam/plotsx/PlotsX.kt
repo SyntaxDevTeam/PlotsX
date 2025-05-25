@@ -49,21 +49,4 @@ class PlotsX : JavaPlugin() {
     fun getPluginFile(): File {
         return this.file
     }
-
-    fun getServerName(): String {
-        val properties = Properties()
-        val file = File("server.properties")
-        if (file.exists()) {
-            properties.load(file.inputStream())
-            val serverName = properties.getProperty("server-name")
-            if (serverName != null) {
-                return serverName
-            } else {
-                logger.debug("Property 'server-name' not found in server.properties file.")
-            }
-        } else {
-            logger.debug("The server.properties file does not exist.")
-        }
-        return "Unknown Server"
-    }
 }
