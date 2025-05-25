@@ -10,7 +10,7 @@ import org.bukkit.inventory.ItemStack
 import pl.syntaxdevteam.plotsx.PlotsX
 import java.util.*
 
-class GUIHandler(private var plugin: PlotsX) : Listener {
+class GUIHandler(plugin: PlotsX) : Listener {
 
     private val openGuis: MutableMap<UUID, GUI> = mutableMapOf()
     private val message = plugin.messageHandler
@@ -38,7 +38,7 @@ class GUIHandler(private var plugin: PlotsX) : Listener {
 
     fun createItem(material: Material, name: String): ItemStack {
         val item = ItemStack(material)
-        val meta = item.itemMeta
+        val meta = item.itemMeta!!
         meta.displayName(message.formatMixedTextToMiniMessage(name, TagResolver.empty()))
         item.itemMeta = meta
         return item

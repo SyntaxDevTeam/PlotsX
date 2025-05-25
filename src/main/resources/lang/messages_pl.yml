@@ -30,6 +30,7 @@ plots:
   leave_plot: "<green>Opuszczono działkę <white>{plot}</white></green>"
   teleport: "<green>Teleportowano na działkę!</green>"
   teleport_failed: "<red>Nie znaleziono bezpiecznego miejsca do teleportacji na tą działkę.</red>"
+  rename_hint: "Aby zmienić nazwę działki, użyj: /rename <stara_nazwa> <nowa_nazwa>"
 
 
 GUI:
@@ -45,6 +46,8 @@ GUI:
       flags: "<color:#852579>Ustawienia flag</color>"
       teleport: "<color:#aa2244>Teleportuj się do działki</color>"
       list: "<gold>Lista działek</gold>"
+      rename: "<gold>Zmień nazwę działki</gold>"
+      expand: "<gold>Rozszerz działkę</gold>"
     info:
       plot_name: "<green>Nazwa:</green> <white>{plot}"
       id: "<green>ID:</green> <white>{id}"

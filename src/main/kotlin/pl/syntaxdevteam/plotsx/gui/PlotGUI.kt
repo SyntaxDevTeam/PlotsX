@@ -12,9 +12,6 @@ import pl.syntaxdevteam.plotsx.databases.PlotData
 import net.kyori.adventure.text.Component
 import java.text.SimpleDateFormat
 import java.util.*
-import org.bukkit.Bukkit
-import org.bukkit.Location
-import org.bukkit.World
 import pl.syntaxdevteam.plotsx.protection.SafeTeleportUtil
 
 class PlotGUI(
@@ -28,13 +25,15 @@ class PlotGUI(
 
     private val message = plugin.messageHandler
     private val helpers = Helpers(plugin)
-    private val plotIndex  = 13
-    private val flagsIndex = 20
-    private val tpaIndex   = 24
+    private val plotIndex  = 4
+    private val flagsIndex = 11
+    private val tpaIndex   = 15
+    private val renameIndex = 29
     private val listIndex  = 31
+    private val expandIndex = 33
 
     override fun open(player: Player) {
-        // pobierz działkę (jeśli nie w konstruktorze)
+
         val targetPlot = plot ?: plugin.databaseHandler.getPlotAtLocation(
             player.location.world!!.name,
             player.location.blockX,
@@ -55,9 +54,17 @@ class PlotGUI(
             Material.MINECART,
             message.getCleanMessage("GUI", "plot.material_name.teleport")
         ))
+        inventory.setItem(renameIndex, createItem(
+            Material.NAME_TAG,
+            message.getCleanMessage("GUI", "plot.material_name.rename")
+        ))
         inventory.setItem(listIndex,  createItem(
             Material.GRASS_BLOCK,
             message.getCleanMessage("GUI", "plot.material_name.list")
+        ))
+        inventory.setItem(expandIndex, createItem(
+            Material.DIAMOND_PICKAXE,
+            message.getCleanMessage("GUI", "plot.material_name.expand")
         ))
 
         super.open(player)
@@ -99,6 +106,15 @@ class PlotGUI(
                     })
                 }
             }
+            renameIndex -> {
+                if (pd == null) {
+                    player.sendMessage(message.getMessage("error", "no_in_plot"))
+                } else {
+                    player.closeInventory()
+                    player.sendMessage(message.getMessage("plots", "rename_hint", mapOf("plot" to pd.name)))
+                    player.sendMessage("§7Wpisz: §e/plotsx rename <nowa_nazwa>")
+                }
+            }
             listIndex -> {
                 val playerPlots = plugin.databaseHandler.getPlayerPlots(ownerUuid)
                 if (playerPlots.isNotEmpty()) {
@@ -108,6 +124,14 @@ class PlotGUI(
                     player.closeInventory()
                 }
                 plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, ownerUuid))
+            }
+            expandIndex -> {
+                if (pd == null) {
+                    player.sendMessage(message.getMessage("error", "no_in_plot"))
+                } else {
+                    //plugin.guiHandler.registerGui(player, ExpandGUI(plugin, pd))
+                    player.sendMessage("Feature not implemented yet.")
+                }
             }
             plotIndex -> {
                 plugin.server.scheduler.runTask(plugin, Runnable {

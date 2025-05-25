@@ -31,6 +31,7 @@ plots:
   leave_plot: "<green>You left plot <white>{plot}</white></green>"
   teleport: "<green>Teleported to the plot!</green>"
   teleport_failed: "<red>No safe location found to teleport to this plot.</red>"
+  rename_hint: "To rename the plot, use: /rename <old_name> <new_name>"
 
 GUI:
   claim:
@@ -45,6 +46,8 @@ GUI:
       flags: "<color:#852579>Flag Settings</color>"
       teleport: "<color:#aa2244>Teleport to plot</color>"
       list: "<gold>Plot List</gold>"
+      rename: "<gold>Rename Plot</gold>"
+      expand: "<gold>Expand Plot</gold>"
     info:
       plot_name: "<green>Name:</green> <white>{plot}"
       id: "<green>ID:</green> <white>{id}"
