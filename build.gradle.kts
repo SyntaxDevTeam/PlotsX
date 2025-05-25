@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "pl.syntaxdevteam"
-version = "1.0"
+version = "Alpha-1"
 description = ""
 
 repositories {
