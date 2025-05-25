@@ -7,6 +7,7 @@ import pl.syntaxdevteam.plotsx.common.*
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.gui.GUIHandler
+import pl.syntaxdevteam.plotsx.hooks.CoreProtectHook
 import pl.syntaxdevteam.plotsx.protection.PlotProtectionListener
 import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
 
@@ -72,7 +73,11 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)
         plugin.server.pluginManager.registerEvents(PlotProtectionListener(plugin), plugin)
         plugin.server.pluginManager.registerEvents(plugin.renamePlotChatListener, plugin)
+        plugin.coreProtectHook = CoreProtectHook(plugin)
 
+        if (!plugin.coreProtectHook.isEnabled()) {
+            plugin.logger.warning("CoreProtect not connected - some features may not work.")
+        }
 
         if (plugin.hookHandler.checkPlaceholderAPI()) {
             //PlaceholderHandler(plugin).register()

@@ -8,10 +8,10 @@ import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.common.*
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.gui.GUIHandler
+import pl.syntaxdevteam.plotsx.hooks.CoreProtectHook
 import pl.syntaxdevteam.plotsx.loader.PluginInitializer
 import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
 import java.io.File
-import java.util.*
 
 class PlotsX : JavaPlugin() {
     private lateinit var pluginInitializer: PluginInitializer
@@ -31,6 +31,7 @@ class PlotsX : JavaPlugin() {
     lateinit var cacheManager: CacheManager
     //lateinit var invitationManager: InvitationManager
     lateinit var renamePlotChatListener: RenamePlotChatListener
+    lateinit var coreProtectHook: CoreProtectHook
 
     override fun onEnable() {
         pluginInitializer = PluginInitializer(this)

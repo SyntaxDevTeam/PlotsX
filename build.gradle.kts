@@ -18,6 +18,7 @@ repositories {
     maven("https://repo.extendedclip.com/releases/")
     maven("https://jitpack.io")
     maven("https://repo.codemc.org/repository/maven-public")
+    maven("https://maven.playpro.com/")
 }
 
 dependencies {
@@ -37,6 +38,7 @@ dependencies {
     compileOnly("com.github.milkbowl:VaultAPI:1.7.1")
     compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.10")
     compileOnly(files("libs/CleanerX-1.5.1-DEV-all.jar"))
+    compileOnly("net.coreprotect:coreprotect:22.4")
 }
 
 val targetJavaVersion = 21

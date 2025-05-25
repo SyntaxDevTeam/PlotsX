@@ -37,6 +37,7 @@ import org.bukkit.event.entity.EntityPotionEffectEvent
 import org.bukkit.event.entity.LingeringPotionSplashEvent
 import org.bukkit.event.entity.PotionSplashEvent
 import org.bukkit.event.entity.ProjectileHitEvent
+import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerBucketEmptyEvent
 import org.bukkit.event.player.PlayerBucketEntityEvent
 import org.bukkit.event.player.PlayerBucketFillEvent
@@ -54,8 +55,6 @@ import pl.syntaxdevteam.plotsx.compat.PlotCompat
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 import java.util.UUID
-import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
-import pl.syntaxdevteam.plotsx.protection.FlagMeta
 
 class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
@@ -225,6 +224,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onBlockPlace(event: BlockPlaceEvent) {
         val player = event.player
+        val block = event.blockPlaced
         val loc = event.block.location
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ)
         val mat = event.block.type
@@ -238,6 +238,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 }, 1L)
                 player.sendMessage(message.getMessage("flags", "allow-spawners.not_allowed"))
             }else{
+                plugin.coreProtectHook.logBlockPlace(player, block)
                 return
             }
         }
@@ -250,13 +251,15 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             }, 1L)
             player.sendMessage(message.getMessage("flags", "build.not_allowed"))
         }else{
-            logger.debug("Sprawdzanie flagi nic nie dało...")
+            plugin.coreProtectHook.logBlockPlace(player, block)
+            logger.debug("Flaga nie zadziałałą. Wyłączona?")
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onBlockBreak(event: BlockBreakEvent) {
         val player = event.player
+        val block = event.block
         val loc    = event.block.location
         val plot   = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ)
         val mat    = event.block.type
@@ -270,6 +273,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 }, 1L)
                 player.sendMessage(message.getMessage("flags", "allow-spawners.not_allowed"))
             }else{
+                plugin.coreProtectHook.logBlockBreak(player, block)
                 return
             }
         }
@@ -281,7 +285,19 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 cancelAndRestore(event.block)
             }, 1L)
             player.sendMessage(message.getMessage("flags", "build.break_not_allowed"))
+        }else{
+            plugin.coreProtectHook.logBlockBreak(player, block)
         }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+    fun onInventoryClick(e: InventoryClickEvent) {
+        val who = e.whoClicked
+        if (who !is Player) return
+        val loc = (e.clickedInventory?.location ?: return)
+        @Suppress("unused", "UnusedVariable") val plot   = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        plugin.coreProtectHook.logContainerTransaction(who, loc.block)
     }
 
     /**

@@ -5,7 +5,6 @@ import io.papermc.paper.command.brigadier.CommandSourceStack
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.NotNull
 import pl.syntaxdevteam.plotsx.PlotsX
-import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 
 @Suppress("UnstableApiUsage")
@@ -23,7 +22,7 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
             player.sendMessage(plugin.messageHandler.getMessage("error", "no_permission"))
             return
         }
-        // TODO: Pozmieniać komunikaty na messages.yml
+        // TODO: Pozmieniać komunikaty na messages.yml oraz dodać do nich GUI z potwierdzeniem
         val currentPlot = dbh.getPlotAtLocation(world, x, z)
         if (currentPlot == null) {
             player.sendMessage("§cNie znajdujesz się na żadnej działce.")
