@@ -27,6 +27,7 @@ error:
 plots:
   claim_success: "<green>Plot has been successfully created!</green>"
   unclaim_success: "<green>Plot has been successfully removed.</green>"
+  unclaim_cancelled: "<yellow>Plot removal has been cancelled.</yellow>"
   enter_plot: "<green>You entered plot <white>{plot}</white></green>"
   leave_plot: "<green>You left plot <white>{plot}</white></green>"
   teleport: "<green>Teleported to the plot!</green>"
@@ -44,6 +45,11 @@ GUI:
     material_name:
       confirm: "<green>Create plot</green>"
       cancel: "<red>Cancel</red>"
+  unclaim:
+    title_unclaim: "Confirm plot removal!"
+    material_name:
+      confirm: "<red>Remove plot</red>"
+      cancel: "<yellow>Cancel</yellow>"
   plot:
     title_plot: "<b>Plot Settings"
     material_name:
