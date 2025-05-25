@@ -5,6 +5,8 @@ import io.papermc.paper.command.brigadier.CommandSourceStack
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.NotNull
 import pl.syntaxdevteam.plotsx.PlotsX
+import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
+import pl.syntaxdevteam.plotsx.gui.UnclaimConfirmGUI
 import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 
 @Suppress("UnstableApiUsage")
@@ -22,28 +24,50 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
             player.sendMessage(plugin.messageHandler.getMessage("error", "no_permission"))
             return
         }
-        // TODO: Pozmieniać komunikaty na messages.yml oraz dodać do nich GUI z potwierdzeniem
+
         val currentPlot = dbh.getPlotAtLocation(world, x, z)
         if (currentPlot == null) {
-            player.sendMessage("§cNie znajdujesz się na żadnej działce.")
+            player.sendMessage(plugin.messageHandler.getMessage("error", "no_in_plot"))
             return
         }
 
         if (currentPlot.ownerUuid != player.uniqueId) {
-            player.sendMessage("§cNie jesteś właścicielem tej działki.")
+            player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
             return
         }
 
-        val success = dbh.deletePlot(currentPlot.id)
-        if (!success) {
-            player.sendMessage("§cWystąpił błąd podczas usuwania działki.")
-            return
-        }
+        openUnclaimGui(player, currentPlot.id)
+    }
 
-        player.sendMessage(plugin.messageHandler.getMessage("plots", "unclaim_success"))
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            plugin.cacheManager.invalidatePlot(currentPlot.id)
-        })
+    private fun openUnclaimGui(player: Player, plotId: Int) {
+        val gui = UnclaimConfirmGUI(
+            plugin = plugin,
+            player = player,
+            onConfirm = { p ->
+                val success = plugin.databaseHandler.deletePlot(plotId)
+                if (!success) {
+                    p.sendMessage(plugin.messageHandler.getMessage("error", "create_error"))
+                } else {
+                    plugin.databaseHandler.logPlotAction(
+                        PlotLogEntry(
+                            plotId = plotId,
+                            action = "DELETE",
+                            actorUUID = p.uniqueId,
+                            timestamp = System.currentTimeMillis()
+                        )
+                    )
+                    p.sendMessage(plugin.messageHandler.getMessage("plots", "unclaim_success"))
+                    plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                        plugin.cacheManager.invalidatePlot(plotId)
+                    })
+                }
+            },
+            onCancel = { p ->
+                p.sendMessage(plugin.messageHandler.getMessage("plots", "unclaim_cancelled"))
+            }
+        )
+
+        plugin.guiHandler.registerGui(player, gui)
     }
 
     private fun plotList(player: Player): List<String> {
