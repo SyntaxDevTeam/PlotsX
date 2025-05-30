@@ -26,14 +26,14 @@ class RenamePlotChatListener(private val plugin: PlotsX) : Listener {
         player.sendMessage(plugin.messageHandler.getMessage("plots", "rename_hint"))
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onChat(event: AsyncChatEvent) {
         val player = event.player
         val entry = waiting.remove(player.uniqueId) ?: return
         event.isCancelled = true
         entry.second.cancel()
         val plotId = entry.first
-        val newName = PlainTextComponentSerializer.plainText().serialize(event.message()).trim()
+        val newName = PlainTextComponentSerializer.plainText().serialize(event.originalMessage()).trim()
 
         Bukkit.getScheduler().runTask(plugin, Runnable {
             val plot = plugin.databaseHandler.getPlotById(plotId)
