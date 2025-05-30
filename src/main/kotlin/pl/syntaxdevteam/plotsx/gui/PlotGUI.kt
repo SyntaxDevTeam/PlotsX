@@ -168,9 +168,10 @@ class PlotGUI(
 
         val dateFormat   = SimpleDateFormat("yyyy-MM-dd HH:mm")
         val creationTime = dateFormat.format(Date(plot.creationTime))
-        val owner = plugin.uuidManager.getPlayerName(plot.ownerUuid.toString())
+        plugin.logger.debug("plot.ownerUuid.toString() to ${plot.ownerUuid.toString()}")
+        val owner = plugin.uuidManager.getPlayerName(plot.ownerUuid)
         val lore = listOf(
-            message.getLogMessage("GUI", "plot.info.plot_owner",   mapOf("player" to owner!!)),
+            message.getLogMessage("GUI", "plot.info.owner",   mapOf("owner" to owner!!)),
             message.getLogMessage("GUI", "plot.info.plot_name",    mapOf("plot" to plot.name)),
             message.getLogMessage("GUI", "plot.info.id",           mapOf("id"   to plot.id.toString())),
             message.getLogMessage("GUI", "plot.info.creation_time",mapOf("time" to creationTime)),
