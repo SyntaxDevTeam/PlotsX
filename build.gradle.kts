@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "2.2.0-RC"
-    id("com.gradleup.shadow") version "9.0.0-beta13"
+    kotlin("jvm") version "2.2.0-RC3"
+    id("com.gradleup.shadow") version "9.0.0-beta16"
 }
 
 group = "pl.syntaxdevteam"
@@ -19,6 +19,7 @@ repositories {
     maven("https://jitpack.io")
     maven("https://repo.codemc.org/repository/maven-public")
     maven("https://maven.playpro.com/")
+    maven("https://nexus.syntaxdevteam.pl/repository/maven-releases/")
 }
 
 dependencies {
@@ -32,12 +33,12 @@ dependencies {
     compileOnly("net.kyori:adventure-text-serializer-plain:4.21.0")
     compileOnly("net.kyori:adventure-text-serializer-ansi:4.21.0")
     compileOnly("com.zaxxer:HikariCP:6.3.0")
-    compileOnly("net.luckperms:api:5.4")
+    compileOnly("net.luckperms:api:5.5")
     compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("io.github.miniplaceholders:miniplaceholders-kotlin-ext:2.3.0")
     compileOnly("com.github.milkbowl:VaultAPI:1.7.1")
-    compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.10")
-    compileOnly(files("libs/CleanerX-1.5.1-DEV-all.jar"))
+    compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.11")
+    compileOnly("pl.syntaxdevteam:cleanerx:1.5.1-DEV")
     compileOnly("net.coreprotect:coreprotect:22.4")
 }
 
