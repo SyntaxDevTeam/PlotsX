@@ -64,7 +64,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
     }
 
     override fun suggest(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>): List<String> {
-        if (!stack.sender.hasPermission("plotsx.cmd.plot")) return emptyList()
+        if (!PermissionChecker.canManagePlot(stack.sender)) return emptyList()
         if (args.size != 1) return emptyList()
 
         val player = stack.sender as? Player ?: return emptyList()
