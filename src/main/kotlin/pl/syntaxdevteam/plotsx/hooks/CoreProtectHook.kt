@@ -28,7 +28,7 @@ class CoreProtectHook(private val plugin: PlotsX) {
             val api = provider.api
             if (api.isEnabled) {
                 coreProtectAPI = api
-                plugin.logger.info("Hooked into CoreProtect!")
+                plugin.logger.debug("Hooked into CoreProtect!")
                 api.testAPI()
             } else {
                 plugin.logger.warning("CoreProtect API is not enabled!")

@@ -252,7 +252,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             player.sendMessage(message.getMessage("flags", "build.not_allowed"))
         }else{
             plugin.coreProtectHook.logBlockPlace(player, block)
-            logger.debug("Flaga nie zadziałałą. Wyłączona?")
+            logger.debug("Flaga nie zablokowana. Brak działki lub odpowiednie uprawnienia.")
         }
     }
 
