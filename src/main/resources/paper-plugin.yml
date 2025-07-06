@@ -46,20 +46,3 @@ dependencies:
     CoreProtect:
       load: BEFORE
       required: false
-
-commands:
-  claim:
-    aliases: [c]
-    description: Pozwala utworzyć działkę na danym terenie.
-    usage: /claim
-    permission: plotsx.cmd.claim
-  unclaim:
-    aliases: [unc]
-    description: Usuwa działkę na której się znajdujesz.
-    usage: /unclaim # TODO: dodać argument do usunięcia działki po jej nazwie bez konieczności stania na niej
-    permission: plotsx.cmd.unclaim
-  plotsx:
-    aliases: [ptx]
-    description: Główna komenda wtyczki.
-    usage: /plotsx
-    permission: plotsx.cmd.ptx
