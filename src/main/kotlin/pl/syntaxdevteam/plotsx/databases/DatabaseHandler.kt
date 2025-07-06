@@ -164,6 +164,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         try {
             connection.createStatement().use { statement ->
                 statement.execute("PRAGMA journal_mode=WAL;")
+                statement.execute("PRAGMA foreign_keys=ON;")
                 //logger.debug("SQLite WAL mode enabled.")
             }
         } catch (e: SQLException) {
@@ -183,6 +184,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 owner_uuid TEXT NOT NULL,
                                 x INTEGER NOT NULL,
                                 z INTEGER NOT NULL,
+                                y INTEGER NOT NULL,
                                 radius INTEGER NOT NULL,
                                 world TEXT NOT NULL,
                                 name TEXT NOT NULL,
@@ -197,6 +199,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 owner_uuid VARCHAR(36) NOT NULL,
                                 x INTEGER NOT NULL,
                                 z INTEGER NOT NULL,
+                                y INTEGER NOT NULL,
                                 radius INTEGER NOT NULL,
                                 world VARCHAR(255) NOT NULL,
                                 name VARCHAR(255) NOT NULL,
@@ -211,6 +214,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 owner_uuid VARCHAR(36) NOT NULL,
                                 x INTEGER NOT NULL,
                                 z INTEGER NOT NULL,
+                                y INTEGER NOT NULL,
                                 radius INTEGER NOT NULL,
                                 world VARCHAR(255) NOT NULL,
                                 name VARCHAR(255) NOT NULL,
@@ -225,6 +229,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 owner_uuid VARCHAR(36) NOT NULL,
                                 x INT NOT NULL,
                                 z INT NOT NULL,
+                                y INTEGER NOT NULL,
                                 radius INT NOT NULL,
                                 world VARCHAR(255) NOT NULL,
                                 name VARCHAR(255) NOT NULL,
@@ -336,8 +341,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 plot_id INTEGER NOT NULL,
                                 action TEXT NOT NULL,
                                 actor_uuid TEXT NOT NULL,
-                                timestamp TEXT NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
+                                timestamp TEXT NOT NULL
                             );
                         """.trimIndent()
 
@@ -347,8 +351,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 plot_id INTEGER NOT NULL,
                                 action VARCHAR(255) NOT NULL,
                                 actor_uuid VARCHAR(36) NOT NULL,
-                                timestamp BIGINT NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
+                                timestamp BIGINT NOT NULL
                             );
                         """.trimIndent()
 
@@ -358,8 +361,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 plot_id INT NOT NULL,
                                 action VARCHAR(255) NOT NULL,
                                 actor_uuid VARCHAR(36) NOT NULL,
-                                timestamp TEXT NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
+                                timestamp TEXT NOT NULL
                             );
                         """.trimIndent()
 
@@ -369,8 +371,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                 plot_id INT NOT NULL,
                                 action VARCHAR(255) NOT NULL,
                                 actor_uuid VARCHAR(36) NOT NULL,
-                                timestamp BIGINT (255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
+                                timestamp BIGINT (255) NOT NULL
                             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
                         """.trimIndent()
                     }
@@ -389,6 +390,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         world: String,
         x: Int,
         z: Int,
+        y: Int,
         radius: Int,
         name: String
     ): Int? {
@@ -406,18 +408,19 @@ class DatabaseHandler(private val plugin: PlotsX) {
 
                 val plotId: Int
                 val insertPlotSql = """
-                INSERT INTO plots (owner_uuid, x, z, radius, world, name, creation_time)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO plots (owner_uuid, x, z, y, radius, world, name, creation_time)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent()
 
                 conn.prepareStatement(insertPlotSql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
                     stmt.setString(1, ownerUuid.toString())
                     stmt.setInt(2, x)
                     stmt.setInt(3, z)
-                    stmt.setInt(4, radius)
-                    stmt.setString(5, world)
-                    stmt.setString(6, name)
-                    stmt.setLong(7, System.currentTimeMillis())
+                    stmt.setInt(4, y)
+                    stmt.setInt(5, radius)
+                    stmt.setString(6, world)
+                    stmt.setString(7, name)
+                    stmt.setLong(8, System.currentTimeMillis())
                     stmt.executeUpdate()
 
                     val generatedKeys = stmt.generatedKeys
@@ -820,6 +823,7 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
                             x = rs.getInt("x"),
                             z = rs.getInt("z"),
+                            y = rs.getInt("y"),
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
@@ -890,6 +894,7 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
                             x = rs.getInt("x"),
                             z = rs.getInt("z"),
+                            y = rs.getInt("y"),
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
@@ -924,6 +929,7 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
                             x = rs.getInt("x"),
                             z = rs.getInt("z"),
+                            y = rs.getInt("y"),
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
@@ -969,6 +975,7 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
                             x = rs.getInt("x"),
                             z = rs.getInt("z"),
+                            y = rs.getInt("y"),
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
@@ -995,6 +1002,7 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
                             x = rs.getInt("x"),
                             z = rs.getInt("z"),
+                            y = rs.getInt("y"),
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
@@ -1021,6 +1029,7 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
                             x = rs.getInt("x"),
                             z = rs.getInt("z"),
+                            y = rs.getInt("y"),
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
