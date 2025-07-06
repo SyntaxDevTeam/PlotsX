@@ -1,9 +1,11 @@
 package pl.syntaxdevteam.plotsx.loader
 
+import pl.syntaxdevteam.core.SyntaxCore
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.cache.CacheManager
 import pl.syntaxdevteam.plotsx.commands.CommandsManager
-import pl.syntaxdevteam.plotsx.common.*
+import pl.syntaxdevteam.plotsx.common.ConfigHandler
+import pl.syntaxdevteam.plotsx.common.UUIDManager
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.gui.GUIHandler
@@ -32,7 +34,7 @@ class PluginInitializer(private val plugin: PlotsX) {
 
     private fun setUpLogger() {
         plugin.pluginConfig = plugin.getConfig()
-        plugin.logger = Logger(plugin)
+        plugin.logger = SyntaxCore.logger
     }
 
     private fun setupConfig() {
@@ -53,8 +55,8 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     private fun setupHandlers() {
-        plugin.messageHandler = MessageHandler(plugin).apply { initial() }
-        plugin.pluginsManager = PluginManager(plugin)
+        plugin.messageHandler = SyntaxCore.messages
+        plugin.pluginsManager = SyntaxCore.pluginManagerx
         plugin.hookHandler = HookHandler(plugin)
         plugin.guiHandler = GUIHandler(plugin)
         plugin.cacheManager = CacheManager(plugin)
@@ -91,8 +93,7 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     private fun checkForUpdates() {
-        plugin.statsCollector = StatsCollector(plugin)
-        plugin.updateChecker = UpdateChecker(plugin)
-        plugin.updateChecker.checkForUpdates()
+        plugin.statsCollector = SyntaxCore.statsCollector
+        SyntaxCore.updateChecker.checkAsync()
     }
 }
