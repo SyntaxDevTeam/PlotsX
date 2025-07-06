@@ -29,7 +29,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             return
         }
 
-        if (!PermissionChecker.canCreatePlot(player)) {
+        if (!PermissionChecker.canCreatePlot(stack.sender)) {
             player.sendMessage(plugin.messageHandler.getMessage("error", "no_permission"))
             return
         }
@@ -58,14 +58,16 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                 val world    = loc.world!!.name
                 val x        = loc.blockX
                 val z        = loc.blockZ
+                val y        = loc.blockY
                 val radius   = plugin.config.getInt("plots.radius", 16)
 
                 plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
                     val existing = dbh.getPlotsByOwner(uuid)
                     val nextNum  = existing.size + 1
-                    val plotName = "${p.name}_Plot_$nextNum"
+                    val plotName = "${p.name}_Plot_$nextNum" //"${p.name}_Plot_$nextNum"
+                    //val plotName = "Działka yRoshee $nextNum" //"${p.name}_Plot_$nextNum"
 
-                    val plotId = dbh.createNewPlot(uuid, world, x, z, radius, plotName)
+                    val plotId = dbh.createNewPlot(uuid, world, x, z, y, radius, plotName)
                     if (plotId == null) {
                         p.sendMessage(plugin.messageHandler.getMessage("error", "create_error"))
                     } else {
