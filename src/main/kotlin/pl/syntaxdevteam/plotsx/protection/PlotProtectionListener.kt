@@ -901,7 +901,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     fun onPlayerTeleport(event: PlayerTeleportEvent) {
         val cause = event.cause
         if (cause != PlayerTeleportEvent.TeleportCause.ENDER_PEARL
-            && cause != PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT
+            && cause != PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT  //'CHORUS_FRUIT' is deprecated since version 1.21.5 and marked for removal
         ) return
 
         val player = event.player
