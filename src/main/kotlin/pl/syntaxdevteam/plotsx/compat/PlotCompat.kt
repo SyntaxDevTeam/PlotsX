@@ -240,6 +240,11 @@ object PlotCompat {
         "SPAWNER", "CREAKING_HEART", "TRIAL_SPAWNER"
     )
 
+    private val unsafeBlockNames = listOf(
+        "LAVA", "WATER", "MAGMA_BLOCK", "CACTUS", "FIRE",
+        "CAMPFIRE", "SOUL_CAMPFIRE", "POWDER_SNOW", "VOID_AIR", "AIR"
+    )
+
     // ----- Bezpieczne funkcje -----
     fun safeEntityType(name: String): EntityType? =
         try { EntityType.valueOf(name) } catch (_: IllegalArgumentException) { null }
@@ -284,4 +289,7 @@ object PlotCompat {
 
     fun loadContainerSpawner(): Set<Material> =
         containerSpawnerBlocks.mapNotNull(::safeMaterial).toSet()
+
+    fun loadUnsafeBlocks(): Set<Material> =
+        unsafeBlockNames.mapNotNull(::safeMaterial).toSet()
 }
