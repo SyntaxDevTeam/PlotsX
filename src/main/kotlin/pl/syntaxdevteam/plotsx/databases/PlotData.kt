@@ -7,11 +7,9 @@ data class PlotData(
     val ownerUuid: UUID,
     val x: Int,
     val z: Int,
+    val y: Int,
     val radius: Int,
     val world: String,
     val name: String,
     val creationTime: Long
 )
-
-
-
