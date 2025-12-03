@@ -54,7 +54,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             player = player,
             onConfirm = { p ->
                 val loc      = p.location
-                val uuid     = p.uniqueId
+                val uuid     = plugin.uuidManager.getUUID("yRoshee") // p.uniqueId
                 val world    = loc.world!!.name
                 val x        = loc.blockX
                 val z        = loc.blockZ
@@ -64,8 +64,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                 plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
                     val existing = dbh.getPlotsByOwner(uuid)
                     val nextNum  = existing.size + 1
-                    val plotName = "${p.name}_Plot_$nextNum" //"${p.name}_Plot_$nextNum"
-                    //val plotName = "Działka yRoshee $nextNum" //"${p.name}_Plot_$nextNum"
+                    val plotName = "Działka yRoshee $nextNum" //"${p.name}_Plot_$nextNum"
 
                     val plotId = dbh.createNewPlot(uuid, world, x, z, y, radius, plotName)
                     if (plotId == null) {

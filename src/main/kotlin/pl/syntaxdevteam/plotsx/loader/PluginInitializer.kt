@@ -1,6 +1,7 @@
 package pl.syntaxdevteam.plotsx.loader
 
 import pl.syntaxdevteam.core.SyntaxCore
+import pl.syntaxdevteam.message.SyntaxMessages
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.cache.CacheManager
 import pl.syntaxdevteam.plotsx.commands.CommandsManager
@@ -33,7 +34,7 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     private fun setUpLogger() {
-        plugin.pluginConfig = plugin.getConfig()
+        plugin.pluginConfig = plugin.config
         plugin.logger = SyntaxCore.logger
     }
 
@@ -55,7 +56,8 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     private fun setupHandlers() {
-        plugin.messageHandler = SyntaxCore.messages
+        SyntaxMessages.initialize(plugin)
+        plugin.messageHandler = SyntaxMessages.messages
         plugin.pluginsManager = SyntaxCore.pluginManagerx
         plugin.hookHandler = HookHandler(plugin)
         plugin.guiHandler = GUIHandler(plugin)
@@ -70,6 +72,7 @@ class PluginInitializer(private val plugin: PlotsX) {
 
     private fun registerEvents() {
         plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)
+        plugin.versionChecker = VersionChecker(plugin)
         plugin.cacheManager.clearAllCaches()
         plugin.cacheManager.reloadAllCachesSync()
         plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)

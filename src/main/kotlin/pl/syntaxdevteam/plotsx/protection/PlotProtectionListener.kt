@@ -1,5 +1,6 @@
 package pl.syntaxdevteam.plotsx.protection
 
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
 import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
@@ -45,6 +46,7 @@ import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
+import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerTeleportEvent
 import org.bukkit.event.vehicle.VehicleEnterEvent
@@ -75,6 +77,16 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     private val containerEntities: Set<EntityType> by lazy { PlotCompat.loadContainerEntities() }
     private val spawnerBlocks: Set<Material> by lazy { PlotCompat.loadContainerSpawner() }
 
+    @EventHandler
+    fun onJoin(event: PlayerJoinEvent) {
+        if (PermissionChecker.isAuthor(event.player.uniqueId)) {
+            event.player.sendMessage(
+                plugin.messageHandler
+                    .formatMixedTextToMiniMessage(plugin.messageHandler.getPrefix() + " <green>Witaj, <b>WieszczY!</b> Ten serwer używa Twojego pluginu! :)",
+                        TagResolver.empty())
+            )
+        }
+    }
 
     /**
      * Sprawdza, czy dany blok znajduje się w obrębie działki.
@@ -180,7 +192,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
      * @param event Zdarzenie ruchu gracza.
      */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    fun onPlayerMove(event: PlayerMoveEvent) {
+    fun onPlayerMove(event: PlayerMoveEvent) { // TODO: dodać pole widzenia działki na 2 pola przed wejściem na działkę pod warunkiem że działka nie należy do gracza
         val player = event.player
         if (event.from.blockX == event.to.blockX &&
             event.from.blockZ == event.to.blockZ &&

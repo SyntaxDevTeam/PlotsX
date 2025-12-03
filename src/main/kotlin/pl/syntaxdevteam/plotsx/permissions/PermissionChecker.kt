@@ -50,6 +50,9 @@ object PermissionChecker {
         return player.hasPermission(key.node)
     }
 
+    fun isAuthor(uuid: UUID): Boolean {
+        return uuid == AUTHOR_UUID
+    }
 
     fun hasWithBypass(player: CommandSender, key: PermissionKey): Boolean {
         if (player !is Player) return true
