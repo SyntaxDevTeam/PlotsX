@@ -30,6 +30,7 @@ plots:
   unclaim_cancelled: "<yellow>Plot removal has been cancelled.</yellow>"
   enter_plot: "<green>You entered plot <white>{plot}</white></green>"
   leave_plot: "<green>You left plot <white>{plot}</white></green>"
+  approaching_plot: "<yellow>You are approaching plot <white>{plot}</white>. Protections will change soon.</yellow>"
   teleport: "<green>Teleported to the plot!</green>"
   teleport_failed: "<red>No safe location found to teleport to this plot.</red>"
   rename_hint: "Type the new plot name in chat (you have 60 seconds)."
@@ -169,6 +170,12 @@ flags:
   leaves-decay:
     name: "Leaf Decay"
     description: "Prevents leaves from decaying"
+  block-transform:
+    name: "Block Transformation"
+    description: "Prevents automatic block transformations (e.g., moss or concrete)"
+  fall:
+    name: "Falling Blocks"
+    description: "Blocks falling block physics from settling"
   effects:
     name: "Effect Blocking"
     description: "Blocks effects (including potions)"

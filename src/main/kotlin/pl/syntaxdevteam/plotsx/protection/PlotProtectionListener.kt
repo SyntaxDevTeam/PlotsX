@@ -10,6 +10,7 @@ import org.bukkit.block.data.Openable
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
+import org.bukkit.entity.Projectile
 import org.bukkit.entity.ThrownPotion
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -28,6 +29,7 @@ import org.bukkit.event.block.BlockPistonExtendEvent
 import org.bukkit.event.block.BlockPistonRetractEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.block.BlockSpreadEvent
+import org.bukkit.event.block.LeavesDecayEvent
 import org.bukkit.event.block.EntityBlockFormEvent
 import org.bukkit.event.entity.CreatureSpawnEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
@@ -63,6 +65,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     private val logger = plugin.logger
     private val message = plugin.messageHandler
     private val playerLastPlot = mutableMapOf<UUID, Int?>()
+    private val approachingPlotWarnings = mutableMapOf<UUID, Int?>()
     private val toggling: MutableSet<Block> = mutableSetOf()
     private val aggressiveMobs: Set<EntityType> by lazy { PlotCompat.loadAggressiveMobs() }
     private val passiveMobs: Set<EntityType>   by lazy { PlotCompat.loadPassiveMobs() }
@@ -200,7 +203,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         ) return
 
         val uuid = player.uniqueId
-        val to = event.to
+        val to = event.to ?: return
         val newPlot = getPlotAtLocation(to.world.name, to.blockX, to.blockZ)
         val oldPlotId = playerLastPlot[uuid]
         val newPlotId = newPlot?.id
@@ -219,12 +222,43 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 player.sendMessage(message.getMessage("plots", "enter_plot", mapOf("plot" to newPlot.name)))
             }
         }
+
+        val stepX = (event.to.blockX - event.from.blockX).coerceIn(-1, 1)
+        val stepZ = (event.to.blockZ - event.from.blockZ).coerceIn(-1, 1)
+        if (stepX != 0 || stepZ != 0) {
+            val approachingPlot = findApproachingPlot(event, stepX, stepZ)
+
+            if (approachingPlot != null && approachingPlot.ownerUuid != uuid && approachingPlot.id != newPlotId) {
+                if (approachingPlotWarnings[uuid] != approachingPlot.id) {
+                    approachingPlotWarnings[uuid] = approachingPlot.id
+                    player.sendMessage(
+                        message.getMessage("plots", "approaching_plot", mapOf("plot" to approachingPlot.name))
+                    )
+                }
+            } else {
+                approachingPlotWarnings.remove(uuid)
+            }
+        }
         if (newPlot != null && !isFlagAllowed(newPlot.id, "effects")) {
 
             player.activePotionEffects
                 .map { it.type }
                 .forEach { player.removePotionEffect(it) }
         }
+    }
+
+    private fun findApproachingPlot(event: PlayerMoveEvent, stepX: Int, stepZ: Int): PlotData? {
+        val to = event.to ?: return null
+        val worldName = to.world.name
+        for (distance in 1..2) {
+            val plot = getPlotAtLocation(
+                worldName,
+                to.blockX + stepX * distance,
+                to.blockZ + stepZ * distance
+            )
+            if (plot != null) return plot
+        }
+        return null
     }
 
     /**
@@ -320,19 +354,18 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
      */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onFallingBlock(event: EntityChangeBlockEvent) {
-        if (event.entityType != EntityType.FALLING_BLOCK) return
-
         val loc = event.block.location
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
         logger.debug("EntityChangeBlockEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
-        val flags = plugin.cacheManager.getFlags(plot.id) ?: return
-        val fallFlagMeta = PlotFlagRegistry.allFlags["fall"]
-        val fallValue = flags.firstOrNull { it.name == "fall" }?.value?.toBooleanStrictOrNull() ?: fallFlagMeta?.defaultValue ?: true
-        if (!fallValue) {
-            if (event.entityType == EntityType.FALLING_BLOCK) {
-                event.isCancelled = true
-                event.block.blockData = event.block.blockData
-            }
+
+        if (event.entityType == EntityType.FALLING_BLOCK && !isFlagAllowed(plot.id, "fall")) {
+            event.isCancelled = true
+            event.block.state.update(true, false)
+            return
+        }
+
+        if (!isFlagAllowed(plot.id, "block-transform")) {
+            event.isCancelled = true
         }
     }
 
@@ -466,9 +499,10 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 return
             }
             in buttonsAndLevers -> {
-                if (!hasPlotPermission(player, plot, "button")) {
+                val flag = if (mat == Material.LEVER) "lever" else "button"
+                if (!hasPlotPermission(player, plot, flag)) {
                     event.isCancelled = true
-                    player.sendMessage(message.getMessage("flags", "button.not_allowed"))
+                    player.sendMessage(message.getMessage("flags", "$flag.not_allowed"))
                 }
                 return
             }
@@ -614,8 +648,27 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onEntityDamageByPlayer(event: EntityDamageByEntityEvent) {
-        val attacker = event.damager as? Player ?: return
+        val attacker = when (val damager = event.damager) {
+            is Player -> damager
+            is Projectile -> damager.shooter as? Player
+            else -> null
+        } ?: return
         val victim = event.entity
+
+        if (victim is Player) {
+            val plot = getPlotAtLocation(
+                victim.world.name,
+                victim.location.blockX,
+                victim.location.blockZ
+            ) ?: return
+
+            if (!hasPlotPermission(attacker, plot, "pvp")) {
+                event.isCancelled = true
+                attacker.sendMessage(message.getMessage("flags", "pvp.not_allowed"))
+            }
+            return
+        }
+
         if (victim.type !in passiveMobs) return
 
         val plot = getPlotAtLocation(
@@ -623,7 +676,6 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             victim.location.blockX,
             victim.location.blockZ
         ) ?: return
-        if (plot.ownerUuid == attacker.uniqueId) return
         if (!hasPlotPermission(attacker, plot, "passives")) {
             event.isCancelled = true
             attacker.sendMessage(message.getMessage("flags", "passives.not_allowed"))
@@ -861,11 +913,16 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onBlockFormByWorld(event: BlockFormEvent) {
-        val newType = event.newState.type
-        if (newType != Material.ICE && newType != Material.SNOW && newType != Material.SNOW_BLOCK) return
-
         val loc = event.block.location
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!isFlagAllowed(plot.id, "block-transform")) {
+            event.isCancelled = true
+            return
+        }
+
+        val newType = event.newState.type
+        if (newType != Material.ICE && newType != Material.SNOW && newType != Material.SNOW_BLOCK) return
 
         if (!isFlagAllowed(plot.id, "iceform-world")) {
             event.isCancelled = true
@@ -874,13 +931,28 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onBlockSpread(event: BlockSpreadEvent) {
-        val type = event.block.type
-        if (type != Material.ICE && type != Material.SNOW && type != Material.SNOW_BLOCK) return
-
         val loc = event.block.location
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
 
+        if (!isFlagAllowed(plot.id, "block-transform")) {
+            event.isCancelled = true
+            return
+        }
+
+        val type = event.block.type
+        if (type != Material.ICE && type != Material.SNOW && type != Material.SNOW_BLOCK) return
+
         if (!isFlagAllowed(plot.id, "iceform-world")) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onLeavesDecay(event: LeavesDecayEvent) {
+        val loc = event.block.location
+        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+
+        if (!isFlagAllowed(plot.id, "leaves-decay")) {
             event.isCancelled = true
         }
     }

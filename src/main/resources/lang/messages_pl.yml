@@ -29,6 +29,7 @@ plots:
   unclaim_cancelled: "<yellow>Anulowano usuwanie działki.</yellow>"
   enter_plot: "<green>Wszedłeś na działkę <white>{plot}</white></green>"
   leave_plot: "<green>Opuszczono działkę <white>{plot}</white></green>"
+  approaching_plot: "<yellow>Zbliżasz się do działki <white>{plot}</white>. Ochrona za chwilę się zmieni.</yellow>"
   teleport: "<green>Teleportowano na działkę!</green>"
   teleport_failed: "<red>Nie znaleziono bezpiecznego miejsca do teleportacji na tą działkę.</red>"
   rename_hint: "Wpisz nową nazwę działki na czacie (masz 60 sekund)."
@@ -184,6 +185,9 @@ flags:
   block-transform:
     name: "Blokowanie przemian bloków"
     description: "Blokuje przemiany bloków (np. beton)"
+  fall:
+    name: "Blokowanie spadających bloków"
+    description: "Blokuje osiadanie bloków z fizyką grawitacji"
   team:
     name: "Zarządzanie Teamem"
     description: "Dodaj lub usuń wszystkich członków swojego Teamu z działki"

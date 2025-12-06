@@ -31,6 +31,7 @@ object PlotFlagRegistry {
         FlagMeta("leaves-decay", true, FlagType.BLACKLIST, Material.OAK_LEAVES, "leaves-decay.name", "leaves-decay.description"),
         FlagMeta("effects", true, FlagType.BLACKLIST, Material.BEACON, "effects.name", "effects.description"),
         FlagMeta("block-transform", true, FlagType.BLACKLIST, Material.MOSS_BLOCK, "block-transform.name", "block-transform.description"),
+        FlagMeta("fall", true, FlagType.BLACKLIST, Material.SAND, "fall.name", "fall.description"),
         // FlagMeta("block-transform", true, FlagType.BLACKLIST, Material.MOSS_BLOCK, "block-transform.name", "block-transform.description")
         // FlagMeta("team", false, FlagType.WHITELIST, Material.NAME_TAG, "team.name", "team.description"),
         // FlagMeta("mob-loot", false, FlagType.WHITELIST, Material.MYCELIUM, "mob-loot.name", "mob-loot.description"),
