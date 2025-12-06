@@ -18,7 +18,7 @@ class PlotListGUI(
     private val plots: List<PlotData>,
     private val ownerUuid: UUID
 ) : AbstractGUI(
-    title = plugin.messageHandler.getLogMessage("GUI", "plot.list_title"),
+    title = plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "plot.list_title"),
     size  = calculateSize(plots.size)
 ) {
 
@@ -72,7 +72,7 @@ class PlotListGUI(
         meta.lore(listOf(
             Component.text("Location: ${plot.x}, ${plot.z} (${plot.world})"),
             Component.text("Created: $created"),
-            plugin.messageHandler.getLogMessage("GUI", "plot.list_click_hint")
+            plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "plot.list_click_hint")
         ))
 
         item.itemMeta = meta

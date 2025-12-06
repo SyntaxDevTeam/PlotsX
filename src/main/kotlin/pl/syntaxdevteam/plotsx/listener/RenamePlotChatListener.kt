@@ -20,10 +20,10 @@ class RenamePlotChatListener(private val plugin: PlotsX) : Listener {
         waiting[player.uniqueId]?.second?.cancel()
         val task = Bukkit.getScheduler().runTaskLater(plugin, Runnable {
             waiting.remove(player.uniqueId)
-            player.sendMessage(plugin.messageHandler.getMessage("plots", "rename_timeout"))
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_timeout"))
         }, timeoutSeconds * 20L)
         waiting[player.uniqueId] = plotId to task
-        player.sendMessage(plugin.messageHandler.getMessage("plots", "rename_hint"))
+        player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_hint"))
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -38,19 +38,19 @@ class RenamePlotChatListener(private val plugin: PlotsX) : Listener {
         Bukkit.getScheduler().runTask(plugin, Runnable {
             val plot = plugin.databaseHandler.getPlotById(plotId)
             if (plot == null) {
-                player.sendMessage(plugin.messageHandler.getMessage("plots", "rename_not_found"))
+                player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_not_found"))
                 return@Runnable
             }
             if (plugin.databaseHandler.getPlotByName(newName, plot.ownerUuid) != null) {
-                player.sendMessage(plugin.messageHandler.getMessage("plots", "rename_exists"))
+                player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_exists"))
                 return@Runnable
             }
             val success = plugin.databaseHandler.updatePlotDetails(plot.id, newName)
             if (success) {
                 plugin.cacheManager.updatePlotCacheAsync(plot.id)
-                player.sendMessage(plugin.messageHandler.getMessage("plots", "rename_success", mapOf("name" to newName)))
+                player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_success", mapOf("name" to newName)))
             } else {
-                player.sendMessage(plugin.messageHandler.getMessage("plots", "rename_fail"))
+                player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_fail"))
             }
         })
     }

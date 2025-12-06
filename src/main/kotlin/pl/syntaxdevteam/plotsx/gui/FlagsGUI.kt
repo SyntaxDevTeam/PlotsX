@@ -18,7 +18,7 @@ class FlagsGUI(
     private val plugin: PlotsX,
     private val plot: PlotData
 ) : AbstractGUI(
-    title = plugin.messageHandler.getLogMessage("GUI", "flags.title"),
+    title = plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "flags.title"),
     size  = 54
 ) {
 
@@ -36,14 +36,14 @@ class FlagsGUI(
             val flagData = flags.firstOrNull { it.name == flagMeta.name }
             val current = flagData?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
 
-            val name    = message.getCleanMessage("flags", flagMeta.displayKey)
-            val desc    = message.getCleanMessage("flags", flagMeta.descriptionKey)
-            val descTl  = message.getCleanMessage("flags", "desc_title")
-            val valTl   = message.getCleanMessage("flags", "value_title")
+            val name    = message.stringMessageToStringNoPrefix("flags", flagMeta.displayKey)
+            val desc    = message.stringMessageToStringNoPrefix("flags", flagMeta.descriptionKey)
+            val descTl  = message.stringMessageToStringNoPrefix("flags", "desc_title")
+            val valTl   = message.stringMessageToStringNoPrefix("flags", "value_title")
             val valStr  = if (current)
-                "<green><bold>✔</bold> ${message.getCleanMessage("flags", "value_true")}"
+                "<green><bold>✔</bold> ${message.stringMessageToStringNoPrefix("flags", "value_true")}"
             else
-                "<red><bold>✘</bold> ${message.getCleanMessage("flags", "value_false")}"
+                "<red><bold>✘</bold> ${message.stringMessageToStringNoPrefix("flags", "value_false")}"
 
             // Item
             val item = ItemStack(flagMeta.material)
@@ -61,7 +61,7 @@ class FlagsGUI(
 
             inventory.setItem(idx, item)
         }
-        inventory.setItem(49, plugin.guiHandler.createItem(Material.BARRIER, message.getCleanMessage("GUI", "flags.back")))
+        inventory.setItem(49, plugin.guiHandler.createItem(Material.BARRIER, message.stringMessageToStringNoPrefix("GUI", "flags.back")))
 
         super.open(player)
     }
@@ -96,7 +96,7 @@ class FlagsGUI(
             val updated = !current
 
             if (plugin.databaseHandler.updatePlotFlag(plot.id, flagKey, updated)) {
-                player.sendMessage(message.getMessage("flags", "toggle", mapOf(
+                player.sendMessage(message.stringMessageToComponent("flags", "toggle", mapOf(
                     "flag" to flagKey,
                     "value" to updated.toString()
                 )))
@@ -122,7 +122,7 @@ class FlagsGUI(
                     })
                 }
             } else {
-                player.sendMessage(message.getMessage("error", "flag_update_failed"))
+                player.sendMessage(message.stringMessageToComponent("error", "flag_update_failed"))
             }
         })
     }

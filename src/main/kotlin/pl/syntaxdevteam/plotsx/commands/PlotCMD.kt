@@ -14,13 +14,13 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
 
     override fun execute(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>) {
         if (stack.sender !is Player) {
-            stack.sender.sendMessage(plugin.messageHandler.getMessage("error", "console"))
+            stack.sender.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "console"))
             return
         }
 
         val player = stack.sender as Player
         if (!PermissionChecker.canManagePlot(player)) {
-            player.sendMessage(plugin.messageHandler.getMessage("error", "no_permission"))
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_permission"))
             return
         }
 
@@ -31,12 +31,12 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             val plot = plugin.databaseHandler.getPlotByName(plotName, uuid)
             if (plot != null) {
                 if (plot.ownerUuid != uuid && !PermissionChecker.canBypassPlots(player)) {
-                    player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
+                    player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "not_owner"))
                     return
                 }
                 plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot, plot.ownerUuid))
             } else {
-                player.sendMessage(plugin.messageHandler.getMessage("error", "plot_not_found"))
+                player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "plot_not_found"))
             }
             return
         }
@@ -48,7 +48,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         )
         if (standingPlot != null) {
             if (standingPlot.ownerUuid != uuid && !player.hasPermission("plotsx.plot.bypass")) {
-                player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
+                player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "not_owner"))
                 return
             }
             plugin.guiHandler.registerGui(player, PlotGUI(plugin, standingPlot, standingPlot.ownerUuid))
@@ -59,7 +59,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         if (playerPlots.isNotEmpty()) {
             plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, uuid))
         } else {
-            player.sendMessage(plugin.messageHandler.getMessage("error", "no_plot_found"))
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_plot_found"))
         }
     }
 

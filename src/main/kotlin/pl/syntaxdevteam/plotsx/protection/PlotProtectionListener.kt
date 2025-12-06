@@ -214,12 +214,12 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             if (oldPlotId != null) {
                 val oldPlot = plugin.cacheManager.getCachedPlots().firstOrNull { it.id == oldPlotId }
                 if (oldPlot != null) {
-                    player.sendMessage(message.getMessage("plots", "leave_plot", mapOf("plot" to oldPlot.name)))
+                    player.sendMessage(message.stringMessageToComponent("plots", "leave_plot", mapOf("plot" to oldPlot.name)))
                     }
             }
 
             if (newPlot != null) {
-                player.sendMessage(message.getMessage("plots", "enter_plot", mapOf("plot" to newPlot.name)))
+                player.sendMessage(message.stringMessageToComponent("plots", "enter_plot", mapOf("plot" to newPlot.name)))
             }
         }
 
@@ -232,7 +232,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 if (approachingPlotWarnings[uuid] != approachingPlot.id) {
                     approachingPlotWarnings[uuid] = approachingPlot.id
                     player.sendMessage(
-                        message.getMessage("plots", "approaching_plot", mapOf("plot" to approachingPlot.name))
+                        message.stringMessageToComponent("plots", "approaching_plot", mapOf("plot" to approachingPlot.name))
                     )
                 }
             } else {
@@ -282,7 +282,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 plugin.server.scheduler.runTaskLater(plugin, Runnable {
                     cancelAndRestore(event.block)
                 }, 1L)
-                player.sendMessage(message.getMessage("flags", "allow-spawners.not_allowed"))
+                player.sendMessage(message.stringMessageToComponent("flags", "allow-spawners.not_allowed"))
             }else{
                 plugin.coreProtectHook.logBlockPlace(player, block)
                 return
@@ -295,7 +295,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             plugin.server.scheduler.runTaskLater(plugin, Runnable {
                 cancelAndRestore(event.block)
             }, 1L)
-            player.sendMessage(message.getMessage("flags", "build.not_allowed"))
+            player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
         }else{
             plugin.coreProtectHook.logBlockPlace(player, block)
             logger.debug("Flaga nie zablokowana. Brak działki lub odpowiednie uprawnienia.")
@@ -317,7 +317,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 plugin.server.scheduler.runTaskLater(plugin, Runnable {
                     cancelAndRestore(event.block)
                 }, 1L)
-                player.sendMessage(message.getMessage("flags", "allow-spawners.not_allowed"))
+                player.sendMessage(message.stringMessageToComponent("flags", "allow-spawners.not_allowed"))
             }else{
                 plugin.coreProtectHook.logBlockBreak(player, block)
                 return
@@ -330,7 +330,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             plugin.server.scheduler.runTaskLater(plugin, Runnable {
                 cancelAndRestore(event.block)
             }, 1L)
-            player.sendMessage(message.getMessage("flags", "build.break_not_allowed"))
+            player.sendMessage(message.stringMessageToComponent("flags", "build.break_not_allowed"))
         }else{
             plugin.coreProtectHook.logBlockBreak(player, block)
         }
@@ -485,7 +485,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         if (mat == Material.CHISELED_BOOKSHELF) {
             if (!hasPlotPermission(player, plot, "utility")) {
                 event.isCancelled = true
-                player.sendMessage(message.getMessage("flags", "utility.not_allowed"))
+                player.sendMessage(message.stringMessageToComponent("flags", "utility.not_allowed"))
             }
             return
         }
@@ -494,7 +494,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             in containers -> {
                 if (!hasPlotPermission(player, plot, "chest")) {
                     event.isCancelled = true
-                    player.sendMessage(message.getMessage("flags", "chest.not_allowed"))
+                    player.sendMessage(message.stringMessageToComponent("flags", "chest.not_allowed"))
                 }
                 return
             }
@@ -502,14 +502,14 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 val flag = if (mat == Material.LEVER) "lever" else "button"
                 if (!hasPlotPermission(player, plot, flag)) {
                     event.isCancelled = true
-                    player.sendMessage(message.getMessage("flags", "$flag.not_allowed"))
+                    player.sendMessage(message.stringMessageToComponent("flags", "$flag.not_allowed"))
                 }
                 return
             }
             in enderChest -> {
                 if (!hasPlotPermission(player, plot, "ender-chest")) {
                     event.isCancelled = true
-                    player.sendMessage(message.getMessage("flags", "ender-chest.not_allowed"))
+                    player.sendMessage(message.stringMessageToComponent("flags", "ender-chest.not_allowed"))
                 }
                 return
             }
@@ -517,7 +517,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 if (block.type in utilityBlocks) {
                     if (!hasPlotPermission(player, plot, "utility")) {
                         event.isCancelled = true
-                        player.sendMessage(message.getMessage("flags", "utility.not_allowed"))
+                        player.sendMessage(message.stringMessageToComponent("flags", "utility.not_allowed"))
                     }
                     return
                 }
@@ -526,7 +526,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 if (block.type in redstoneNames) {
                     if (!hasPlotPermission(player, plot, "redstone")) {
                         event.isCancelled = true
-                        player.sendMessage(message.getMessage("flags", "redstone.not_allowed"))
+                        player.sendMessage(message.stringMessageToComponent("flags", "redstone.not_allowed"))
                     }
                     return
                 }
@@ -534,7 +534,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             in damageableByFlow -> {
                 if (!isFlagAllowed(plot.id, "cant-grow")) {
                     event.isCancelled = true
-                    event.player.sendMessage(message.getMessage("flags", "cant-grow.not_allowed"))
+                    event.player.sendMessage(message.stringMessageToComponent("flags", "cant-grow.not_allowed"))
                 }
             }
             else -> {
@@ -566,7 +566,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
             if (!hasPlotPermission(player, plot, "door")) {
                 event.isCancelled = true
-                player.sendMessage(message.getMessage("flags", "door.not_allowed"))
+                player.sendMessage(message.stringMessageToComponent("flags", "door.not_allowed"))
             }
             return
         }
@@ -587,7 +587,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         if (!hasPlotPermission(player, plot, "build")) {
             event.isCancelled = true
-            player.sendMessage(message.getMessage("flags", "build.not_allowed"))
+            player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
         }
     }
 
@@ -600,7 +600,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         if (!hasPlotPermission(player, plot, "build")) {
             event.isCancelled = true
-            player.sendMessage(message.getMessage("flags", "build.not_allowed"))
+            player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
         }
     }
 
@@ -612,7 +612,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         if (!hasPlotPermission(player, plot, "build")) {
             event.isCancelled = true
-            player.sendMessage(message.getMessage("flags", "build.not_allowed"))
+            player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
         }
     }
 
@@ -664,7 +664,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
             if (!hasPlotPermission(attacker, plot, "pvp")) {
                 event.isCancelled = true
-                attacker.sendMessage(message.getMessage("flags", "pvp.not_allowed"))
+                attacker.sendMessage(message.stringMessageToComponent("flags", "pvp.not_allowed"))
             }
             return
         }
@@ -678,7 +678,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         ) ?: return
         if (!hasPlotPermission(attacker, plot, "passives")) {
             event.isCancelled = true
-            attacker.sendMessage(message.getMessage("flags", "passives.not_allowed"))
+            attacker.sendMessage(message.stringMessageToComponent("flags", "passives.not_allowed"))
         }
     }
 
@@ -693,7 +693,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         if (!isFlagAllowed(plot.id, "fire")) {
             event.isCancelled = true
-            event.player.sendMessage(message.getMessage("flags", "fire.not_allowed"))
+            event.player.sendMessage(message.stringMessageToComponent("flags", "fire.not_allowed"))
         }
     }
 
@@ -763,7 +763,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         if (ent is LivingEntity && ent.type in passiveMobs) {
             if (!hasPlotPermission(player, plot, "passives")) {
                 event.isCancelled = true
-                player.sendMessage(message.getMessage("flags","passives.not_allowed"))
+                player.sendMessage(message.stringMessageToComponent("flags","passives.not_allowed"))
             }else{
                 return
             }
@@ -772,7 +772,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         if (ent.type in containerEntities) {
             if (!hasPlotPermission(player, plot, "minecart")) {
                 event.isCancelled = true
-                player.sendMessage(message.getMessage("flags","minecart.not_allowed"))
+                player.sendMessage(message.stringMessageToComponent("flags","minecart.not_allowed"))
             }else{
                 return
             }
@@ -788,7 +788,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 ?: return
             if (!hasPlotPermission(player, plot, "minecart")) {
                 event.isCancelled = true
-                player.sendMessage(message.getMessage("flags","minecart.not_allowed"))
+                player.sendMessage(message.stringMessageToComponent("flags","minecart.not_allowed"))
             }
         }
     }
@@ -802,7 +802,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 ?: return
             if (!hasPlotPermission(player, plot, "minecart")) {
                 event.isCancelled = true
-                player.sendMessage(message.getMessage("flags","minecart.not_allowed"))
+                player.sendMessage(message.stringMessageToComponent("flags","minecart.not_allowed"))
             }
         }
     }
@@ -821,7 +821,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         if (!hasPlotPermission(player, plot, "allow-home")) {
             event.isCancelled = true
-            player.sendMessage(message.getMessage("flags", "allow-home.not_allowed"))
+            player.sendMessage(message.stringMessageToComponent("flags", "allow-home.not_allowed"))
         }
     }
 
@@ -839,7 +839,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         if (!hasPlotPermission(player, plot, "use-potions")) {
             event.isCancelled = true
-            player.sendMessage(message.getMessage("flags", "use-potions.not_allowed"))
+            player.sendMessage(message.stringMessageToComponent("flags", "use-potions.not_allowed"))
         }
     }
 
@@ -856,7 +856,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         if (!hasPlotPermission(shooter, plot, "use-potions")) {
             event.isCancelled = true
-            shooter.sendMessage(message.getMessage("flags", "use-potions.not_allowed"))
+            shooter.sendMessage(message.stringMessageToComponent("flags", "use-potions.not_allowed"))
         }
     }
 
@@ -872,7 +872,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         if (!hasPlotPermission(shooter, plot, "use-potions")) {
             event.isCancelled = true
-            shooter.sendMessage(message.getMessage("flags", "use-potions.not_allowed"))
+            shooter.sendMessage(message.stringMessageToComponent("flags", "use-potions.not_allowed"))
         }
     }
 
@@ -894,7 +894,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         if (!hasPlotPermission(player, plot, "use-potions")) {
             potion.remove()
-            player.sendMessage(message.getMessage("flags", "use-potions.not_allowed"))
+            player.sendMessage(message.stringMessageToComponent("flags", "use-potions.not_allowed"))
         }
     }
 
@@ -999,7 +999,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = fromPlot ?: toPlot ?: return
         if (!hasPlotPermission(player, plot, "teleport")) {
             event.isCancelled = true
-            player.sendMessage(message.getMessage("flags", "teleport.not_allowed"))
+            player.sendMessage(message.stringMessageToComponent("flags", "teleport.not_allowed"))
         }
     }
 

@@ -10,7 +10,7 @@ class ClaimConfirmGUI(
     private val player: Player,
     private val onConfirm: (Player) -> Unit,
     private val onCancel:  (Player) -> Unit
-) : AbstractGUI(plugin.messageHandler.getLogMessage("GUI", "claim.title_claim"), 3*9) {
+) : AbstractGUI(plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "claim.title_claim"), 3*9) {
 
     private val message = plugin.messageHandler
 
@@ -20,11 +20,11 @@ class ClaimConfirmGUI(
     init {
         inventory.setItem(confirmIndex,
             plugin.guiHandler.createItem(Material.EMERALD_BLOCK,
-                message.getCleanMessage("GUI", "claim.material_name.confirm"))
+                message.stringMessageToStringNoPrefix("GUI", "claim.material_name.confirm"))
         )
         inventory.setItem(cancelIndex,
             plugin.guiHandler.createItem(Material.REDSTONE_BLOCK,
-                message.getCleanMessage("GUI", "claim.material_name.cancel"))
+                message.stringMessageToStringNoPrefix("GUI", "claim.material_name.cancel"))
         )
     }
 

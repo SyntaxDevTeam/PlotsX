@@ -25,23 +25,23 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
         val radius = plugin.config.getInt("plots.radius", 16)
 
         if (stack.sender !is Player) {
-            stack.sender.sendMessage(plugin.messageHandler.getMessage("error", "console"))
+            stack.sender.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "console"))
             return
         }
 
         if (!PermissionChecker.canCreatePlot(stack.sender)) {
-            player.sendMessage(plugin.messageHandler.getMessage("error", "no_permission"))
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_permission"))
             return
         }
 
         val currentPlot = dbh.getPlotAtLocation(world, x, z)
         if (currentPlot != null) {
-            player.sendMessage(plugin.messageHandler.getMessage("error", "is_plot"))
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "is_plot"))
             return
         }
 
         if (dbh.doesPlotOverlap(x, z, radius, world)) {
-            player.sendMessage(plugin.messageHandler.getMessage("error", "in_collision"))
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "in_collision"))
             return
         }
 
@@ -68,7 +68,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
 
                     val plotId = dbh.createNewPlot(uuid, world, x, z, y, radius, plotName)
                     if (plotId == null) {
-                        p.sendMessage(plugin.messageHandler.getMessage("error", "create_error"))
+                        p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "create_error"))
                     } else {
                         dbh.logPlotAction(
                             PlotLogEntry(
@@ -78,7 +78,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                                 timestamp= System.currentTimeMillis()
                             )
                         )
-                        p.sendMessage(plugin.messageHandler.getMessage("plots", "claim_success"))
+                        p.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "claim_success"))
 
                         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
                             plugin.cacheManager.refreshAllCachesAsync()
@@ -99,7 +99,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                 })
             },
             onCancel = { p ->
-                p.sendMessage(plugin.messageHandler.getMessage("plots", "claim_cancelled"))
+                p.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "claim_cancelled"))
             }
         )
 

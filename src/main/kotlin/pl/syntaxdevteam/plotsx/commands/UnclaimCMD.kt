@@ -21,19 +21,19 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
         val z = location.blockZ
         /*
         if (!PermissionChecker.canUnclaimPlot(player)) {
-            player.sendMessage(plugin.messageHandler.getMessage("error", "no_permission"))
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_permission"))
             return
         }
         */
         val currentPlot = dbh.getPlotAtLocation(world, x, z)
 
         if (currentPlot == null) {
-            player.sendMessage(plugin.messageHandler.getMessage("error", "no_in_plot"))
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_in_plot"))
             return
         }
         /*
         if (currentPlot.ownerUuid != player.uniqueId) {
-            player.sendMessage(plugin.messageHandler.getMessage("error", "not_owner"))
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "not_owner"))
             return
         }
         */
@@ -47,7 +47,7 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
             onConfirm = { p ->
                 val success = plugin.databaseHandler.deletePlot(plotId)
                 if (!success) {
-                    p.sendMessage(plugin.messageHandler.getMessage("error", "create_error"))
+                    p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "create_error"))
                 } else {
                     plugin.databaseHandler.logPlotAction(
                         PlotLogEntry(
@@ -57,14 +57,14 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
                             timestamp = System.currentTimeMillis()
                         )
                     )
-                    p.sendMessage(plugin.messageHandler.getMessage("plots", "unclaim_success"))
+                    p.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "unclaim_success"))
                     plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
                         plugin.cacheManager.invalidatePlot(plotId)
                     })
                 }
             },
             onCancel = { p ->
-                p.sendMessage(plugin.messageHandler.getMessage("plots", "unclaim_cancelled"))
+                p.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "unclaim_cancelled"))
             }
         )
 
