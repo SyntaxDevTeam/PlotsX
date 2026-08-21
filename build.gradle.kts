@@ -2,7 +2,7 @@ plugins {
     kotlin("jvm") version "2.4.10"
     id("com.gradleup.shadow") version "9.6.1"
     id("xyz.jpenilla.run-paper") version "3.0.1"
-    id("pl.syntaxdevteam.plugindeployer") version "1.0.4"
+    id("pl.syntaxdevteam.plugindeployer") version "1.0.6-R0.2-SNAPSHOT"
 }
 
 group = "pl.syntaxdevteam"
