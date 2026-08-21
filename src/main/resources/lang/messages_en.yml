@@ -16,6 +16,8 @@ error:
   is_plot: "<red>You can't claim here because a plot already exists.</red>"
   no_in_plot: "<red>You are not inside a plot.</red><grey>Use /plot <name> to select a plot or stand on your plot.</grey>"
   in_collision: "<red>You can't claim here because it overlaps with another plot.</red>"
+  claim_world_not_allowed: "<red>You cannot create plots in this world.</red>"
+  max_plots_reached: "<red>You have reached the maximum number of plots: {max}.</red>"
   create_error: "<red>An error occurred while creating the plot.</red>"
   no_plot_found: "<red>You do not own any plots.</red>"
   plot_not_found: "<red>Plot not found.</red>"
@@ -176,6 +178,43 @@ flags:
   fall:
     name: "Falling Blocks"
     description: "Blocks falling block physics from settling"
+  explosions:
+    name: "Explosion Protection"
+    description: "Protects blocks and entities on the plot from explosions"
+  decorations:
+    name: "Decoration Interaction"
+    description: "Allows non-members to place, break and modify paintings, frames and armor stands"
+    not_allowed: "<red>You cannot modify decorations on this plot.</red>"
+  item-transfer:
+    name: "Item Transfer"
+    description: "Allows hoppers to move items across the plot boundary"
+  portal-create:
+    name: "Portal Creation"
+    description: "Allows portals to be created on the plot"
+  portal-use:
+    name: "Portal Usage"
+    description: "Allows non-members to use portals on the plot"
+    not_allowed: "<red>You cannot use portals on this plot.</red>"
+  projectiles:
+    name: "Projectiles"
+    description: "Allows non-members to hit objects on the plot with projectiles"
+    not_allowed: "<red>You cannot use projectiles on this plot.</red>"
+  item-pickup:
+    name: "Item Pickup"
+    description: "Allows non-members to pick up items on the plot"
+    not_allowed: "<red>You cannot pick up items on this plot.</red>"
+  item-drop:
+    name: "Item Drop"
+    description: "Allows non-members to drop items on the plot"
+    not_allowed: "<red>You cannot drop items on this plot.</red>"
+  crop-trample:
+    name: "Crop Trampling"
+    description: "Allows non-members to trample farmland on the plot"
+    not_allowed: "<red>You cannot trample crops on this plot.</red>"
+  animal-interact:
+    name: "Animal Interaction"
+    description: "Allows non-members to leash, breed and mount animals"
+    not_allowed: "<red>You cannot perform this action with an animal on the plot.</red>"
   effects:
     name: "Effect Blocking"
     description: "Blocks effects (including potions)"

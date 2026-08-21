@@ -12,6 +12,7 @@ import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.entity.Projectile
 import org.bukkit.entity.ThrownPotion
+import org.bukkit.entity.ArmorStand
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -29,18 +30,29 @@ import org.bukkit.event.block.BlockPistonExtendEvent
 import org.bukkit.event.block.BlockPistonRetractEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.block.BlockSpreadEvent
+import org.bukkit.event.block.BlockExplodeEvent
 import org.bukkit.event.block.LeavesDecayEvent
 import org.bukkit.event.block.EntityBlockFormEvent
 import org.bukkit.event.entity.CreatureSpawnEvent
+import org.bukkit.event.entity.EntityBreedEvent
 import org.bukkit.event.entity.EntityChangeBlockEvent
 import org.bukkit.event.entity.EntityDamageByBlockEvent
 import org.bukkit.event.entity.EntityDamageByEntityEvent
 import org.bukkit.event.entity.EntityDamageEvent
 import org.bukkit.event.entity.EntityPotionEffectEvent
+import org.bukkit.event.entity.EntityExplodeEvent
+import org.bukkit.event.entity.EntityMountEvent
+import org.bukkit.event.entity.EntityPickupItemEvent
+import org.bukkit.event.entity.PlayerLeashEntityEvent
 import org.bukkit.event.entity.LingeringPotionSplashEvent
 import org.bukkit.event.entity.PotionSplashEvent
 import org.bukkit.event.entity.ProjectileHitEvent
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryMoveItemEvent
+import org.bukkit.event.hanging.HangingBreakByEntityEvent
+import org.bukkit.event.hanging.HangingBreakEvent
+import org.bukkit.event.hanging.HangingPlaceEvent
+import org.bukkit.event.player.PlayerArmorStandManipulateEvent
 import org.bukkit.event.player.PlayerBucketEmptyEvent
 import org.bukkit.event.player.PlayerBucketEntityEvent
 import org.bukkit.event.player.PlayerBucketFillEvent
@@ -48,10 +60,14 @@ import org.bukkit.event.player.PlayerCommandPreprocessEvent
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
+import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerJoinEvent
 import org.bukkit.event.player.PlayerMoveEvent
+import org.bukkit.event.player.PlayerPortalEvent
 import org.bukkit.event.player.PlayerTeleportEvent
+import org.bukkit.event.player.PlayerUnleashEntityEvent
 import org.bukkit.event.vehicle.VehicleEnterEvent
+import org.bukkit.event.world.PortalCreateEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import pl.syntaxdevteam.plotsx.PlotsX
@@ -187,6 +203,16 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     private fun hasBypass(player: Player): Boolean {
         return PermissionChecker.canBypassPlots(player)
     }
+
+    private fun plotAt(block: Block): PlotData? =
+        getPlotAtLocation(block.world.name, block.x, block.z)
+
+    private fun plotAt(entity: org.bukkit.entity.Entity): PlotData? {
+        val location = entity.location
+        return getPlotAtLocation(location.world.name, location.blockX, location.blockZ)
+    }
+
+    private fun projectilePlayer(projectile: Projectile): Player? = projectile.shooter as? Player
 
     /**
      * Zdarzenie wywoływane, gdy gracz wchodzi na działkę.
@@ -346,6 +372,99 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         plugin.coreProtectHook.logContainerTransaction(who, loc.block)
     }
 
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onInventoryMoveItem(event: InventoryMoveItemEvent) {
+        val sourceLocation = event.source.location ?: return
+        val destinationLocation = event.destination.location ?: return
+        val sourcePlot = getPlotAtLocation(sourceLocation.world.name, sourceLocation.blockX, sourceLocation.blockZ)
+        val destinationPlot = getPlotAtLocation(destinationLocation.world.name, destinationLocation.blockX, destinationLocation.blockZ)
+
+        if (sourcePlot?.id == destinationPlot?.id) return
+        if ((sourcePlot != null && !isFlagAllowed(sourcePlot.id, "item-transfer")) ||
+            (destinationPlot != null && !isFlagAllowed(destinationPlot.id, "item-transfer"))
+        ) {
+            event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onEntityExplode(event: EntityExplodeEvent) {
+        event.blockList().removeIf { block ->
+            plotAt(block)?.let { !isFlagAllowed(it.id, "explosions") } ?: false
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onBlockExplode(event: BlockExplodeEvent) {
+        event.blockList().removeIf { block ->
+            plotAt(block)?.let { !isFlagAllowed(it.id, "explosions") } ?: false
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onExplosionDamage(event: EntityDamageEvent) {
+        if (event.cause != EntityDamageEvent.DamageCause.BLOCK_EXPLOSION &&
+            event.cause != EntityDamageEvent.DamageCause.ENTITY_EXPLOSION
+        ) return
+        val plot = plotAt(event.entity) ?: return
+        if (!isFlagAllowed(plot.id, "explosions")) event.isCancelled = true
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onHangingPlace(event: HangingPlaceEvent) {
+        val player = event.player ?: return
+        val plot = plotAt(event.entity) ?: return
+        if (!hasPlotPermission(player, plot, "decorations")) {
+            event.isCancelled = true
+            player.sendMessage(message.stringMessageToComponent("flags", "decorations.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onHangingBreakByEntity(event: HangingBreakByEntityEvent) {
+        val player = when (val remover = event.remover) {
+            is Player -> remover
+            is Projectile -> projectilePlayer(remover)
+            else -> null
+        } ?: return
+        val plot = plotAt(event.entity) ?: return
+        if (!hasPlotPermission(player, plot, "decorations")) {
+            event.isCancelled = true
+            player.sendMessage(message.stringMessageToComponent("flags", "decorations.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onHangingBreak(event: HangingBreakEvent) {
+        if (event is HangingBreakByEntityEvent) return
+        val plot = plotAt(event.entity) ?: return
+        if (!isFlagAllowed(plot.id, "decorations")) event.isCancelled = true
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onArmorStandManipulate(event: PlayerArmorStandManipulateEvent) {
+        val plot = plotAt(event.rightClicked) ?: return
+        if (!hasPlotPermission(event.player, plot, "decorations")) {
+            event.isCancelled = true
+            event.player.sendMessage(message.stringMessageToComponent("flags", "decorations.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onArmorStandDamage(event: EntityDamageByEntityEvent) {
+        if (event.entity !is ArmorStand) return
+        val player = when (val damager = event.damager) {
+            is Player -> damager
+            is Projectile -> projectilePlayer(damager)
+            else -> null
+        } ?: return
+        val plot = plotAt(event.entity) ?: return
+        if (!hasPlotPermission(player, plot, "decorations")) {
+            event.isCancelled = true
+            player.sendMessage(message.stringMessageToComponent("flags", "decorations.not_allowed"))
+        }
+    }
+
     /**
      * Zdarzenie wywoływane, gdy blok zmienia się w inny blok (np. przez grawitację). TODO: Przetestować ponownie!!!
      * Sprawdza, czy gracz ma odpowiednie uprawnienia do zmiany bloków na działce.
@@ -474,6 +593,15 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onPlayerInteract(event: PlayerInteractEvent) {
+        if (event.action == Action.PHYSICAL && event.clickedBlock?.type == Material.FARMLAND) {
+            val player = event.player
+            val plot = event.clickedBlock?.let(::plotAt) ?: return
+            if (!hasPlotPermission(player, plot, "crop-trample")) {
+                event.isCancelled = true
+                player.sendMessage(message.stringMessageToComponent("flags", "crop-trample.not_allowed"))
+            }
+            return
+        }
         if (event.action != Action.RIGHT_CLICK_BLOCK || event.hand != EquipmentSlot.HAND) return
 
         val player = event.player
@@ -761,9 +889,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             ?: return
 
         if (ent is LivingEntity && ent.type in passiveMobs) {
-            if (!hasPlotPermission(player, plot, "passives")) {
+            if (!hasPlotPermission(player, plot, "animal-interact")) {
                 event.isCancelled = true
-                player.sendMessage(message.stringMessageToComponent("flags","passives.not_allowed"))
+                player.sendMessage(message.stringMessageToComponent("flags","animal-interact.not_allowed"))
             }else{
                 return
             }
@@ -776,6 +904,64 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             }else{
                 return
             }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPlayerLeashEntity(event: PlayerLeashEntityEvent) {
+        val plot = plotAt(event.entity) ?: return
+        if (!hasPlotPermission(event.player, plot, "animal-interact")) {
+            event.isCancelled = true
+            event.player.sendMessage(message.stringMessageToComponent("flags", "animal-interact.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPlayerUnleashEntity(event: PlayerUnleashEntityEvent) {
+        val plot = plotAt(event.entity) ?: return
+        if (!hasPlotPermission(event.player, plot, "animal-interact")) {
+            event.isCancelled = true
+            event.player.sendMessage(message.stringMessageToComponent("flags", "animal-interact.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onEntityBreed(event: EntityBreedEvent) {
+        val player = event.breeder as? Player ?: return
+        val plot = plotAt(event.entity) ?: return
+        if (!hasPlotPermission(player, plot, "animal-interact")) {
+            event.isCancelled = true
+            player.sendMessage(message.stringMessageToComponent("flags", "animal-interact.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onEntityMount(event: EntityMountEvent) {
+        val player = event.entity as? Player ?: return
+        if (event.mount.type !in passiveMobs) return
+        val plot = plotAt(event.mount) ?: return
+        if (!hasPlotPermission(player, plot, "animal-interact")) {
+            event.isCancelled = true
+            player.sendMessage(message.stringMessageToComponent("flags", "animal-interact.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onEntityPickupItem(event: EntityPickupItemEvent) {
+        val player = event.entity as? Player ?: return
+        val plot = plotAt(event.item) ?: return
+        if (!hasPlotPermission(player, plot, "item-pickup")) {
+            event.isCancelled = true
+            player.sendMessage(message.stringMessageToComponent("flags", "item-pickup.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPlayerDropItem(event: PlayerDropItemEvent) {
+        val plot = plotAt(event.itemDrop) ?: return
+        if (!hasPlotPermission(event.player, plot, "item-drop")) {
+            event.isCancelled = true
+            event.player.sendMessage(message.stringMessageToComponent("flags", "item-drop.not_allowed"))
         }
     }
 
@@ -895,6 +1081,43 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         if (!hasPlotPermission(player, plot, "use-potions")) {
             potion.remove()
             player.sendMessage(message.stringMessageToComponent("flags", "use-potions.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onProtectedProjectileHit(event: ProjectileHitEvent) {
+        if (event.entity is ThrownPotion) return
+        val player = projectilePlayer(event.entity) ?: return
+        val targetLocation = event.hitEntity?.location ?: event.hitBlock?.location ?: event.entity.location
+        val plot = getPlotAtLocation(targetLocation.world.name, targetLocation.blockX, targetLocation.blockZ) ?: return
+        if (!hasPlotPermission(player, plot, "projectiles")) {
+            event.isCancelled = true
+            event.entity.remove()
+            player.sendMessage(message.stringMessageToComponent("flags", "projectiles.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPortalCreate(event: PortalCreateEvent) {
+        val protectedPlot = event.blocks
+            .asSequence()
+            .mapNotNull { plotAt(it.block) }
+            .firstOrNull { !isFlagAllowed(it.id, "portal-create") }
+        if (protectedPlot != null) event.isCancelled = true
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPlayerPortal(event: PlayerPortalEvent) {
+        val player = event.player
+        val fromPlot = getPlotAtLocation(event.from.world.name, event.from.blockX, event.from.blockZ)
+        val to = event.to
+        val toPlot = getPlotAtLocation(to.world.name, to.blockX, to.blockZ)
+        val denied = listOfNotNull(fromPlot, toPlot)
+            .distinctBy(PlotData::id)
+            .any { !hasPlotPermission(player, it, "portal-use") }
+        if (denied) {
+            event.isCancelled = true
+            player.sendMessage(message.stringMessageToComponent("flags", "portal-use.not_allowed"))
         }
     }
 

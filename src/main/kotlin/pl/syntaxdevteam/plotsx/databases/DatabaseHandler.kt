@@ -7,12 +7,23 @@ import java.io.File
 import java.io.IOException
 import java.sql.*
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 
 class DatabaseHandler(private val plugin: PlotsX) {
     private var dataSource: HikariDataSource? = null
     private var logger = plugin.logger
     private val dbType = plugin.config.getString("database.type")?.lowercase() ?: "sqlite"
+    private val claimLocks = ConcurrentHashMap<String, ReentrantLock>()
+
+    sealed interface ClaimResult {
+        data class Success(val plotId: Int) : ClaimResult
+        data object LimitReached : ClaimResult
+        data object Overlap : ClaimResult
+        data object DatabaseError : ClaimResult
+    }
 
     init {
         setupDataSource()
@@ -385,60 +396,107 @@ class DatabaseHandler(private val plugin: PlotsX) {
         logger.debug("Table creation operations completed.")
     }
 
-    fun createNewPlot(
+    fun claimPlotAtomically(
         ownerUuid: UUID,
+        actorUuid: UUID,
         world: String,
         x: Int,
         z: Int,
         y: Int,
         radius: Int,
-        name: String
-    ): Int? {
+        maxPlots: Int,
+        namePrefix: String
+    ): ClaimResult {
+        val claimLock = claimLocks.computeIfAbsent(world.lowercase(Locale.ROOT)) { ReentrantLock() }
+        return claimLock.withLock {
+            claimPlotInTransaction(ownerUuid, actorUuid, world, x, z, y, radius, maxPlots, namePrefix)
+        }
+    }
+
+    private fun claimPlotInTransaction(
+        ownerUuid: UUID,
+        actorUuid: UUID,
+        world: String,
+        x: Int,
+        z: Int,
+        y: Int,
+        radius: Int,
+        maxPlots: Int,
+        namePrefix: String
+    ): ClaimResult {
         val connection = getConnection() ?: run {
             logger.err("Brak połączenia z bazą danych.")
-            return null
+            return ClaimResult.DatabaseError
         }
-        logger.debug("Ustanowiono połączenie z createNewPlot()")
-
         val defaultFlags = PlotFlagRegistry.allFlags.values.associate { it.name to it.defaultValue }
 
-        try {
-            connection.use { conn ->
-                conn.autoCommit = false 
+        connection.use { conn ->
+            try {
+                conn.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
+                conn.autoCommit = false
 
-                val plotId: Int
-                val insertPlotSql = """
-                INSERT INTO plots (owner_uuid, x, z, y, radius, world, name, creation_time)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """.trimIndent()
+                val ownerPlotCount = conn.prepareStatement(
+                    "SELECT COUNT(*) FROM plots WHERE owner_uuid = ?"
+                ).use { stmt ->
+                    stmt.setString(1, ownerUuid.toString())
+                    stmt.executeQuery().use { rs ->
+                        if (rs.next()) rs.getInt(1) else 0
+                    }
+                }
 
-                conn.prepareStatement(insertPlotSql, Statement.RETURN_GENERATED_KEYS).use { stmt ->
+                if (maxPlots >= 0 && ownerPlotCount >= maxPlots) {
+                    conn.rollback()
+                    return ClaimResult.LimitReached
+                }
+
+                val overlap = conn.prepareStatement(
+                    """
+                    SELECT 1 FROM plots
+                    WHERE world = ?
+                      AND (x + radius) >= ?
+                      AND (x - radius) <= ?
+                      AND (z + radius) >= ?
+                      AND (z - radius) <= ?
+                    LIMIT 1
+                    """.trimIndent()
+                ).use { stmt ->
+                    stmt.setString(1, world)
+                    stmt.setInt(2, x - radius)
+                    stmt.setInt(3, x + radius)
+                    stmt.setInt(4, z - radius)
+                    stmt.setInt(5, z + radius)
+                    stmt.executeQuery().use(ResultSet::next)
+                }
+
+                if (overlap) {
+                    conn.rollback()
+                    return ClaimResult.Overlap
+                }
+
+                val plotId = conn.prepareStatement(
+                    """
+                    INSERT INTO plots (owner_uuid, x, z, y, radius, world, name, creation_time)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """.trimIndent(),
+                    Statement.RETURN_GENERATED_KEYS
+                ).use { stmt ->
                     stmt.setString(1, ownerUuid.toString())
                     stmt.setInt(2, x)
                     stmt.setInt(3, z)
                     stmt.setInt(4, y)
                     stmt.setInt(5, radius)
                     stmt.setString(6, world)
-                    stmt.setString(7, name)
+                    stmt.setString(7, "$namePrefix ${ownerPlotCount + 1}")
                     stmt.setLong(8, System.currentTimeMillis())
                     stmt.executeUpdate()
-
-                    val generatedKeys = stmt.generatedKeys
-                    if (generatedKeys.next()) {
-                        plotId = generatedKeys.getInt(1)
-                    } else {
-                        conn.rollback()
-                        logger.err("Nie udało się pobrać ID nowej działki.")
-                        return null
+                    stmt.generatedKeys.use { keys ->
+                        if (keys.next()) keys.getInt(1) else throw SQLException("Nie udało się pobrać ID nowej działki.")
                     }
                 }
 
-                // 2. Domyślne flagi
-                val insertFlagSql = """
-                INSERT INTO plot_flags (plot_id, flag_name, flag_value) VALUES (?, ?, ?)
-            """.trimIndent()
-
-                conn.prepareStatement(insertFlagSql).use { flagStmt ->
+                conn.prepareStatement(
+                    "INSERT INTO plot_flags (plot_id, flag_name, flag_value) VALUES (?, ?, ?)"
+                ).use { flagStmt ->
                     for ((flag, value) in defaultFlags) {
                         flagStmt.setInt(1, plotId)
                         flagStmt.setString(2, flag)
@@ -448,13 +506,28 @@ class DatabaseHandler(private val plugin: PlotsX) {
                     flagStmt.executeBatch()
                 }
 
+                conn.prepareStatement(
+                    "INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp) VALUES (?, ?, ?, ?)"
+                ).use { logStmt ->
+                    logStmt.setInt(1, plotId)
+                    logStmt.setString(2, "CREATE")
+                    logStmt.setString(3, actorUuid.toString())
+                    logStmt.setLong(4, System.currentTimeMillis())
+                    logStmt.executeUpdate()
+                }
+
                 conn.commit()
                 logger.debug("Utworzono działkę z domyślnymi flagami: plot_id=$plotId")
-                return plotId
+                return ClaimResult.Success(plotId)
+            } catch (ex: SQLException) {
+                try {
+                    conn.rollback()
+                } catch (rollbackException: SQLException) {
+                    logger.err("Nie udało się wycofać tworzenia działki: ${rollbackException.message}")
+                }
+                logger.err("Błąd podczas atomowego tworzenia działki: ${ex.message}")
+                return ClaimResult.DatabaseError
             }
-        } catch (ex: SQLException) {
-            logger.err("Błąd podczas tworzenia działki: ${ex.message}")
-            return null
         }
     }
 

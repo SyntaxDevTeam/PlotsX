@@ -1,5 +1,23 @@
 # Audyt ochrony działek – PlotsX
 
+## Aktualizacja implementacji
+
+Po wykonaniu audytu dodano następujące zabezpieczenia:
+
+- `explosions` — filtruje listę bloków niszczonych przez eksplozje bloków i encji oraz chroni byty na działce przed obrażeniami wybuchowymi;
+- `decorations` — chroni obrazy, ramki i inne hanging entities, a także stawianie, niszczenie i wyposażenie armor standów;
+- `item-transfer` — blokuje transfer hopperami przez granicę działki, pozostawiając transfer wewnątrz tej samej działki;
+- `portal-create` — kontroluje tworzenie portali na działce;
+- `portal-use` — kontroluje przechodzenie graczy przez portal z działki lub na działkę;
+- `projectiles` — blokuje pociski obcych graczy trafiające w blok lub byt na działce;
+- `item-pickup` i `item-drop` — kontrolują podnoszenie i wyrzucanie przedmiotów;
+- `crop-trample` — blokuje deptanie pól przez obcych graczy;
+- `animal-interact` — kontroluje zwykłe interakcje, smycze, rozmnażanie i dosiadanie zwierząt.
+
+Właściciel, członkowie oraz gracze z bypassem nadal omijają ograniczenia skierowane do graczy. Zdarzenia środowiskowe, takie jak eksplozje i tworzenie portali, są sterowane bezpośrednio wartością flagi. Nowe flagi działają również na starszych działkach dzięki wartościom domyślnym rejestru, nawet jeśli nie mają jeszcze osobnego rekordu w tabeli `plot_flags`.
+
+Pozostałe obszary do dalszego audytu i implementacji to przede wszystkim ogólna flaga używania komend, fishing, specjalne przedmioty (elytra/trident/mace), efekty pogody oraz bardziej szczegółowe flagi interakcji z blokami.
+
 ## Zakres ochrony i flagi
 - **Rejestr flag** – plugin udostępnia 29 aktywnych flag (whitelist/blacklist) kontrolujących budowanie, PVP, pojemniki, redstone, spawn mobów, płyny, ogień, teleporty, wzrost roślin itd., z domyślnymi wartościami zapisanymi w `PlotFlagRegistry`.【F:src/main/kotlin/pl/syntaxdevteam/plotsx/protection/PlotFlagRegistry.kt†L5-L40】
 - **Wymuszanie flag per‑zdarzenie** – logika ochrony obejmuje m.in. wejście/wyjście z działki, teleporty z perłą/chorusem, stawianie/niszczene bloków (w tym spawnerów), tłoki, dyspensery, przepływ cieczy, griefery fluidów, użycie pojemników (w tym ender‑chest), redstone, utility, drzwi/przyciski/dźwignie, mikstury (wypicie/splash/lingering), komendy /home,/sethome, spawn mobów, interakcje ze zwierzętami i pojazdami, rozrost/bloki naturalne (śnieg/lód/liście/uprawy), oraz aplikację efektów.【F:src/main/kotlin/pl/syntaxdevteam/plotsx/protection/PlotProtectionListener.kt†L94-L413】【F:src/main/kotlin/pl/syntaxdevteam/plotsx/protection/PlotProtectionListener.kt†L450-L1004】
@@ -36,4 +54,4 @@
 5. **Transfer przedmiotów** – dodać obsługę `InventoryMoveItemEvent`/`BlockFromToEvent` dla hopperów i dropperów przenoszących itemy przez granicę działki, z flagą `item-transfer` albo wykorzystując istniejącą `chest`/`build`.
 
 ## Konkluzja
-Plugin ma solidną siatkę ochron dla interakcji gracza i środowiska, ale ignoruje kilka klasycznych wektorów griefingu (wybuchy, portale, kanały itemów, pociski i dekoracje). Bez dołożenia powyższych blokad działki nie są w pełni bezpieczne w realiach survival/skyblock.
+Plugin ma obecnie znacznie pełniejszą siatkę ochron dla interakcji gracza i środowiska. Najważniejsze klasyczne wektory griefingu zidentyfikowane w pierwotnym audycie — wybuchy, portale, kanały itemów, pociski i dekoracje — otrzymały dedykowane flagi i handlery. Przed stabilnym wydaniem nadal potrzebne są testy integracyjne na rzeczywistym serwerze oraz uzupełnienie mniej krytycznych przypadków wymienionych w aktualizacji audytu.

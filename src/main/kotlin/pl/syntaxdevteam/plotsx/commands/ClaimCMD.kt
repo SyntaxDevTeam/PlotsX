@@ -5,32 +5,44 @@ import io.papermc.paper.command.brigadier.CommandSourceStack
 import org.bukkit.entity.Player
 import org.jetbrains.annotations.NotNull
 import pl.syntaxdevteam.plotsx.PlotsX
+import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.databases.Helpers
-import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 import pl.syntaxdevteam.plotsx.gui.ClaimConfirmGUI
 import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 
-@Suppress("UnstableApiUsage")
 class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
     val dbh = plugin.databaseHandler
     val helpers = Helpers(plugin)
 
     override fun execute(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>) {
-
-        val player = stack.sender as Player
+        val player = stack.sender as? Player ?: run {
+            stack.sender.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "console"))
+            return
+        }
         val location = player.location
         val world = location.world.name
         val x = location.blockX
         val z = location.blockZ
         val radius = plugin.config.getInt("plots.radius", 16)
 
-        if (stack.sender !is Player) {
-            stack.sender.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "console"))
+        if (!isClaimWorldAllowed(world)) {
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "claim_world_not_allowed"))
             return
         }
 
         if (!PermissionChecker.canCreatePlot(stack.sender)) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_permission"))
+            return
+        }
+
+        val maxPlots = plugin.config.getInt("plots.maxPlots", 5).coerceAtLeast(0)
+        val ownerUuid = plugin.uuidManager.getUUID(player.name) // Celowe podczas testów jednoosobowych.
+        if (dbh.getPlotsByOwner(ownerUuid).size >= maxPlots) {
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                "error",
+                "max_plots_reached",
+                mapOf("max" to maxPlots.toString())
+            ))
             return
         }
 
@@ -54,46 +66,58 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             player = player,
             onConfirm = { p ->
                 val loc      = p.location
-                val uuid     = plugin.uuidManager.getUUID("yRoshee") // p.uniqueId
+                val uuid     = plugin.uuidManager.getUUID("yRoshee") // Celowe podczas testów jednoosobowych.
                 val world    = loc.world!!.name
                 val x        = loc.blockX
                 val z        = loc.blockZ
                 val y        = loc.blockY
                 val radius   = plugin.config.getInt("plots.radius", 16)
+                val maxPlots = plugin.config.getInt("plots.maxPlots", 5).coerceAtLeast(0)
+
+                if (!isClaimWorldAllowed(world)) {
+                    p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "claim_world_not_allowed"))
+                    return@ClaimConfirmGUI
+                }
 
                 plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-                    val existing = dbh.getPlotsByOwner(uuid)
-                    val nextNum  = existing.size + 1
-                    val plotName = "Działka yRoshee $nextNum" //"${p.name}_Plot_$nextNum"
-
-                    val plotId = dbh.createNewPlot(uuid, world, x, z, y, radius, plotName)
-                    if (plotId == null) {
-                        p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "create_error"))
-                    } else {
-                        dbh.logPlotAction(
-                            PlotLogEntry(
-                                plotId   = plotId,
-                                action   = "CREATE",
-                                actorUUID= uuid,
-                                timestamp= System.currentTimeMillis()
-                            )
-                        )
-                        p.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "claim_success"))
-
-                        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                    when (dbh.claimPlotAtomically(
+                        ownerUuid = uuid,
+                        actorUuid = p.uniqueId,
+                        world = world,
+                        x = x,
+                        z = z,
+                        y = y,
+                        radius = radius,
+                        maxPlots = maxPlots,
+                        namePrefix = "Działka yRoshee"
+                    )) {
+                        is DatabaseHandler.ClaimResult.Success -> {
                             plugin.cacheManager.refreshAllCachesAsync()
-                        })
-
-                        plugin.server.scheduler.runTask(plugin, Runnable {
-                            helpers.visualizePlotBorder3D(
-                                player    = p,
+                            plugin.server.scheduler.runTask(plugin, Runnable {
+                                p.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "claim_success"))
+                                helpers.visualizePlotBorder3D(
+                                    player    = p,
                                 centerX   = x,
                                 centerZ   = z,
                                 radius    = radius,
                                 durationSec = 20,
                                 stepXZ      = 2,
                                 stepY    = 4
-                            )
+                                )
+                            })
+                        }
+                        DatabaseHandler.ClaimResult.LimitReached -> plugin.server.scheduler.runTask(plugin, Runnable {
+                            p.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                                "error",
+                                "max_plots_reached",
+                                mapOf("max" to maxPlots.toString())
+                            ))
+                        })
+                        DatabaseHandler.ClaimResult.Overlap -> plugin.server.scheduler.runTask(plugin, Runnable {
+                            p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "in_collision"))
+                        })
+                        DatabaseHandler.ClaimResult.DatabaseError -> plugin.server.scheduler.runTask(plugin, Runnable {
+                            p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "create_error"))
                         })
                     }
                 })
@@ -104,6 +128,11 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
         )
 
         plugin.guiHandler.registerGui(player, gui)
+    }
+
+    private fun isClaimWorldAllowed(world: String): Boolean {
+        val configuredWorld = plugin.config.getString("plots.world")?.trim().orEmpty()
+        return configuredWorld.isEmpty() || configuredWorld == "*" || configuredWorld.equals(world, ignoreCase = true)
     }
 
 }

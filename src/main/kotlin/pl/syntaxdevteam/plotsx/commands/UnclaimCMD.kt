@@ -13,30 +13,33 @@ import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
 
     override fun execute(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>) {
-        val player = stack.sender as Player
+        val player = stack.sender as? Player ?: run {
+            stack.sender.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "console"))
+            return
+        }
         val dbh = plugin.databaseHandler
         val location = player.location
         val world = location.world.name
         val x = location.blockX
         val z = location.blockZ
-        /*
+
         if (!PermissionChecker.canUnclaimPlot(player)) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_permission"))
             return
         }
-        */
+
         val currentPlot = dbh.getPlotAtLocation(world, x, z)
 
         if (currentPlot == null) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_in_plot"))
             return
         }
-        /*
+
         if (currentPlot.ownerUuid != player.uniqueId) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "not_owner"))
             return
         }
-        */
+
         openUnclaimGui(player, currentPlot.id)
     }
 

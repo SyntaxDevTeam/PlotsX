@@ -16,6 +16,8 @@ error:
   is_plot: "<red>Nie możesz postawić działki tutaj, ponieważ działka już istnieje.</red>"
   no_in_plot: "<red>Nie jesteś w działce.</red><grey>Użyj /plot <nazwa>, aby wybrać działkę lub stań na swojej działce.</grey>"
   in_collision: "<red>Nie możesz postawić działki tutaj, ponieważ koliduje z inną działką.</red>"
+  claim_world_not_allowed: "<red>Nie możesz tworzyć działek w tym świecie.</red>"
+  max_plots_reached: "<red>Osiągnięto maksymalną liczbę działek: {max}.</red>"
   create_error: "<red>Wystąpił błąd podczas tworzenia działki.</red>"
   no_plot_found: "<red>Nie posiadasz działki.</red>"
   plot_not_found: "<red>Nie znaleziono działki.</red>"
@@ -188,7 +190,43 @@ flags:
   fall:
     name: "Blokowanie spadających bloków"
     description: "Blokuje osiadanie bloków z fizyką grawitacji"
+  explosions:
+    name: "Ochrona przed eksplozjami"
+    description: "Chroni bloki i byty na działce przed eksplozjami"
+  decorations:
+    name: "Interakcje z dekoracjami"
+    description: "Pozwala obcym stawiać, niszczyć i modyfikować obrazy, ramki oraz stojaki na zbroję"
+    not_allowed: "<red>Nie możesz modyfikować dekoracji na tej działce.</red>"
+  item-transfer:
+    name: "Transfer przedmiotów"
+    description: "Pozwala hopperom przenosić przedmioty przez granicę działki"
+  portal-create:
+    name: "Tworzenie portali"
+    description: "Pozwala na tworzenie portali na działce"
+  portal-use:
+    name: "Korzystanie z portali"
+    description: "Pozwala obcym korzystać z portali na działce"
+    not_allowed: "<red>Nie możesz korzystać z portali na tej działce.</red>"
+  projectiles:
+    name: "Pociski"
+    description: "Pozwala obcym trafiać pociskami w obiekty na działce"
+    not_allowed: "<red>Nie możesz używać pocisków na tej działce.</red>"
+  item-pickup:
+    name: "Podnoszenie przedmiotów"
+    description: "Pozwala obcym podnosić przedmioty na działce"
+    not_allowed: "<red>Nie możesz podnosić przedmiotów na tej działce.</red>"
+  item-drop:
+    name: "Wyrzucanie przedmiotów"
+    description: "Pozwala obcym wyrzucać przedmioty na działce"
+    not_allowed: "<red>Nie możesz wyrzucać przedmiotów na tej działce.</red>"
+  crop-trample:
+    name: "Deptanie upraw"
+    description: "Pozwala obcym deptać pola uprawne na działce"
+    not_allowed: "<red>Nie możesz deptać upraw na tej działce.</red>"
+  animal-interact:
+    name: "Interakcje ze zwierzętami"
+    description: "Pozwala obcym prowadzić, rozmnażać i dosiadać zwierzęta"
+    not_allowed: "<red>Nie możesz wykonywać tej czynności ze zwierzęciem na działce.</red>"
   team:
     name: "Zarządzanie Teamem"
     description: "Dodaj lub usuń wszystkich członków swojego Teamu z działki"
-
