@@ -1,18 +1,18 @@
 libraries:
-  - pl.syntaxdevteam:core:1.2.6
-  - pl.syntaxdevteam:messageHandler-paper:1.0.0
+  - pl.syntaxdevteam:syntaxcore:1.4.0-R0.1-SNAPSHOT
+  - pl.syntaxdevteam:messageHandler-paper:1.2.2-R0.4-SNAPSHOT
   - com.github.ben-manes.caffeine:caffeine:3.2.2
   - org.eclipse.aether:aether-api:1.1.0
   - org.yaml:snakeyaml:2.5
-  - com.google.code.gson:gson:2.13.2
-  - net.kyori:adventure-text-minimessage:4.25.0
-  - net.kyori:adventure-text-serializer-gson:4.25.0
-  - net.kyori:adventure-text-serializer-legacy:4.25.0
-  - net.kyori:adventure-text-serializer-plain:4.25.0
-  - net.kyori:adventure-text-serializer-ansi:4.25.0
+  - com.google.code.gson:gson:2.14.0
+  - net.kyori:adventure-text-minimessage:5.1.0
+  - net.kyori:adventure-text-serializer-gson:5.1.0
+  - net.kyori:adventure-text-serializer-legacy:5.1.0
+  - net.kyori:adventure-text-serializer-plain:5.1.0
+  - net.kyori:adventure-text-serializer-ansi:5.1.0
   - org.apache.ant:ant:1.10.15
-  - org.mariadb.jdbc:mariadb-java-client:3.5.5
+  - org.mariadb.jdbc:mariadb-java-client:3.5.10
   - org.xerial:sqlite-jdbc:3.50.3.0
-  - org.postgresql:postgresql:42.7.7
-  - com.h2database:h2:2.3.232
-  - com.zaxxer:HikariCP:7.0.2
+  - org.postgresql:postgresql:42.7.13
+  - com.h2database:h2:2.4.240
+  - com.zaxxer:HikariCP:7.1.0
