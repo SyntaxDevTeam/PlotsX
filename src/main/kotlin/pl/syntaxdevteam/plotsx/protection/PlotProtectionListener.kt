@@ -617,7 +617,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         val interactionFlag = when {
             mat.name.endsWith("_BED") -> "bed-use"
-            mat == Material.CRAFTING_TABLE || mat == Material.CRAFTER -> "crafting"
+            mat == Material.CRAFTING_TABLE || mat.name == "CRAFTER" -> "crafting"
             mat == Material.ENCHANTING_TABLE -> "enchanting"
             mat == Material.RESPAWN_ANCHOR -> "respawn-anchor"
             else -> null
@@ -833,8 +833,8 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onSpecialWeaponDamage(event: EntityDamageByEntityEvent) {
         val attacker = when (val damager = event.damager) {
-            is Player -> damager.takeIf { it.inventory.itemInMainHand.type == Material.MACE }
-            is Projectile -> (damager.shooter as? Player).takeIf { damager.type == EntityType.TRIDENT }
+            is Player -> damager.takeIf { it.inventory.itemInMainHand.type.name == "MACE" }
+            is Projectile -> (damager.shooter as? Player).takeIf { damager.type.name == "TRIDENT" }
             else -> null
         } ?: return
         val plot = plotAt(event.entity) ?: return
@@ -846,7 +846,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onSpecialProjectileLaunch(event: ProjectileLaunchEvent) {
-        if (event.entity.type != EntityType.TRIDENT) return
+        if (event.entity.type.name != "TRIDENT") return
         val player = projectilePlayer(event.entity) ?: return
         val plot = plotAt(player) ?: return
         if (!hasPlotPermission(player, plot, "special-weapons")) {
@@ -1313,9 +1313,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onPlayerTeleport(event: PlayerTeleportEvent) {
         val cause = event.cause
-        if (cause != PlayerTeleportEvent.TeleportCause.ENDER_PEARL
-            && cause != PlayerTeleportEvent.TeleportCause.CHORUS_FRUIT  //TODO: zrobić coś z tym błędem: 'CHORUS_FRUIT' is deprecated since version 1.21.5 and marked for removal
-        ) return
+        if (cause != PlayerTeleportEvent.TeleportCause.ENDER_PEARL && cause.name != "CHORUS_FRUIT") return
 
         val player = event.player
         val fromPlot = getPlotAtLocation(

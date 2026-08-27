@@ -7,7 +7,10 @@ plugins {
 
 group = "pl.syntaxdevteam"
 version = "1.0.0-R0.1-Alpha"
-description = ""
+description = "Lightweight and versatile player plot protection plugin"
+
+val paperApiVersion = providers.gradleProperty("paperApiVersion")
+    .getOrElse("1.21.11-R0.1-SNAPSHOT")
 
 repositories {
     mavenCentral()
@@ -26,7 +29,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+    compileOnly("io.papermc.paper:paper-api:$paperApiVersion")
     compileOnly("pl.syntaxdevteam:syntaxcore:1.4.0-R0.1-SNAPSHOT")
     compileOnly("pl.syntaxdevteam:messageHandler-paper:1.2.2-R0.4-SNAPSHOT")
     compileOnly("pl.syntaxdevteam:cleanerx:1.5.8")
@@ -51,7 +54,9 @@ dependencies {
     compileOnly("net.coreprotect:coreprotect:22.4")
 }
 
-val targetJavaVersion = 21
+val targetJavaVersion = providers.gradleProperty("javaVersion")
+    .map(String::toInt)
+    .getOrElse(21)
 kotlin {
     jvmToolchain(targetJavaVersion)
 }
@@ -61,14 +66,14 @@ tasks {
         dependsOn("shadowJar")
     }
     runServer {
-        minecraftVersion("1.21.10")
+        minecraftVersion("1.20.6")
         runDirectory(file("run/paper"))
     }
     runPaper.folia.registerTask()
 }
 
 tasks.processResources {
-    val props = mapOf("version" to version, "description" to description)
+    val props = mapOf("version" to project.version, "description" to project.description)
     inputs.properties(props)
     filteringCharset = "UTF-8"
     filesMatching("paper-plugin.yml") {
@@ -77,6 +82,6 @@ tasks.processResources {
 }
 
 plugindeployer {
-    paper { dir = "/home/debian/poligon/Paper/1.21.11/plugins" } //ostatnia wersja dla Paper
-    folia { dir = "/home/debian/poligon/Folia/1.21.8/plugins" } //ostatnia wersja dla Folia
+    paper { dir = "/home/debian/poligon/Paper/26.2/plugins" } //ostatnia wersja dla Paper
+    folia { dir = "/home/debian/poligon/Folia/26.2/plugins" } //ostatnia wersja dla Folia
 }

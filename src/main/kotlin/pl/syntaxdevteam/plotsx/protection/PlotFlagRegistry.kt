@@ -1,6 +1,7 @@
 package pl.syntaxdevteam.plotsx.protection
 
 import org.bukkit.Material
+import pl.syntaxdevteam.plotsx.compat.PlotCompat
 
 object PlotFlagRegistry {
     val allFlags: Map<String, FlagMeta> = listOf(
@@ -45,7 +46,7 @@ object PlotFlagRegistry {
         FlagMeta("command-use", true, FlagType.WHITELIST, Material.COMMAND_BLOCK, "command-use.name", "command-use.description"),
         FlagMeta("fishing", false, FlagType.WHITELIST, Material.FISHING_ROD, "fishing.name", "fishing.description"),
         FlagMeta("elytra", false, FlagType.WHITELIST, Material.ELYTRA, "elytra.name", "elytra.description"),
-        FlagMeta("special-weapons", false, FlagType.WHITELIST, Material.MACE, "special-weapons.name", "special-weapons.description"),
+        FlagMeta("special-weapons", false, FlagType.WHITELIST, PlotCompat.safeMaterial("MACE") ?: Material.DIAMOND_SWORD, "special-weapons.name", "special-weapons.description"),
         FlagMeta("weather", true, FlagType.BLACKLIST, Material.LIGHTNING_ROD, "weather.name", "weather.description"),
         FlagMeta("bed-use", false, FlagType.WHITELIST, Material.RED_BED, "bed-use.name", "bed-use.description"),
         FlagMeta("crafting", false, FlagType.WHITELIST, Material.CRAFTING_TABLE, "crafting.name", "crafting.description"),

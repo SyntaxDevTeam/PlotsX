@@ -2,30 +2,7 @@ package pl.syntaxdevteam.plotsx.loader
 
 import org.bukkit.Bukkit
 import pl.syntaxdevteam.plotsx.PlotsX
-import kotlin.collections.getOrElse
-import kotlin.collections.map
-import kotlin.let
-import kotlin.text.split
-import kotlin.text.substringBefore
-import kotlin.text.toIntOrNull
-
 class VersionChecker(private val plugin: PlotsX) {
-
-    companion object {
-        private val SUPPORTED_VERSIONS: Set<String> = setOf(
-            "1.20.6",
-            "1.21",
-            "1.21.0",
-            "1.21.1",
-            "1.21.2",
-            "1.21.3",
-            "1.21.4",
-            "1.21.5",
-            "1.21.6",
-            "1.21.7",
-            "1.21.8"
-        )
-    }
 
     private fun getRawVersion(): String =
         Bukkit.getServer().bukkitVersion
@@ -33,8 +10,18 @@ class VersionChecker(private val plugin: PlotsX) {
     fun getServerVersion(): String =
         getRawVersion().substringBefore("-")
 
-    fun isSupported(): Boolean =
-        SUPPORTED_VERSIONS.contains(getServerVersion())
+    fun isSupported(): Boolean {
+        val version = getServerVersion().normalizeVersion()
+        return when (version.getOrElse(0) { 0 }) {
+            1 -> {
+                val minor = version.getOrElse(1) { 0 }
+                val patch = version.getOrElse(2) { 0 }
+                (minor == 20 && patch >= 6) || (minor == 21 && patch <= 11)
+            }
+            26 -> version.getOrElse(1) { 0 } in 1..3
+            else -> false
+        }
+    }
 
     fun checkAndLog(): Boolean {
         val version = getServerVersion()

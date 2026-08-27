@@ -1,295 +1,227 @@
 package pl.syntaxdevteam.plotsx.compat
 
+import org.bukkit.Bukkit
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
+import org.bukkit.Tag
+import org.bukkit.block.data.AnaloguePowerable
+import org.bukkit.block.data.Openable
+import org.bukkit.block.data.Powerable
+import org.bukkit.block.data.type.Switch
+import org.bukkit.entity.AbstractVillager
+import org.bukkit.entity.Ambient
+import org.bukkit.entity.Animals
 import org.bukkit.entity.EntityType
+import org.bukkit.entity.Enemy
+import org.bukkit.entity.Golem
+import org.bukkit.entity.Vehicle
+import org.bukkit.entity.WaterMob
 
+/**
+ * Stabilna fasada klasyfikacji elementów Minecrafta.
+ *
+ * Reszta pluginu nie zna konkretnego adaptera ani wersji serwera. Nowe warianty
+ * bloków i mobów są wykrywane przede wszystkim po interfejsach Bukkit i tagach
+ * vanilla, a nazwy pozostają wyłącznie dla małej liczby wyjątków semantycznych.
+ */
 object PlotCompat {
+    private val adapter: PlotPlatformAdapter by lazy {
+        PlotPlatformAdapters.forMinecraftVersion(Bukkit.getMinecraftVersion())
+    }
 
-    val aggressiveMobNames = listOf(
-        "BLAZE", "CAVE_SPIDER", "CREAKING", "CREEPER", "DROWNED",
-        "ELDER_GUARDIAN", "ENDERMAN", "ENDERMITE", "EVOKER", "GHAST",
-        "GIANT", "GUARDIAN", "HUSK", "ILLUSIONER", "MAGMA_CUBE",
-        "PHANTOM", "PIGLIN", "PIGLIN_BRUTE", "PILLAGER", "RAVAGER",
-        "SHULKER", "SILVERFISH", "SKELETON", "SLIME", "SPIDER",
-        "STRAY", "VEX", "VINDICATOR", "WITCH", "WITHER",
-        "WITHER_SKELETON", "WARDEN", "ZOGLIN", "ZOMBIFIED_PIGLIN",
-        "ZOMBIE", "ZOMBIE_VILLAGER"
+    fun loadAggressiveMobs(): Set<EntityType> = adapter.aggressiveMobs()
+    fun loadPassiveMobs(): Set<EntityType> = adapter.passiveMobs()
+    fun loadDoorsAndGates(): Set<Material> = adapter.doorsAndGates()
+    fun loadButtonsAndLevers(): Set<Material> = adapter.buttonsAndLevers()
+    fun loadContainers(): Set<Material> = adapter.containers()
+    fun loadEnderChest(): Set<Material> = adapter.enderChests()
+    fun loadDispenserBucketMaterials(): Set<Material> = adapter.dispenserItems()
+    fun loadDamageableByFlow(): Set<Material> = adapter.flowDamageableBlocks()
+    fun loadUtilityBlocks(): Set<Material> = adapter.utilityBlocks()
+    fun loadRedstoneBlocks(): Set<Material> = adapter.redstoneBlocks()
+    fun loadContainerEntities(): Set<EntityType> = adapter.vehicleEntities()
+    fun loadContainerSpawner(): Set<Material> = adapter.spawnerBlocks()
+    fun loadUnsafeBlocks(): Set<Material> = adapter.unsafeTeleportBlocks()
+
+    fun safeEntityType(name: String): EntityType? = adapter.entityType(name)
+    fun safeMaterial(name: String): Material? = adapter.material(name)
+}
+
+internal interface PlotPlatformAdapter {
+    fun aggressiveMobs(): Set<EntityType>
+    fun passiveMobs(): Set<EntityType>
+    fun doorsAndGates(): Set<Material>
+    fun buttonsAndLevers(): Set<Material>
+    fun containers(): Set<Material>
+    fun enderChests(): Set<Material>
+    fun dispenserItems(): Set<Material>
+    fun flowDamageableBlocks(): Set<Material>
+    fun utilityBlocks(): Set<Material>
+    fun redstoneBlocks(): Set<Material>
+    fun vehicleEntities(): Set<EntityType>
+    fun spawnerBlocks(): Set<Material>
+    fun unsafeTeleportBlocks(): Set<Material>
+    fun entityType(name: String): EntityType?
+    fun material(name: String): Material?
+}
+
+internal object PlotPlatformAdapters {
+    fun forMinecraftVersion(version: String): PlotPlatformAdapter {
+        val major = version.substringBefore('.').toIntOrNull()
+        return if (major != null && major >= 26) Modern26Adapter else Legacy120Adapter
+    }
+}
+
+/** Adapter dla 1.20.6–1.21.x. */
+private object Legacy120Adapter : StructuralBukkitAdapter() {
+    override val materialAliases: Map<String, List<String>> = mapOf(
+        "SHORT_GRASS" to listOf("SHORT_GRASS", "GRASS")
     )
+}
 
-    val passiveMobNames = listOf(
-        "ALLAY", "ARMADILLO", "AXOLOTL", "BAT", "BEE",
-        "CAT", "CHICKEN", "COD", "COW", "DOLPHIN",
-        "DONKEY", "FOX", "FROG", "GOAT", "HORSE",
-        "MOOSHROOM", "MULE", "OCELOT", "PANDA", "PARROT",
-        "PIG", "PUFFERFISH", "RABBIT", "SALMON", "SHEEP",
-        "SNIFFER", "SNOW_GOLEM", "SQUID", "STRIDER", "TADPOLE",
-        "TROPICAL_FISH", "TURTLE", "VILLAGER", "WANDERING_TRADER",
-        "WOLF", "ZOMBIE_HORSE", "LAMA", "LLAMA", "TRADER_LLAMA"
-    )
+/** Adapter dla nowego numerowania 26.x. Różnice trafiają wyłącznie tutaj. */
+private object Modern26Adapter : StructuralBukkitAdapter()
 
-    val doorNames = listOf(
-        "OAK_DOOR", "SPRUCE_DOOR", "BIRCH_DOOR", "JUNGLE_DOOR",
-        "ACACIA_DOOR", "DARK_OAK_DOOR", "MANGROVE_DOOR", "CHERRY_DOOR",
-        "BAMBOO_DOOR", "CRIMSON_DOOR", "WARPED_DOOR", "PALE_OAK_DOOR",
-        "COPPER_DOOR", "EXPOSED_COPPER_DOOR", "WEATHERED_COPPER_DOOR",
-        "OXIDIZED_COPPER_DOOR", "WAXED_COPPER_DOOR", "WAXED_EXPOSED_COPPER_DOOR",
-        "WAXED_WEATHERED_COPPER_DOOR", "WAXED_OXIDIZED_COPPER_DOOR", "IRON_DOOR"
-    )
+private open class StructuralBukkitAdapter : PlotPlatformAdapter {
+    protected open val materialAliases: Map<String, List<String>> = emptyMap()
 
-    val trapdoorNames = listOf(
-        "OAK_TRAPDOOR", "SPRUCE_TRAPDOOR", "BIRCH_TRAPDOOR",
-        "JUNGLE_TRAPDOOR", "ACACIA_TRAPDOOR", "DARK_OAK_TRAPDOOR",
-        "MANGROVE_TRAPDOOR", "CHERRY_TRAPDOOR", "BAMBOO_TRAPDOOR",
-        "CRIMSON_TRAPDOOR", "WARPED_TRAPDOOR", "IRON_TRAPDOOR",
-        "PALE_OAK_TRAPDOOR", "IRON_TRAPDOOR", "COPPER_TRAPDOOR",
-        "EXPOSED_COPPER_TRAPDOOR", "WEATHERED_COPPER_TRAPDOOR",
-        "OXIDIZED_COPPER_TRAPDOOR", "WAXED_COPPER_TRAPDOOR",
-        "WAXED_EXPOSED_COPPER_TRAPDOOR", "WAXED_WEATHERED_COPPER_TRAPDOOR",
-        "WAXED_OXIDIZED_COPPER_TRAPDOOR"
-    )
+    private val allMaterials: Array<Material> by lazy(Material::values)
+    private val allEntityTypes: Array<EntityType> by lazy(EntityType::values)
 
-    val fenceGateNames = listOf(
-        "OAK_FENCE_GATE", "SPRUCE_FENCE_GATE", "BIRCH_FENCE_GATE",
-        "JUNGLE_FENCE_GATE", "ACACIA_FENCE_GATE", "DARK_OAK_FENCE_GATE",
-        "MANGROVE_FENCE_GATE", "CHERRY_FENCE_GATE", "BAMBOO_FENCE_GATE",
-        "CRIMSON_FENCE_GATE", "WARPED_FENCE_GATE", "PALE_OAK_FENCE_GATE",
+    override fun aggressiveMobs(): Set<EntityType> = entityTypesAssignableTo(Enemy::class.java)
 
-    )
+    override fun passiveMobs(): Set<EntityType> = allEntityTypes.filterTo(mutableSetOf()) { type ->
+        val entityClass = type.entityClass ?: return@filterTo false
+        type.name in PASSIVE_ENTITY_EXCEPTIONS ||
+            Animals::class.java.isAssignableFrom(entityClass) ||
+            WaterMob::class.java.isAssignableFrom(entityClass) ||
+            Ambient::class.java.isAssignableFrom(entityClass) ||
+            AbstractVillager::class.java.isAssignableFrom(entityClass) ||
+            Golem::class.java.isAssignableFrom(entityClass)
+    }
 
-    val buttonNames = listOf(
-        "LEVER", "STONE_BUTTON", "OAK_BUTTON", "SPRUCE_BUTTON",
-        "BIRCH_BUTTON", "JUNGLE_BUTTON", "ACACIA_BUTTON", "DARK_OAK_BUTTON",
-        "MANGROVE_BUTTON", "CHERRY_BUTTON", "BAMBOO_BUTTON",
-        "CRIMSON_BUTTON", "WARPED_BUTTON", "POLISHED_BLACKSTONE_BUTTON",
-        "PALE_OAK_BUTTON", "OAK_PRESSURE_PLATE", "SPRUCE_PRESSURE_PLATE",
-        "BIRCH_PRESSURE_PLATE", "JUNGLE_PRESSURE_PLATE", "ACACIA_PRESSURE_PLATE",
-        "DARK_OAK_PRESSURE_PLATE", "MANGROVE_PRESSURE_PLATE",
-        "CHERRY_PRESSURE_PLATE", "BAMBOO_PRESSURE_PLATE",
-        "CRIMSON_PRESSURE_PLATE", "WARPED_PRESSURE_PLATE",
-        "POLISHED_BLACKSTONE_PRESSURE_PLATE", "PALE_OAK_PRESSURE_PLATE",
-        "IRON_PRESSURE_PLATE", "GOLD_PRESSURE_PLATE"
-    )
+    override fun doorsAndGates(): Set<Material> = buildSet {
+        addAll(blockTag("doors"))
+        addAll(blockTag("trapdoors"))
+        addAll(blockTag("fence_gates"))
+        addAll(materialsWithBlockData<Openable>())
+    }
 
-    val containerNames = listOf("CHEST", "TRAPPED_CHEST", "BARREL", "SHULKER_BOX", "CHEST_MINECART")
+    override fun buttonsAndLevers(): Set<Material> = buildSet {
+        addAll(blockTag("buttons"))
+        addAll(blockTag("pressure_plates"))
+        addAll(materialsWithBlockData<Switch>())
+    }
 
-    val enderChestNames = listOf("ENDER_CHEST")
+    override fun containers(): Set<Material> = allMaterials.filterTo(mutableSetOf()) { material ->
+        material.name == "CHEST" ||
+            material.name == "TRAPPED_CHEST" ||
+            material.name == "BARREL" ||
+            material.name.endsWith("_SHULKER_BOX")
+    }
 
-    val dispenserBucketNames = listOf(
-        "WATER_BUCKET", "LAVA_BUCKET", "POWDER_SNOW_BUCKET",
-        "BUCKET", "EGG", "BLUE_EGG", "BROWN_EGG",
-        "SNIFFER_EGG", "TURTLE_EGG"
-    )
+    override fun enderChests(): Set<Material> = materials("ENDER_CHEST")
 
-    private val damageableByFlowNames = listOf(
-        // Uprawy
-        "WHEAT",
-        "CARROTS",
-        "POTATOES",
-        "BEETROOTS",
-        "NETHER_WART",
-        "COCOA",
-        "SWEET_BERRY_BUSH",
-        "GLOW_BERRIES",
+    override fun dispenserItems(): Set<Material> = allMaterials.filterTo(mutableSetOf()) { material ->
+        material.name == "BUCKET" ||
+            material.name.endsWith("_BUCKET") ||
+            material.name == "EGG" ||
+            material.name.endsWith("_EGG")
+    }
 
-        // Rośliny półwodne
-        "SUGAR_CANE",
-        "BAMBOO",
+    override fun flowDamageableBlocks(): Set<Material> = buildSet {
+        addAll(blockTag("crops"))
+        addAll(blockTag("flowers"))
+        addAll(blockTag("saplings"))
+        addAll(allMaterials.filter { material ->
+            material.isBlock && !material.isAir && !material.isSolid && !isLiquid(material)
+        })
+    }
 
-        // Jednopłytkowe kwiaty i zioła
-        "POPPY",
-        "DANDELION",
-        "BLUE_ORCHID",
-        "ALLIUM",
-        "AZURE_BLUET",
-        "RED_TULIP",
-        "ORANGE_TULIP",
-        "WHITE_TULIP",
-        "PINK_TULIP",
-        "OXEYE_DAISY",
-        "CORNFLOWER",
-        "LILY_OF_THE_VALLEY",
-        "WITHER_ROSE",
+    override fun utilityBlocks(): Set<Material> = allMaterials.filterTo(mutableSetOf()) { material ->
+        val name = material.name
+        name.endsWith("FURNACE") ||
+            name.endsWith("ANVIL") ||
+            name.endsWith("_TABLE") ||
+            name in UTILITY_EXCEPTIONS
+    }
 
-        // Dwublokowe rośliny ozdobne
-        "SUNFLOWER",
-        "LILAC",
-        "ROSE_BUSH",
-        "PEONY",
-        "TALL_GRASS",
-        "LARGE_FERN",
+    override fun redstoneBlocks(): Set<Material> = buildSet {
+        addAll(materialsWithBlockData<Powerable>())
+        addAll(materialsWithBlockData<AnaloguePowerable>())
+        addAll(materialsWithBlockData<Switch>())
+        addAll(allMaterials.filter { it.name in REDSTONE_EXCEPTIONS })
+    }.minus(doorsAndGates()).minus(buttonsAndLevers())
 
-        // Zwykłe trawy i paprocie
-        "GRASS",
-        "TALL_GRASS",
-        "FERN",
-        "LARGE_FERN",
+    override fun vehicleEntities(): Set<EntityType> = allEntityTypes.filterTo(mutableSetOf()) { type ->
+        val entityClass = type.entityClass ?: return@filterTo false
+        Vehicle::class.java.isAssignableFrom(entityClass)
+    }
 
-        // Nether / End
-        "CHORUS_PLANT",
-        "CHORUS_FLOWER",
-        "CRIMSON_ROOTS",
-        "WARPED_ROOTS",
-        "NETHER_SPROUTS",
-        "TWISTING_VINES",
-        "WEEPING_VINES",
+    override fun spawnerBlocks(): Set<Material> = allMaterials.filterTo(mutableSetOf()) { material ->
+        material.name == "SPAWNER" ||
+            material.name.endsWith("_SPAWNER") ||
+            material.name == "CREAKING_HEART"
+    }
 
-        // Sadzonki drzew i mangrowe
-        "OAK_SAPLING",
-        "BIRCH_SAPLING",
-        "SPRUCE_SAPLING",
-        "JUNGLE_SAPLING",
-        "DARK_OAK_SAPLING",
-        "ACACIA_SAPLING",
-        "MANGROVE_PROPAGULE",
-        "CHERRY_SAPLING",
+    override fun unsafeTeleportBlocks(): Set<Material> = allMaterials.filterTo(mutableSetOf()) { material ->
+        material.name in UNSAFE_TELEPORT_EXCEPTIONS
+    }
 
-        // Grzyby
-        "RED_MUSHROOM",
-        "BROWN_MUSHROOM",
+    override fun entityType(name: String): EntityType? =
+        allEntityTypes.firstOrNull { it.name.equals(name, ignoreCase = true) }
 
-        // Dekoracyjne i pozostałe
-        "HANGING_ROOTS",
-        "SMALL_DRIPLEAF",
-        "BIG_DRIPLEAF",
-        "BIG_DRIPLEAF_STEM",
-        "DEAD_BUSH",
-        "SPORE_BLOSSOM",
-        "FLOWER_POT",
-        "LILY_PAD",
+    override fun material(name: String): Material? {
+        val candidates = materialAliases[name.uppercase()] ?: listOf(name)
+        return candidates.firstNotNullOfOrNull(Material::matchMaterial)
+    }
 
-        // Nowe rośliny netherowe (1.20+)
-        "CRIMSON_FUNGI",
-        "WARPED_FUNGI",
-        "CRIMSON_ROOTS",
-        "WARPED_ROOTS",
+    private fun entityTypesAssignableTo(parent: Class<*>): Set<EntityType> =
+        allEntityTypes.filterTo(mutableSetOf()) { type ->
+            type.entityClass?.let(parent::isAssignableFrom) ?: false
+        }
 
-        // Nowości od 1.21
-        "PITCHER_PLANT",
-        "PITCHER_CROP",
-        "TORCHFLOWER",
-        "TORCHFLOWER_CROP",
-        "PITCHER_PLANT",
-        "PITCHER_CROP"
-    )
+    private inline fun <reified T> materialsWithBlockData(): Set<Material> =
+        allMaterials.filterTo(mutableSetOf()) { material ->
+            if (!material.isBlock) return@filterTo false
+            runCatching { material.createBlockData() is T }.getOrDefault(false)
+        }
 
-    private val utilityBlockNames = listOf(
-        // piece i ich warianty
-        "FURNACE",
-        "BLAST_FURNACE",
-        "SMOKER",
-        "CAMPFIRE",
-        "SOUL_CAMPFIRE",
+    private fun blockTag(name: String): Set<Material> {
+        val tag = Bukkit.getTag(
+            Tag.REGISTRY_BLOCKS,
+            NamespacedKey.minecraft(name),
+            Material::class.java
+        ) ?: return emptySet()
+        return allMaterials.filterTo(mutableSetOf(), tag::isTagged)
+    }
 
-        // stoliki i warsztaty
-        "CRAFTING_TABLE",
-        "LOOM",
-        "STONECUTTER",
-        "SMITHING_TABLE",
-        "GRINDSTONE",
-        "ENCHANTING_TABLE",
-        "BREWING_STAND",
-        "ANVIL",
-        "CHIPPED_ANVIL",
-        "DAMAGED_ANVIL",
+    private fun materials(vararg names: String): Set<Material> =
+        names.mapNotNull(::material).toSet()
 
-        // inne interaktywne
-        "CAULDRON",
-        "LECTERN",
-        "BARREL",
-        "COMPOSTER",
-        "SMITHING_TABLE",
-        "CARTOGRAPHY_TABLE",
-        "FLETCHING_TABLE",
-        "LOOM",
-        "STONECUTTER",
-        "CHISELED_BOOKSHELF",
-    )
+    private fun isLiquid(material: Material): Boolean =
+        material.name == "WATER" || material.name == "LAVA"
 
-    private val redstoneNames = listOf(
-        "REDSTONE_BLOCK",
-        "REDSTONE_TORCH",
-        "REDSTONE_WALL_TORCH",
-        "REDSTONE_LAMP",
-        "REPEATER",
-        "COMPARATOR",
-        "DAYLIGHT_DETECTOR",
-        "DAYLIGHT_DETECTOR_INVERTED",
-        "NOTE_BLOCK",
-        "DISPENSER",
-        "DROPPER",
-        "HOPPER",
-        "TARGET_BLOCK",
-        "CRAFTER",
-        "OBSERVER"
-    )
+    private companion object {
+        val PASSIVE_ENTITY_EXCEPTIONS = setOf("ALLAY")
 
-    private val containerMinecartNames = listOf(
-        "CHEST_MINECART", "HOPPER_MINECART", "TNT_MINECART",
-        "MINECART", "CHEST_BOAT", "BARREL_BOAT",
-        "OAK_BOAT", "WARPED_BOAT", "PALE_OAK_BOAT",
-        "SPRUCE_BOAT", "BIRCH_BOAT", "JUNGLE_BOAT",
-        "ACACIA_BOAT", "DARK_OAK_BOAT", "MANGROVE_BOAT",
-        "CRIMSON_BOAT", "BAMBOO_CHEST_RAFT",
-        "CHERRY_BOAT", "BAMBOO_RAFT", "OAK_CHEST_BOAT",
-        "SPRUCE_CHEST_BOAT", "BIRCH_CHEST_BOAT", "JUNGLE_CHEST_BOAT",
-        "ACACIA_CHEST_BOAT", "DARK_OAK_CHEST_BOAT", "MANGROVE_CHEST_BOAT",
-        "CHERRY_CHEST_BOAT", "BAMBOO_CHEST_BOAT", "CRIMSON_CHEST_BOAT"
-    )
+        val UTILITY_EXCEPTIONS = setOf(
+            "BREWING_STAND", "CAULDRON", "LECTERN", "COMPOSTER",
+            "GRINDSTONE", "STONECUTTER", "LOOM", "CAMPFIRE",
+            "SOUL_CAMPFIRE", "CHISELED_BOOKSHELF"
+        )
 
-    private val containerSpawnerBlocks = listOf(
-        "SPAWNER", "CREAKING_HEART", "TRIAL_SPAWNER"
-    )
+        val REDSTONE_EXCEPTIONS = setOf(
+            "REDSTONE_BLOCK", "REDSTONE_TORCH", "REDSTONE_WALL_TORCH",
+            "REDSTONE_LAMP", "REPEATER", "COMPARATOR", "DAYLIGHT_DETECTOR",
+            "NOTE_BLOCK", "DISPENSER", "DROPPER", "HOPPER", "OBSERVER",
+            "TARGET", "TARGET_BLOCK", "CRAFTER"
+        )
 
-    private val unsafeBlockNames = listOf(
-        "LAVA", "WATER", "MAGMA_BLOCK", "CACTUS", "FIRE",
-        "CAMPFIRE", "SOUL_CAMPFIRE", "POWDER_SNOW", "VOID_AIR", "AIR"
-    )
-
-    // ----- Bezpieczne funkcje -----
-    fun safeEntityType(name: String): EntityType? =
-        try { EntityType.valueOf(name) } catch (_: IllegalArgumentException) { null }
-
-    fun safeMaterial(name: String): Material? = Material.matchMaterial(name)
-
-    // ----- Mapowania w zbiory -----
-    fun loadAggressiveMobs(): Set<EntityType> =
-        aggressiveMobNames.mapNotNull(::safeEntityType).toSet()
-
-    fun loadPassiveMobs(): Set<EntityType> =
-        passiveMobNames.mapNotNull(::safeEntityType).toSet()
-
-    fun loadDoorsAndGates(): Set<Material> = (
-            doorNames + trapdoorNames + fenceGateNames
-            ).mapNotNull(::safeMaterial).toSet()
-
-    fun loadButtonsAndLevers(): Set<Material> =
-        buttonNames.mapNotNull(::safeMaterial).toSet()
-
-    fun loadContainers(): Set<Material> = (
-            containerNames + Material.entries.map { it.name }.filter { it.endsWith("_SHULKER_BOX") }
-            ).mapNotNull(::safeMaterial).toSet()
-
-    fun loadEnderChest(): Set<Material> =
-        enderChestNames.mapNotNull(::safeMaterial).toSet()
-
-    fun loadDispenserBucketMaterials(): Set<Material> =
-        dispenserBucketNames.mapNotNull(::safeMaterial).toSet()
-
-    fun loadDamageableByFlow(): Set<Material> =
-        damageableByFlowNames.mapNotNull(::safeMaterial).toSet()
-
-    fun loadUtilityBlocks(): Set<Material> =
-        utilityBlockNames.mapNotNull(::safeMaterial).toSet()
-
-    fun loadRedstoneBlocks(): Set<Material> =
-        redstoneNames.mapNotNull(::safeMaterial).toSet()
-
-    fun loadContainerEntities(): Set<EntityType> =
-        containerMinecartNames.mapNotNull(::safeEntityType).toSet()
-
-    fun loadContainerSpawner(): Set<Material> =
-        containerSpawnerBlocks.mapNotNull(::safeMaterial).toSet()
-
-    fun loadUnsafeBlocks(): Set<Material> =
-        unsafeBlockNames.mapNotNull(::safeMaterial).toSet()
+        val UNSAFE_TELEPORT_EXCEPTIONS = setOf(
+            "LAVA", "WATER", "MAGMA_BLOCK", "CACTUS", "FIRE",
+            "SOUL_FIRE", "CAMPFIRE", "SOUL_CAMPFIRE", "POWDER_SNOW",
+            "VOID_AIR"
+        )
+    }
 }

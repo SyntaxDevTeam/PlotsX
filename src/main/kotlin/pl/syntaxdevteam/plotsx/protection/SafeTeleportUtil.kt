@@ -48,10 +48,14 @@ object SafeTeleportUtil {
         val above: Block = world.getBlockAt(x, y + 1, z)
         val twoAbove: Block = world.getBlockAt(x, y + 2, z)
 
-        return ground.type !in unsafeBlocks
+        return ground.type.isSolid
+                && ground.type !in unsafeBlocks
+                && block.isPassable
                 && block.type !in unsafeBlocks
-                && above.type == Material.AIR
-                && twoAbove.type == Material.AIR
+                && above.isPassable
+                && above.type !in unsafeBlocks
+                && twoAbove.isPassable
+                && twoAbove.type !in unsafeBlocks
     }
 
     /**

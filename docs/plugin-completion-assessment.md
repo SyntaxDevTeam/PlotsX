@@ -424,3 +424,9 @@ Przed stabilnym wydaniem dodatkowo zalecane są:
 PlotsX ma solidną bazę i więcej funkcjonalności, niż sugerowałby typowy wczesny prototyp. Największym problemem nie jest brak kodu, lecz kilka krytycznych skrótów pozostawionych z etapu developmentu oraz brak testów potwierdzających bezpieczeństwo.
 
 Po wykonaniu pierwszych pięciu pozycji z listy priorytetów projekt może wejść w kontrolowane testy beta. Do stabilnego `1.0.0` potrzebne będą jeszcze pełniejsze zabezpieczenia, testy integracyjne oraz faktyczne sprawdzenie na deklarowanych wersjach Paper i Folia.
+
+## Aktualizacja kompatybilności wersji
+
+`PlotCompat` został przebudowany na lekką architekturę adapterów dla rodzin 1.20.6–1.21.x i 26.x. Kompletne listy materiałów oraz mobów zastąpiono interfejsami Bukkit, dynamicznymi tagami vanilla, właściwościami materiałów i krótkimi listami wyjątków. Szczegóły oraz granice jednego artefaktu opisuje `docs/version-compatibility.md`.
+
+Macierz kompilacyjna została potwierdzona dla Paper API 1.20.6/Java 21, 1.21.11/Java 21 oraz 26.2/Java 25. Finalny artefakt pozostaje budowany na Java 21 z `api-version: 1.20.6`, dzięki czemu może działać na całym wspieranym zakresie serwerów, o ile testy uruchomieniowe nie ujawnią różnic zachowania runtime.
