@@ -11,6 +11,7 @@ import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.gui.GUIHandler
 import pl.syntaxdevteam.plotsx.hooks.CoreProtectHook
+import pl.syntaxdevteam.plotsx.hooks.WorldGuardHook
 import pl.syntaxdevteam.plotsx.protection.PlotProtectionListener
 import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
 
@@ -78,6 +79,12 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.server.pluginManager.registerEvents(PlotProtectionListener(plugin), plugin)
         plugin.server.pluginManager.registerEvents(plugin.renamePlotChatListener, plugin)
         plugin.coreProtectHook = CoreProtectHook(plugin)
+        if (plugin.server.pluginManager.isPluginEnabled("WorldGuard")) {
+            plugin.regionProtectionHook = WorldGuardHook(plugin)
+            plugin.logger.success("WorldGuard detected - claims cannot overlap WorldGuard regions.")
+        } else {
+            plugin.logger.info("WorldGuard not detected - region overlap check disabled.")
+        }
 
         if (!plugin.coreProtectHook.isEnabled()) {
             plugin.logger.warning("CoreProtect not connected - some features may not work.")

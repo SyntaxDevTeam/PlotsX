@@ -16,6 +16,7 @@ error:
   is_plot: "<red>Nie możesz postawić działki tutaj, ponieważ działka już istnieje.</red>"
   no_in_plot: "<red>Nie jesteś w działce.</red><grey>Użyj /plot <nazwa>, aby wybrać działkę lub stań na swojej działce.</grey>"
   in_collision: "<red>Nie możesz postawić działki tutaj, ponieważ koliduje z inną działką.</red>"
+  worldguard_collision: "<red>Nie możesz utworzyć działki, ponieważ jej obszar koliduje z regionem WorldGuard.</red>"
   claim_world_not_allowed: "<red>Nie możesz tworzyć działek w tym świecie.</red>"
   max_plots_reached: "<red>Osiągnięto maksymalną liczbę działek: {max}.</red>"
   create_error: "<red>Wystąpił błąd podczas tworzenia działki.</red>"

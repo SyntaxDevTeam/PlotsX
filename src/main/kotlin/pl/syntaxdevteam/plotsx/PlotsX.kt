@@ -13,6 +13,7 @@ import pl.syntaxdevteam.plotsx.cache.CacheManager
 import pl.syntaxdevteam.plotsx.commands.CommandsManager
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.hooks.CoreProtectHook
+import pl.syntaxdevteam.plotsx.hooks.RegionProtectionHook
 import pl.syntaxdevteam.plotsx.common.ConfigHandler
 import pl.syntaxdevteam.plotsx.common.UUIDManager
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
@@ -42,6 +43,7 @@ class PlotsX : JavaPlugin() {
     //lateinit var invitationManager: InvitationManager
     lateinit var renamePlotChatListener: RenamePlotChatListener
     lateinit var coreProtectHook: CoreProtectHook
+    var regionProtectionHook: RegionProtectionHook? = null
     lateinit var versionChecker: VersionChecker
 
     override fun onEnable() {

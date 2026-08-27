@@ -430,3 +430,7 @@ Po wykonaniu pierwszych pięciu pozycji z listy priorytetów projekt może wejś
 `PlotCompat` został przebudowany na lekką architekturę adapterów dla rodzin 1.20.6–1.21.x i 26.x. Kompletne listy materiałów oraz mobów zastąpiono interfejsami Bukkit, dynamicznymi tagami vanilla, właściwościami materiałów i krótkimi listami wyjątków. Szczegóły oraz granice jednego artefaktu opisuje `docs/version-compatibility.md`.
 
 Macierz kompilacyjna została potwierdzona dla Paper API 1.20.6/Java 21, 1.21.11/Java 21 oraz 26.2/Java 25. Finalny artefakt pozostaje budowany na Java 21 z `api-version: 1.20.6`, dzięki czemu może działać na całym wspieranym zakresie serwerów, o ile testy uruchomieniowe nie ujawnią różnic zachowania runtime.
+
+## Integracja WorldGuard
+
+Dodano opcjonalny hook WorldGuard blokujący tworzenie działek nachodzących na fizyczne regiony WorldGuard. Sprawdzany jest cały obszar X/Z oraz pełna wysokość świata, przed GUI i ponownie przy zatwierdzeniu. Region globalny jest pomijany. Szczegóły opisuje `docs/worldguard-integration.md`.

@@ -1,7 +1,7 @@
 plugins {
     kotlin("jvm") version "2.4.10"
     id("com.gradleup.shadow") version "9.6.1"
-    id("xyz.jpenilla.run-paper") version "3.0.1"
+    id("xyz.jpenilla.run-paper") version "3.1.0"
     id("pl.syntaxdevteam.plugindeployer") version "1.0.6-R0.2-SNAPSHOT"
 }
 
@@ -11,21 +11,32 @@ description = "Lightweight and versatile player plot protection plugin"
 
 val paperApiVersion = providers.gradleProperty("paperApiVersion")
     .getOrElse("1.21.11-R0.1-SNAPSHOT")
+val worldGuardVersion = providers.gradleProperty("worldGuardVersion")
+    .getOrElse("7.0.13")
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
     maven("https://repo.papermc.io/repository/maven-public/") {
         name = "papermc-repo"
     }
     maven("https://oss.sonatype.org/content/groups/public/") {
         name = "sonatype"
     }
-    maven("https://repo.extendedclip.com/releases/")
-    maven("https://jitpack.io")
-    maven("https://repo.codemc.org/repository/maven-public")
     maven("https://maven.playpro.com/")
+    maven("https://maven.enginehub.org/repo/")
+
     maven("https://nexus.syntaxdevteam.pl/repository/maven-snapshots/") //SyntaxDevTeam
     maven("https://nexus.syntaxdevteam.pl/repository/maven-releases/") //SyntaxDevTeam
+
+    maven("https://repo.menthamc.org/repository/maven-public/")
+    maven("https://repo.extendedclip.com/releases/") // PlaceholderAPI
+    maven("https://repo.codemc.org/repository/maven-public/") // VaultUnlockedAPI
+    maven("https://jitpack.io") // VaultAPI
+    maven("https://repo.essentialsx.net/releases/") // EssentialsX
+    maven("https://repo.leavesmc.org/snapshots/") {
+        name = "leavesmc-repo"
+    }
 }
 
 dependencies {
@@ -52,6 +63,18 @@ dependencies {
     compileOnly("com.github.milkbowl:VaultAPI:1.7.1")
     compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.13")
     compileOnly("net.coreprotect:coreprotect:22.4")
+    compileOnly("com.sk89q.worldguard:worldguard-bukkit:$worldGuardVersion") {
+        isTransitive = false
+    }
+    compileOnly("com.sk89q.worldguard:worldguard-core:$worldGuardVersion") {
+        isTransitive = false
+    }
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.9") {
+        isTransitive = false
+    }
+    compileOnly("com.sk89q.worldedit:worldedit-core:7.3.9") {
+        isTransitive = false
+    }
 }
 
 val targetJavaVersion = providers.gradleProperty("javaVersion")

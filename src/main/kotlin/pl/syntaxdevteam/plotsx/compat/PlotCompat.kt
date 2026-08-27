@@ -85,7 +85,13 @@ private object Modern26Adapter : StructuralBukkitAdapter()
 private open class StructuralBukkitAdapter : PlotPlatformAdapter {
     protected open val materialAliases: Map<String, List<String>> = emptyMap()
 
-    private val allMaterials: Array<Material> by lazy(Material::values)
+    // Material.values() nadal zawiera wpisy LEGACY_*. Przekazanie jednego z nich
+    // do Bukkit Tag#isTagged inicjalizuje CraftLegacy/DataFixerUpper na głównym
+    // wątku serwera, co może zatrzymać tick na wiele sekund.
+    @Suppress("DEPRECATION")
+    private val allMaterials: List<Material> by lazy {
+        Material.values().filterNot(Material::isLegacy)
+    }
     private val allEntityTypes: Array<EntityType> by lazy(EntityType::values)
 
     override fun aggressiveMobs(): Set<EntityType> = entityTypesAssignableTo(Enemy::class.java)

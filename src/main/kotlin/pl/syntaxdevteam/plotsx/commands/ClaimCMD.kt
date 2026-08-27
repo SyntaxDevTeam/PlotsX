@@ -57,6 +57,11 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             return
         }
 
+        if (overlapsExternalRegion(player.world, x, z, radius)) {
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "worldguard_collision"))
+            return
+        }
+
         openClaimGui(player)
     }
 
@@ -76,6 +81,11 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
 
                 if (!isClaimWorldAllowed(world)) {
                     p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "claim_world_not_allowed"))
+                    return@ClaimConfirmGUI
+                }
+
+                if (overlapsExternalRegion(loc.world!!, x, z, radius)) {
+                    p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "worldguard_collision"))
                     return@ClaimConfirmGUI
                 }
 
@@ -134,5 +144,8 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
         val configuredWorld = plugin.config.getString("plots.world")?.trim().orEmpty()
         return configuredWorld.isEmpty() || configuredWorld == "*" || configuredWorld.equals(world, ignoreCase = true)
     }
+
+    private fun overlapsExternalRegion(world: org.bukkit.World, x: Int, z: Int, radius: Int): Boolean =
+        plugin.regionProtectionHook?.overlapsProtectedRegion(world, x, z, radius) == true
 
 }

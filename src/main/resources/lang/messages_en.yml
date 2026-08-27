@@ -16,6 +16,7 @@ error:
   is_plot: "<red>You can't claim here because a plot already exists.</red>"
   no_in_plot: "<red>You are not inside a plot.</red><grey>Use /plot <name> to select a plot or stand on your plot.</grey>"
   in_collision: "<red>You can't claim here because it overlaps with another plot.</red>"
+  worldguard_collision: "<red>You cannot create this plot because its area overlaps a WorldGuard region.</red>"
   claim_world_not_allowed: "<red>You cannot create plots in this world.</red>"
   max_plots_reached: "<red>You have reached the maximum number of plots: {max}.</red>"
   create_error: "<red>An error occurred while creating the plot.</red>"
