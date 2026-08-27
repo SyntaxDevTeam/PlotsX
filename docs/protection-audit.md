@@ -13,10 +13,17 @@ Po wykonaniu audytu dodano następujące zabezpieczenia:
 - `item-pickup` i `item-drop` — kontrolują podnoszenie i wyrzucanie przedmiotów;
 - `crop-trample` — blokuje deptanie pól przez obcych graczy;
 - `animal-interact` — kontroluje zwykłe interakcje, smycze, rozmnażanie i dosiadanie zwierząt.
+- `command-use` — kontroluje ogólne komendy z bezpiecznymi wyjątkami dla komend PlotsX; `/home` i `/sethome` nadal podlegają `allow-home`;
+- `fishing` — kontroluje łowienie wewnątrz działki oraz zarzucanie wędki przez jej granicę;
+- `elytra`, `flight` — kontrolują rozpoczęcie lotu elytrą i zwykłego latania;
+- `special-weapons` — kontroluje używanie trójzębów i buzdyganów przeciw celom na działce;
+- `weather` — chroni działkę przed uderzeniami piorunów i obrażeniami od nich;
+- `bed-use`, `crafting`, `enchanting`, `respawn-anchor` — rozdzielają dostęp do specjalnych bloków użytkowych;
+- `conduit-effects` — kontroluje efekty nakładane przez conduit.
 
 Właściciel, członkowie oraz gracze z bypassem nadal omijają ograniczenia skierowane do graczy. Zdarzenia środowiskowe, takie jak eksplozje i tworzenie portali, są sterowane bezpośrednio wartością flagi. Nowe flagi działają również na starszych działkach dzięki wartościom domyślnym rejestru, nawet jeśli nie mają jeszcze osobnego rekordu w tabeli `plot_flags`.
 
-Pozostałe obszary do dalszego audytu i implementacji to przede wszystkim ogólna flaga używania komend, fishing, specjalne przedmioty (elytra/trident/mace), efekty pogody oraz bardziej szczegółowe flagi interakcji z blokami.
+Najważniejsze pozycje pierwotnego audytu zostały zaimplementowane. Dalsze prace powinny koncentrować się na testach integracyjnych każdego eventu, zachowaniu przy współpracy z innymi pluginami oraz paginacji GUI przed dodaniem kolejnych flag. Rejestr zawiera obecnie 49 aktywnych flag, czyli maksymalną liczbę mieszczącą się w obecnym układzie GUI z przyciskiem powrotu w slocie 49.
 
 ## Zakres ochrony i flagi
 - **Rejestr flag** – plugin udostępnia 29 aktywnych flag (whitelist/blacklist) kontrolujących budowanie, PVP, pojemniki, redstone, spawn mobów, płyny, ogień, teleporty, wzrost roślin itd., z domyślnymi wartościami zapisanymi w `PlotFlagRegistry`.【F:src/main/kotlin/pl/syntaxdevteam/plotsx/protection/PlotFlagRegistry.kt†L5-L40】

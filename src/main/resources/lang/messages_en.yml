@@ -215,6 +215,48 @@ flags:
     name: "Animal Interaction"
     description: "Allows non-members to leash, breed and mount animals"
     not_allowed: "<red>You cannot perform this action with an animal on the plot.</red>"
+  command-use:
+    name: "Command Usage"
+    description: "Allows non-members to use commands other than PlotsX commands on the plot"
+    not_allowed: "<red>You cannot use this command on this plot.</red>"
+  fishing:
+    name: "Fishing"
+    description: "Allows non-members to fish on the plot or cast a hook into it"
+    not_allowed: "<red>You cannot fish on this plot.</red>"
+  elytra:
+    name: "Elytra Usage"
+    description: "Allows non-members to start gliding with an elytra on the plot"
+    not_allowed: "<red>You cannot start gliding on this plot.</red>"
+  special-weapons:
+    name: "Special Weapons"
+    description: "Allows non-members to use tridents and maces on the plot"
+    not_allowed: "<red>You cannot use this weapon on this plot.</red>"
+  weather:
+    name: "Weather and Lightning"
+    description: "Allows lightning to strike and deal damage on the plot"
+  bed-use:
+    name: "Bed Usage"
+    description: "Allows non-members to use beds on the plot"
+    not_allowed: "<red>You cannot use beds on this plot.</red>"
+  crafting:
+    name: "Crafting"
+    description: "Allows non-members to use crafting tables and crafters"
+    not_allowed: "<red>You cannot craft on this plot.</red>"
+  enchanting:
+    name: "Enchanting"
+    description: "Allows non-members to use enchanting tables"
+    not_allowed: "<red>You cannot enchant items on this plot.</red>"
+  respawn-anchor:
+    name: "Respawn Anchor"
+    description: "Allows non-members to use respawn anchors"
+    not_allowed: "<red>You cannot use a respawn anchor on this plot.</red>"
+  conduit-effects:
+    name: "Conduit Effects"
+    description: "Allows conduits to apply effects to players on the plot"
+  flight:
+    name: "Flight"
+    description: "Allows non-members to start regular flight on the plot"
+    not_allowed: "<red>You cannot start flying on this plot.</red>"
   effects:
     name: "Effect Blocking"
     description: "Blocks effects (including potions)"

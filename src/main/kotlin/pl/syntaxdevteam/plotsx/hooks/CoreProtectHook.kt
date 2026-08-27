@@ -76,7 +76,7 @@ class CoreProtectHook(private val plugin: PlotsX) {
         val api = coreProtectAPI ?: return
         val seconds = timeSeconds.toInt()
         val world = Bukkit.getWorld(plot.world) ?: return
-        val centerY = world.spawnLocation.y.toDouble()
+        val centerY = world.spawnLocation.y
         val center = Location(world, plot.x.toDouble(), centerY, plot.z.toDouble())
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
@@ -100,7 +100,7 @@ class CoreProtectHook(private val plugin: PlotsX) {
         val api = coreProtectAPI ?: return emptyList()
         val seconds = timeSeconds.toInt()
         val world = Bukkit.getWorld(plot.world) ?: return emptyList()
-        val centerY = world.spawnLocation.y.toDouble()
+        val centerY = world.spawnLocation.y
         val center = Location(world, plot.x.toDouble(), centerY, plot.z.toDouble())
 
         return api.performLookup(
@@ -123,7 +123,7 @@ class CoreProtectHook(private val plugin: PlotsX) {
         val api = coreProtectAPI ?: return
         val seconds = timeSeconds.toInt()
         val world = Bukkit.getWorld(plot.world) ?: return
-        val centerY = world.spawnLocation.y.toDouble()
+        val centerY = world.spawnLocation.y
         val center = Location(world, plot.x.toDouble(), centerY, plot.z.toDouble())
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {

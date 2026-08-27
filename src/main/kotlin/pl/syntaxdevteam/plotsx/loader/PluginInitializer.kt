@@ -14,7 +14,6 @@ import pl.syntaxdevteam.plotsx.hooks.CoreProtectHook
 import pl.syntaxdevteam.plotsx.protection.PlotProtectionListener
 import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
 
-@Suppress("UnstableApiUsage")
 class PluginInitializer(private val plugin: PlotsX) {
 
     fun onEnable() {

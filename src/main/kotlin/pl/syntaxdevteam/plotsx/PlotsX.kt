@@ -63,8 +63,4 @@ class PlotsX : JavaPlugin() {
         super.reloadConfig()
         logger.success("Config reloaded.")
     }
-
-    fun getPluginFile(): File {
-        return this.file
-    }
 }

@@ -133,7 +133,7 @@ Sugestie:
 
 ### 8. Uzupełnienie luk ochrony działek
 
-**Status: najważniejsze luki zostały wdrożone.** Dodano ochronę eksplozji, dekoracji i armor standów, transferu hopperami przez granicę, tworzenia i używania portali, pocisków, pickup/drop, deptania upraw oraz interakcji ze zwierzętami. Do wykonania pozostają mniej krytyczne i bardziej szczegółowe przypadki opisane poniżej.
+**Status: wdrożone.** Dodano ochronę eksplozji, dekoracji i armor standów, transferu hopperami przez granicę, tworzenia i używania portali, pocisków, pickup/drop, deptania upraw, interakcji ze zwierzętami, fishingu, komend, elytry i lotu, broni specjalnej, pogody, conduit oraz specjalnych bloków użytkowych. Kolejnym etapem powinny być testy integracyjne i paginacja GUI flag.
 
 Istniejący audyt w `docs/protection-audit.md` wskazuje następujące braki:
 

@@ -227,6 +227,48 @@ flags:
     name: "Interakcje ze zwierzętami"
     description: "Pozwala obcym prowadzić, rozmnażać i dosiadać zwierzęta"
     not_allowed: "<red>Nie możesz wykonywać tej czynności ze zwierzęciem na działce.</red>"
+  command-use:
+    name: "Używanie komend"
+    description: "Pozwala obcym używać komend innych niż komendy PlotsX na działce"
+    not_allowed: "<red>Nie możesz używać tej komendy na tej działce.</red>"
+  fishing:
+    name: "Łowienie ryb"
+    description: "Pozwala obcym łowić na działce lub zarzucać na nią wędkę"
+    not_allowed: "<red>Nie możesz łowić na tej działce.</red>"
+  elytra:
+    name: "Używanie elytry"
+    description: "Pozwala obcym rozpoczynać lot elytrą na działce"
+    not_allowed: "<red>Nie możesz rozpocząć lotu elytrą na tej działce.</red>"
+  special-weapons:
+    name: "Broń specjalna"
+    description: "Pozwala obcym używać trójzębów i buzdyganów na działce"
+    not_allowed: "<red>Nie możesz używać tej broni na tej działce.</red>"
+  weather:
+    name: "Pogoda i pioruny"
+    description: "Pozwala piorunom uderzać i zadawać obrażenia na działce"
+  bed-use:
+    name: "Używanie łóżek"
+    description: "Pozwala obcym korzystać z łóżek na działce"
+    not_allowed: "<red>Nie możesz korzystać z łóżek na tej działce.</red>"
+  crafting:
+    name: "Crafting"
+    description: "Pozwala obcym korzystać ze stołów rzemieślniczych i crafterów"
+    not_allowed: "<red>Nie możesz korzystać z craftingu na tej działce.</red>"
+  enchanting:
+    name: "Zaklinanie"
+    description: "Pozwala obcym korzystać ze stołów do zaklinania"
+    not_allowed: "<red>Nie możesz zaklinać przedmiotów na tej działce.</red>"
+  respawn-anchor:
+    name: "Kotwica odrodzenia"
+    description: "Pozwala obcym korzystać z kotwic odrodzenia"
+    not_allowed: "<red>Nie możesz korzystać z kotwicy odrodzenia na tej działce.</red>"
+  conduit-effects:
+    name: "Efekty conduit"
+    description: "Pozwala conduit nakładać efekty na graczy na działce"
+  flight:
+    name: "Latanie"
+    description: "Pozwala obcym rozpoczynać zwykłe latanie na działce"
+    not_allowed: "<red>Nie możesz rozpocząć latania na tej działce.</red>"
   team:
     name: "Zarządzanie Teamem"
     description: "Dodaj lub usuń wszystkich członków swojego Teamu z działki"
