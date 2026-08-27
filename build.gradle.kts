@@ -42,7 +42,7 @@ dependencies {
     compileOnly("net.kyori:adventure-text-serializer-plain:5.1.0")
     compileOnly("net.kyori:adventure-text-serializer-ansi:5.1.0")
     compileOnly("org.mariadb.jdbc:mariadb-java-client:3.5.10")
-    compileOnly("org.xerial:sqlite-jdbc:3.50.3.0")
+    compileOnly("org.xerial:sqlite-jdbc:3.53.4.0")
     compileOnly("org.postgresql:postgresql:42.7.13")
     compileOnly("com.h2database:h2:2.4.240")
     compileOnly("com.zaxxer:HikariCP:7.1.0")
