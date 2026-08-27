@@ -60,7 +60,7 @@ jobs:
         run: echo "SHORT_SHA=$(git rev-parse --short=7 HEAD)" >> $GITHUB_ENV
 
       - name: Archive JAR artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: PlotsX-DEV-Build-${{ env.SHORT_SHA }}.jar
           path: build/libs/*.jar
