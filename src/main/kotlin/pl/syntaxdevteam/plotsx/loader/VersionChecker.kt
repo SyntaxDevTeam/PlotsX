@@ -1,7 +1,9 @@
 package pl.syntaxdevteam.plotsx.loader
 
 import org.bukkit.Bukkit
+import pl.syntaxdevteam.core.platform.ServerEnvironment
 import pl.syntaxdevteam.plotsx.PlotsX
+
 class VersionChecker(private val plugin: PlotsX) {
 
     companion object {
@@ -22,7 +24,7 @@ class VersionChecker(private val plugin: PlotsX) {
             SemanticVersion(26, 1, 0),
             SemanticVersion(26, 1, 1),
             SemanticVersion(26, 1, 2),
-            SemanticVersion(26,2,0)
+            SemanticVersion(26, 2, 0)
         )
 
         fun isVersionSupported(version: String): Boolean =
@@ -58,5 +60,3 @@ class VersionChecker(private val plugin: PlotsX) {
         return current >= required
     }
 }
-
-
