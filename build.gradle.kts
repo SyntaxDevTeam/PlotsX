@@ -61,7 +61,7 @@ dependencies {
     compileOnly("me.clip:placeholderapi:2.12.3")
     compileOnly("io.github.miniplaceholders:miniplaceholders-kotlin-ext:2.3.0")
     compileOnly("com.github.milkbowl:VaultAPI:1.7.1")
-    compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.13")
+    compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.15")
     compileOnly("net.coreprotect:coreprotect:24.0")
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:$worldGuardVersion") {
         isTransitive = false
