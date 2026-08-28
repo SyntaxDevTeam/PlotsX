@@ -44,7 +44,7 @@ dependencies {
     compileOnly("pl.syntaxdevteam:messageHandler-paper:1.2.2-R0.4-SNAPSHOT")
     compileOnly("pl.syntaxdevteam:cleanerx:1.5.8")
     compileOnly("org.eclipse.aether:aether-api:1.1.0")
-    compileOnly("org.yaml:snakeyaml:2.5")
+    compileOnly("org.yaml:snakeyaml:2.6")
     compileOnly("com.google.code.gson:gson:2.14.0")
     compileOnly("net.kyori:adventure-text-serializer-legacy:5.1.0")
     compileOnly("net.kyori:adventure-text-minimessage:5.1.0")
@@ -52,7 +52,7 @@ dependencies {
     compileOnly("net.kyori:adventure-text-serializer-plain:5.1.0")
     compileOnly("net.kyori:adventure-text-serializer-ansi:5.1.0")
     compileOnly("org.mariadb.jdbc:mariadb-java-client:3.5.10")
-    compileOnly("org.xerial:sqlite-jdbc:3.50.3.0")
+    compileOnly("org.xerial:sqlite-jdbc:3.53.4.0")
     compileOnly("org.postgresql:postgresql:42.7.13")
     compileOnly("com.h2database:h2:2.4.240")
     compileOnly("com.zaxxer:HikariCP:7.1.0")
@@ -60,8 +60,8 @@ dependencies {
     compileOnly("me.clip:placeholderapi:2.12.3")
     compileOnly("io.github.miniplaceholders:miniplaceholders-kotlin-ext:2.3.0")
     compileOnly("com.github.milkbowl:VaultAPI:1.7.1")
-    compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.13")
-    compileOnly("net.coreprotect:coreprotect:22.4")
+    compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.15")
+    compileOnly("net.coreprotect:coreprotect:24.0")
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:$worldGuardVersion") {
         isTransitive = false
     }
