@@ -1,7 +1,8 @@
 package pl.syntaxdevteam.plotsx.gui
 
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
+import net.kyori.adventure.text.format.NamedTextColor
+import net.kyori.adventure.text.format.TextDecoration
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
@@ -19,7 +20,7 @@ class FlagsGUI(
     private val plot: PlotData
 ) : AbstractGUI(
     title = plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "flags.title"),
-    size  = 54
+    size = 54
 ) {
 
     private val message = plugin.messageHandler
@@ -36,32 +37,68 @@ class FlagsGUI(
             val flagData = flags.firstOrNull { it.name == flagMeta.name }
             val current = flagData?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
 
-            val name    = message.stringMessageToStringNoPrefix("flags", flagMeta.displayKey)
-            val desc    = message.stringMessageToStringNoPrefix("flags", flagMeta.descriptionKey)
-            val descTl  = message.stringMessageToStringNoPrefix("flags", "desc_title")
-            val valTl   = message.stringMessageToStringNoPrefix("flags", "value_title")
-            val valStr  = if (current)
-                "<green><bold>✔</bold> ${message.stringMessageToStringNoPrefix("flags", "value_true")}"
-            else
-                "<red><bold>✘</bold> ${message.stringMessageToStringNoPrefix("flags", "value_false")}"
+            val name = message.stringMessageToComponentNoPrefix("flags", flagMeta.displayKey)
+            val desc = message.stringMessageToComponentNoPrefix("flags", flagMeta.descriptionKey)
+            val descTitle = message.stringMessageToComponentNoPrefix("flags", "desc_title")
+            val valueTitle = message.stringMessageToComponentNoPrefix("flags", "value_title")
+            val valueText = message.stringMessageToComponentNoPrefix(
+                "flags",
+                if (current) "value_true" else "value_false"
+            )
+            val valueComponent = Component.text()
+                .color(if (current) NamedTextColor.GREEN else NamedTextColor.RED)
+                .append(
+                    Component.text(if (current) "✔" else "✘")
+                        .decorate(TextDecoration.BOLD)
+                )
+                .append(Component.space())
+                .append(valueText)
+                .build()
 
-            // Item
             val item = ItemStack(flagMeta.material)
             val meta = item.itemMeta!!
             meta.persistentDataContainer.set(keyFlag, PersistentDataType.STRING, flagMeta.name)
             meta.displayName(
-                message.formatMixedTextToMiniMessage("<gold>=> <bold>$name</bold> <=", TagResolver.empty())
+                Component.text()
+                    .color(NamedTextColor.GOLD)
+                    .append(Component.text("=> "))
+                    .append(name.decorate(TextDecoration.BOLD))
+                    .append(Component.text(" <="))
+                    .build()
             )
-            meta.lore(listOf(
-                message.formatMixedTextToMiniMessage("<aqua>     $valTl: $valStr", TagResolver.empty()),
-                Component.empty(),
-                message.formatMixedTextToMiniMessage("<aqua>$descTl<gray>$desc", TagResolver.empty())
-            ))
+            meta.lore(
+                listOf(
+                    Component.text()
+                        .color(NamedTextColor.AQUA)
+                        .append(Component.text("     "))
+                        .append(valueTitle)
+                        .append(Component.text(": "))
+                        .append(valueComponent)
+                        .build(),
+                    Component.empty(),
+                    Component.text()
+                        .color(NamedTextColor.AQUA)
+                        .append(descTitle)
+                        .append(
+                            Component.text()
+                                .color(NamedTextColor.GRAY)
+                                .append(desc)
+                                .build()
+                        )
+                        .build()
+                )
+            )
             item.itemMeta = meta
 
             inventory.setItem(idx, item)
         }
-        inventory.setItem(49, plugin.guiHandler.createItem(Material.BARRIER, message.stringMessageToStringNoPrefix("GUI", "flags.back")))
+        inventory.setItem(
+            49,
+            plugin.guiHandler.createItem(
+                Material.BARRIER,
+                message.stringMessageToComponentNoPrefix("GUI", "flags.back")
+            )
+        )
 
         super.open(player)
     }
@@ -72,7 +109,7 @@ class FlagsGUI(
         event.isCancelled = true
         val player = event.whoClicked as? Player ?: return
         val clicked = event.currentItem ?: return
-        val meta    = clicked.itemMeta ?: return
+        val meta = clicked.itemMeta ?: return
 
         plugin.guiHandler.unregisterGui(player)
         player.closeInventory()
@@ -80,7 +117,6 @@ class FlagsGUI(
         val flagKey = meta.persistentDataContainer
             .get(keyFlag, PersistentDataType.STRING)
 
-        // Obsługa przycisku "back" (slot 49)
         if (event.slot == 49) {
             plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot, plot.ownerUuid))
             return
@@ -96,10 +132,14 @@ class FlagsGUI(
             val updated = !current
 
             if (plugin.databaseHandler.updatePlotFlag(plot.id, flagKey, updated)) {
-                player.sendMessage(message.stringMessageToComponent("flags", "toggle", mapOf(
-                    "flag" to flagKey,
-                    "value" to updated.toString()
-                )))
+                player.sendMessage(
+                    message.stringMessageToComponent(
+                        "flags", "toggle", mapOf(
+                            "flag" to flagKey,
+                            "value" to updated.toString()
+                        )
+                    )
+                )
 
                 plugin.cacheManager.updateFlagCacheAsync(plot.id) {
                     plugin.server.scheduler.runTask(plugin, Runnable {
@@ -113,7 +153,7 @@ class FlagsGUI(
                                 timestamp = System.currentTimeMillis()
                             )
                         )
-                        if(plugin.config.getBoolean("debug", false)){
+                        if (plugin.config.getBoolean("debug", false)) {
                             val cacheFlags = plugin.cacheManager.getFlags(plot.id) ?: emptyList()
                             val dbFlags = plugin.databaseHandler.getPlotFlags(plot.id)
                             val table = formatFlagComparison(cacheFlags, dbFlags)

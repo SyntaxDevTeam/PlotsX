@@ -18,13 +18,19 @@ class ClaimConfirmGUI(
     private val cancelIndex  = 15
 
     init {
-        inventory.setItem(confirmIndex,
-            plugin.guiHandler.createItem(Material.EMERALD_BLOCK,
-                message.stringMessageToStringNoPrefix("GUI", "claim.material_name.confirm"))
+        inventory.setItem(
+            confirmIndex,
+            plugin.guiHandler.createItem(
+                Material.EMERALD_BLOCK,
+                message.stringMessageToComponentNoPrefix("GUI", "claim.material_name.confirm")
+            )
         )
-        inventory.setItem(cancelIndex,
-            plugin.guiHandler.createItem(Material.REDSTONE_BLOCK,
-                message.stringMessageToStringNoPrefix("GUI", "claim.material_name.cancel"))
+        inventory.setItem(
+            cancelIndex,
+            plugin.guiHandler.createItem(
+                Material.REDSTONE_BLOCK,
+                message.stringMessageToComponentNoPrefix("GUI", "claim.material_name.cancel")
+            )
         )
     }
 
