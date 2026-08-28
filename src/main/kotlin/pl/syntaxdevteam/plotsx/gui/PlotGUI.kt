@@ -1,6 +1,6 @@
 package pl.syntaxdevteam.plotsx.gui
 
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
+import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
@@ -9,31 +9,29 @@ import org.bukkit.inventory.meta.SkullMeta
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.Helpers
 import pl.syntaxdevteam.plotsx.databases.PlotData
-import net.kyori.adventure.text.Component
+import pl.syntaxdevteam.plotsx.protection.SafeTeleportUtil
 import java.text.SimpleDateFormat
 import java.util.*
-import pl.syntaxdevteam.plotsx.protection.SafeTeleportUtil
 
 class PlotGUI(
     private val plugin: PlotsX,
-    private val plot: PlotData? = null ,
+    private val plot: PlotData? = null,
     private val ownerUuid: UUID
 ) : AbstractGUI(
     title = plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "plot.title_plot"),
-    size  = 45
+    size = 45
 ) {
 
     private val message = plugin.messageHandler
     private val helpers = Helpers(plugin)
-    private val plotIndex  = 4
+    private val plotIndex = 4
     private val flagsIndex = 11
-    private val tpaIndex   = 15
+    private val tpaIndex = 15
     private val renameIndex = 29
-    private val listIndex  = 31
+    private val listIndex = 31
     private val expandIndex = 33
 
     override fun open(player: Player) {
-
         val targetPlot = plot ?: plugin.databaseHandler.getPlotAtLocation(
             player.location.world!!.name,
             player.location.blockX,
@@ -45,27 +43,42 @@ class PlotGUI(
             return
         }
 
-        inventory.setItem(plotIndex,  createPlotHead(player, targetPlot))
-        inventory.setItem(flagsIndex, createItem(
-            Material.CALIBRATED_SCULK_SENSOR,
-            message.stringMessageToStringNoPrefix("GUI", "plot.material_name.flags")
-        ))
-        inventory.setItem(tpaIndex,   createItem(
-            Material.MINECART,
-            message.stringMessageToStringNoPrefix("GUI", "plot.material_name.teleport")
-        ))
-        inventory.setItem(renameIndex, createItem(
-            Material.NAME_TAG,
-            message.stringMessageToStringNoPrefix("GUI", "plot.material_name.rename")
-        ))
-        inventory.setItem(listIndex,  createItem(
-            Material.GRASS_BLOCK,
-            message.stringMessageToStringNoPrefix("GUI", "plot.material_name.list")
-        ))
-        inventory.setItem(expandIndex, createItem(
-            Material.DIAMOND_PICKAXE,
-            message.stringMessageToStringNoPrefix("GUI", "plot.material_name.expand")
-        ))
+        inventory.setItem(plotIndex, createPlotHead(player, targetPlot))
+        inventory.setItem(
+            flagsIndex,
+            createItem(
+                Material.CALIBRATED_SCULK_SENSOR,
+                message.stringMessageToComponentNoPrefix("GUI", "plot.material_name.flags")
+            )
+        )
+        inventory.setItem(
+            tpaIndex,
+            createItem(
+                Material.MINECART,
+                message.stringMessageToComponentNoPrefix("GUI", "plot.material_name.teleport")
+            )
+        )
+        inventory.setItem(
+            renameIndex,
+            createItem(
+                Material.NAME_TAG,
+                message.stringMessageToComponentNoPrefix("GUI", "plot.material_name.rename")
+            )
+        )
+        inventory.setItem(
+            listIndex,
+            createItem(
+                Material.GRASS_BLOCK,
+                message.stringMessageToComponentNoPrefix("GUI", "plot.material_name.list")
+            )
+        )
+        inventory.setItem(
+            expandIndex,
+            createItem(
+                Material.DIAMOND_PICKAXE,
+                message.stringMessageToComponentNoPrefix("GUI", "plot.material_name.expand")
+            )
+        )
 
         super.open(player)
     }
@@ -92,6 +105,7 @@ class PlotGUI(
                     plugin.guiHandler.registerGui(player, FlagsGUI(plugin, pd))
                 }
             }
+
             tpaIndex -> {
                 if (pd == null) {
                     player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
@@ -106,6 +120,7 @@ class PlotGUI(
                     })
                 }
             }
+
             renameIndex -> {
                 if (pd == null) {
                     player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
@@ -114,6 +129,7 @@ class PlotGUI(
                     plugin.renamePlotChatListener.startRenameProcess(player, pd.id)
                 }
             }
+
             listIndex -> {
                 val playerPlots = plugin.databaseHandler.getPlayerPlots(ownerUuid)
                 if (playerPlots.isNotEmpty()) {
@@ -123,6 +139,7 @@ class PlotGUI(
                     player.closeInventory()
                 }
             }
+
             expandIndex -> {
                 if (pd == null) {
                     player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
@@ -131,6 +148,7 @@ class PlotGUI(
                     player.sendMessage("Feature not implemented yet.")
                 }
             }
+
             plotIndex -> {
                 if (pd == null) {
                     player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
@@ -138,23 +156,23 @@ class PlotGUI(
                 }
                 plugin.server.scheduler.runTask(plugin, Runnable {
                     helpers.visualizePlotBorder3D(
-                        player    = player,
-                        centerX   = pd.x,
-                        centerZ   = pd.z,
-                        radius    = pd.radius,
+                        player = player,
+                        centerX = pd.x,
+                        centerZ = pd.z,
+                        radius = pd.radius,
                         durationSec = 20,
-                        stepXZ      = 2,
-                        stepY    = 4
+                        stepXZ = 2,
+                        stepY = 4
                     )
                 })
             }
         }
     }
 
-    private fun createItem(material: Material, name: String): ItemStack {
+    private fun createItem(material: Material, name: Component): ItemStack {
         val item = ItemStack(material)
         val meta = item.itemMeta!!
-        meta.displayName(message.formatMixedTextToMiniMessage(name, TagResolver.empty()))
+        meta.displayName(name)
         item.itemMeta = meta
         return item
     }
@@ -164,24 +182,27 @@ class PlotGUI(
         val meta = skull.itemMeta as SkullMeta
 
         meta.owningPlayer = player
-        meta.displayName(message.stringMessageToComponentNoPrefix(
-            "GUI", "plot.material_name.info",
-            mapOf("plot" to plot.name)
-        ))
+        meta.displayName(
+            message.stringMessageToComponentNoPrefix(
+                "GUI", "plot.material_name.info",
+                mapOf("plot" to plot.name)
+            )
+        )
 
-        val dateFormat   = SimpleDateFormat("yyyy-MM-dd HH:mm")
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm")
         val creationTime = dateFormat.format(Date(plot.creationTime))
         plugin.logger.debug("plot.ownerUuid.toString() to ${plot.ownerUuid}")
-        // Name resolution may legitimately fail (offline-mode data, unavailable
-        // profile service, or an owner who has never joined this server). The GUI
-        // must still open instead of throwing from owner!!.
         val owner = plugin.uuidManager.getPlayerName(plot.ownerUuid)
             ?: plot.ownerUuid.toString()
         val lore = listOf(
-            message.stringMessageToComponentNoPrefix("GUI", "plot.info.owner",   mapOf("owner" to owner)),
-            message.stringMessageToComponentNoPrefix("GUI", "plot.info.plot_name",    mapOf("plot" to plot.name)),
-            message.stringMessageToComponentNoPrefix("GUI", "plot.info.id",           mapOf("id"   to plot.id.toString())),
-            message.stringMessageToComponentNoPrefix("GUI", "plot.info.creation_time",mapOf("time" to creationTime)),
+            message.stringMessageToComponentNoPrefix("GUI", "plot.info.owner", mapOf("owner" to owner)),
+            message.stringMessageToComponentNoPrefix("GUI", "plot.info.plot_name", mapOf("plot" to plot.name)),
+            message.stringMessageToComponentNoPrefix("GUI", "plot.info.id", mapOf("id" to plot.id.toString())),
+            message.stringMessageToComponentNoPrefix(
+                "GUI",
+                "plot.info.creation_time",
+                mapOf("time" to creationTime)
+            ),
             Component.text(" "),
             message.stringMessageToComponentNoPrefix("GUI", "plot.info.click")
         )

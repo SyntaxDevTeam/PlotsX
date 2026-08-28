@@ -1,6 +1,6 @@
 package pl.syntaxdevteam.plotsx.gui
 
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
+import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -10,10 +10,9 @@ import org.bukkit.inventory.ItemStack
 import pl.syntaxdevteam.plotsx.PlotsX
 import java.util.*
 
-class GUIHandler(plugin: PlotsX) : Listener {
+class GUIHandler(@Suppress("UNUSED_PARAMETER") plugin: PlotsX) : Listener {
 
     private val openGuis: MutableMap<UUID, GUI> = mutableMapOf()
-    private val message = plugin.messageHandler
 
     fun registerGui(player: Player, gui: GUI) {
         openGuis[player.uniqueId] = gui
@@ -36,10 +35,10 @@ class GUIHandler(plugin: PlotsX) : Listener {
         gui.handleClick(event)
     }
 
-    fun createItem(material: Material, name: String): ItemStack {
+    fun createItem(material: Material, name: Component): ItemStack {
         val item = ItemStack(material)
         val meta = item.itemMeta!!
-        meta.displayName(message.formatMixedTextToMiniMessage(name, TagResolver.empty()))
+        meta.displayName(name)
         item.itemMeta = meta
         return item
     }
