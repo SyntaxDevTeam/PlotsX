@@ -45,7 +45,7 @@ dependencies {
     compileOnly("pl.syntaxdevteam:messageHandler-paper:1.2.2-R0.4-SNAPSHOT")
     compileOnly("pl.syntaxdevteam:cleanerx:1.5.8")
     compileOnly("org.eclipse.aether:aether-api:1.1.0")
-    compileOnly("org.yaml:snakeyaml:2.5")
+    compileOnly("org.yaml:snakeyaml:2.6")
     compileOnly("com.google.code.gson:gson:2.14.0")
     compileOnly("net.kyori:adventure-text-serializer-legacy:5.1.0")
     compileOnly("net.kyori:adventure-text-minimessage:5.1.0")
