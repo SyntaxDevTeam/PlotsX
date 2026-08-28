@@ -4,29 +4,45 @@ import org.bukkit.Bukkit
 import pl.syntaxdevteam.plotsx.PlotsX
 class VersionChecker(private val plugin: PlotsX) {
 
+    companion object {
+        private val SUPPORTED_VERSIONS: Set<SemanticVersion> = setOf(
+            SemanticVersion(1, 20, 6),
+            SemanticVersion(1, 21, 0),
+            SemanticVersion(1, 21, 1),
+            SemanticVersion(1, 21, 2),
+            SemanticVersion(1, 21, 3),
+            SemanticVersion(1, 21, 4),
+            SemanticVersion(1, 21, 5),
+            SemanticVersion(1, 21, 6),
+            SemanticVersion(1, 21, 7),
+            SemanticVersion(1, 21, 8),
+            SemanticVersion(1, 21, 9),
+            SemanticVersion(1, 21, 10),
+            SemanticVersion(1, 21, 11),
+            SemanticVersion(26, 1, 0),
+            SemanticVersion(26, 1, 1),
+            SemanticVersion(26, 1, 2),
+            SemanticVersion(26,2,0)
+        )
+
+        fun isVersionSupported(version: String): Boolean =
+            SUPPORTED_VERSIONS.contains(SemanticVersion.parse(version))
+    }
+
     private fun getRawVersion(): String =
         Bukkit.getServer().bukkitVersion
 
     fun getServerVersion(): String =
         getRawVersion().substringBefore("-")
 
-    fun isSupported(): Boolean {
-        val version = getServerVersion().normalizeVersion()
-        return when (version.getOrElse(0) { 0 }) {
-            1 -> {
-                val minor = version.getOrElse(1) { 0 }
-                val patch = version.getOrElse(2) { 0 }
-                (minor == 20 && patch >= 6) || (minor == 21 && patch <= 11)
-            }
-            26 -> version.getOrElse(1) { 0 } in 1..3
-            else -> false
-        }
-    }
+    fun isSupported(): Boolean =
+        isVersionSupported(getServerVersion())
 
     fun checkAndLog(): Boolean {
         val version = getServerVersion()
         return if (isSupported()) {
-            plugin.logger.success("The server is running on a supported version $version.")
+            val platformVersion = ServerEnvironment.describeWithVersion(version)
+            plugin.logger.success("The server is running on a supported version $platformVersion.")
             true
         } else {
             plugin.logger.warning("Warning! Unsupported version $version – use with caution!")
@@ -34,29 +50,13 @@ class VersionChecker(private val plugin: PlotsX) {
         }
     }
 
+    fun getSemanticVersion(): SemanticVersion = SemanticVersion.parse(getServerVersion())
+
     fun isAtLeast(minVersion: String): Boolean {
-        val current = getServerVersion().normalizeVersion()
-        val required = minVersion.normalizeVersion()
-        return compareVersions(current, required) >= 0
-    }
-
-    private fun compareVersions(a: List<Int>, b: List<Int>): Int {
-        for (i in 0..2) {
-            val cmp = a.getOrElse(i) { 0 }.compareTo(b.getOrElse(i) { 0 })
-            if (cmp != 0) return cmp
-        }
-        return 0
-    }
-
-    private fun String.normalizeVersion(): List<Int> {
-        return this.split(".")
-            .map { it.toIntOrNull() ?: 0 }
-            .let {
-                when (it.size) {
-                    1 -> listOf(it[0], 0, 0)
-                    2 -> listOf(it[0], it[1], 0)
-                    else -> listOf(it[0], it[1], it[2])
-                }
-            }
+        val current = getSemanticVersion()
+        val required = SemanticVersion.parse(minVersion)
+        return current >= required
     }
 }
+
+
