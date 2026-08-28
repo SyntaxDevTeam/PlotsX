@@ -71,7 +71,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             player = player,
             onConfirm = { p ->
                 val loc      = p.location
-                val uuid     = plugin.uuidManager.getUUID("yRoshee") // Celowe podczas testów jednoosobowych.
+                val uuid     = plugin.uuidManager.getUUID(player.name) // Celowe podczas testów jednoosobowych.
                 val world    = loc.world!!.name
                 val x        = loc.blockX
                 val z        = loc.blockZ
@@ -99,7 +99,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                         y = y,
                         radius = radius,
                         maxPlots = maxPlots,
-                        namePrefix = "Działka yRoshee"
+                        namePrefix = "Działka ${player.name}"
                     )) {
                         is DatabaseHandler.ClaimResult.Success -> {
                             plugin.cacheManager.refreshAllCachesAsync()
