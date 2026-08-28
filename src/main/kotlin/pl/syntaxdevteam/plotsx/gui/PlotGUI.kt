@@ -122,7 +122,6 @@ class PlotGUI(
                     player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_plot_found"))
                     player.closeInventory()
                 }
-                plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, ownerUuid))
             }
             expandIndex -> {
                 if (pd == null) {
@@ -133,10 +132,14 @@ class PlotGUI(
                 }
             }
             plotIndex -> {
+                if (pd == null) {
+                    player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
+                    return
+                }
                 plugin.server.scheduler.runTask(plugin, Runnable {
                     helpers.visualizePlotBorder3D(
                         player    = player,
-                        centerX   = pd!!.x,
+                        centerX   = pd.x,
                         centerZ   = pd.z,
                         radius    = pd.radius,
                         durationSec = 20,
@@ -169,9 +172,13 @@ class PlotGUI(
         val dateFormat   = SimpleDateFormat("yyyy-MM-dd HH:mm")
         val creationTime = dateFormat.format(Date(plot.creationTime))
         plugin.logger.debug("plot.ownerUuid.toString() to ${plot.ownerUuid}")
+        // Name resolution may legitimately fail (offline-mode data, unavailable
+        // profile service, or an owner who has never joined this server). The GUI
+        // must still open instead of throwing from owner!!.
         val owner = plugin.uuidManager.getPlayerName(plot.ownerUuid)
+            ?: plot.ownerUuid.toString()
         val lore = listOf(
-            message.stringMessageToComponentNoPrefix("GUI", "plot.info.owner",   mapOf("owner" to owner!!)),
+            message.stringMessageToComponentNoPrefix("GUI", "plot.info.owner",   mapOf("owner" to owner)),
             message.stringMessageToComponentNoPrefix("GUI", "plot.info.plot_name",    mapOf("plot" to plot.name)),
             message.stringMessageToComponentNoPrefix("GUI", "plot.info.id",           mapOf("id"   to plot.id.toString())),
             message.stringMessageToComponentNoPrefix("GUI", "plot.info.creation_time",mapOf("time" to creationTime)),

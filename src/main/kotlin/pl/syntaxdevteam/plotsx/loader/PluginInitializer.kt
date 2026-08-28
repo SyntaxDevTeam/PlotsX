@@ -75,7 +75,6 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.versionChecker = VersionChecker(plugin)
         plugin.cacheManager.clearAllCaches()
         plugin.cacheManager.reloadAllCachesSync()
-        plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)
         plugin.server.pluginManager.registerEvents(PlotProtectionListener(plugin), plugin)
         plugin.server.pluginManager.registerEvents(plugin.renamePlotChatListener, plugin)
         plugin.coreProtectHook = CoreProtectHook(plugin)

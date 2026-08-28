@@ -29,7 +29,6 @@ repositories {
     maven("https://nexus.syntaxdevteam.pl/repository/maven-snapshots/") //SyntaxDevTeam
     maven("https://nexus.syntaxdevteam.pl/repository/maven-releases/") //SyntaxDevTeam
 
-    maven("https://repo.menthamc.org/repository/maven-public/")
     maven("https://repo.extendedclip.com/releases/") // PlaceholderAPI
     maven("https://repo.codemc.org/repository/maven-public/") // VaultUnlockedAPI
     maven("https://jitpack.io") // VaultAPI

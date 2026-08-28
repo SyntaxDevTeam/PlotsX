@@ -9,7 +9,6 @@ import pl.syntaxdevteam.plotsx.gui.PlotGUI
 import pl.syntaxdevteam.plotsx.gui.PlotListGUI
 import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 
-@Suppress("UnstableApiUsage")
 class PlotCMD(private val plugin: PlotsX) : BasicCommand {
 
     override fun execute(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>) {
@@ -24,7 +23,8 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             return
         }
 
-        val uuid = plugin.uuidManager.getUUID(player.name)
+        // The command sender is online, so no external/offline UUID lookup is needed.
+        val uuid = player.uniqueId
         val plotName = args.getOrNull(0)
 
         if (plotName != null) {
@@ -47,7 +47,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             player.location.blockZ
         )
         if (standingPlot != null) {
-            if (standingPlot.ownerUuid != uuid && !player.hasPermission("plotsx.plot.bypass")) {
+            if (standingPlot.ownerUuid != uuid && !PermissionChecker.canBypassPlots(player)) {
                 player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "not_owner"))
                 return
             }
@@ -68,7 +68,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         if (args.size != 1) return emptyList()
 
         val player = stack.sender as? Player ?: return emptyList()
-        val uuid = plugin.uuidManager.getUUID(player.name)
+        val uuid = player.uniqueId
 
         return plugin.databaseHandler
             .getPlayerPlots(uuid)
