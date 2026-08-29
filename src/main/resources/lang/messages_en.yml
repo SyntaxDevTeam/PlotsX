@@ -71,6 +71,8 @@ GUI:
       click: "<white>Click to see boundaries</white>"
     list_title: "<b>Your plot list:</b>"
     list_click_hint: "<gray>Click to open plot options</gray>"
+    list_back: "<gray>Back to plot settings</gray>"
+    list_close: "<gray>Close the plot list</gray>"
   flags:
     title: "<b>Flag Settings</b>"
     back: "<gray>Back to plot settings</gray>"

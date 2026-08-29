@@ -71,6 +71,8 @@ GUI:
       click: "<white>Kliknij, aby zobaczyć granice</white>"
     list_title: "<b>Lista Twoich działek:</b>"
     list_click_hint: "<gray>Kliknij, aby zobaczyć opcję działki</gray>"
+    list_back: "<gray>Wróć do ustawień działki</gray>"
+    list_close: "<gray>Zamknij listę działek</gray>"
   flags:
     title: "<b>Ustawienia flag</b>"
     back: "<gray>Wróć do ustawień działki</gray>"

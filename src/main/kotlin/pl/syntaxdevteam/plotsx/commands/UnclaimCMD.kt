@@ -9,7 +9,6 @@ import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 import pl.syntaxdevteam.plotsx.gui.UnclaimConfirmGUI
 import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 
-@Suppress("UnstableApiUsage")
 class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
 
     override fun execute(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>) {

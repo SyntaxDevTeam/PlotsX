@@ -16,20 +16,39 @@ import java.util.UUID
 class PlotListGUI(
     private val plugin: PlotsX,
     private val plots: List<PlotData>,
-    private val ownerUuid: UUID
+    private val ownerUuid: UUID,
+    private val backPlot: PlotData? = null
 ) : AbstractGUI(
     title = plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "plot.list_title"),
     size  = calculateSize(plots.size)
 ) {
 
+    private val footerStart = inventory.size - 9
+    private val backIndex = footerStart + 4
+
     override fun open(player: Player) {
         inventory.clear()
 
         plots.forEachIndexed { index, plot ->
-            if (index >= inventory.size) return@forEachIndexed
+            if (index >= footerStart) return@forEachIndexed
 
             inventory.setItem(index, createPlotItem(plot, index))
         }
+
+        val filler = plugin.guiHandler.createItem(Material.GRAY_STAINED_GLASS_PANE, Component.empty())
+        for (slot in footerStart until inventory.size) {
+            inventory.setItem(slot, filler)
+        }
+        inventory.setItem(
+            backIndex,
+            plugin.guiHandler.createItem(
+                Material.BARRIER,
+                plugin.messageHandler.stringMessageToComponentNoPrefix(
+                    "GUI",
+                    if (backPlot == null) "plot.list_close" else "plot.list_back"
+                )
+            )
+        )
 
         super.open(player)
     }
@@ -39,6 +58,15 @@ class PlotListGUI(
 
         event.isCancelled = true
         val player      = event.whoClicked as? Player ?: return
+
+        if (event.slot == backIndex) {
+            plugin.guiHandler.unregisterGui(player)
+            player.closeInventory()
+            backPlot?.let { plugin.guiHandler.registerGui(player, PlotGUI(plugin, it, ownerUuid)) }
+            return
+        }
+        if (event.slot >= footerStart) return
+
         val clickedItem = event.currentItem ?: return
         val meta        = clickedItem.itemMeta ?: return
 
@@ -81,8 +109,8 @@ class PlotListGUI(
 
     companion object {
         private fun calculateSize(amount: Int): Int {
-            val rows = ((amount + 8) / 9).coerceAtMost(6)
-            return rows * 9
+            val contentRows = ((amount + 8) / 9).coerceIn(1, 5)
+            return (contentRows + 1) * 9
         }
     }
 }

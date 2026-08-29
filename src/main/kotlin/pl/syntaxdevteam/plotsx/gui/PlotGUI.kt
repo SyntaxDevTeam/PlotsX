@@ -133,7 +133,7 @@ class PlotGUI(
             listIndex -> {
                 val playerPlots = plugin.databaseHandler.getPlayerPlots(ownerUuid)
                 if (playerPlots.isNotEmpty()) {
-                    plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, ownerUuid))
+                    plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, ownerUuid, pd))
                 } else {
                     player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_plot_found"))
                     player.closeInventory()
