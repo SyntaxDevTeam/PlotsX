@@ -327,10 +327,10 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 cancelAndRestore(event.block)
             }, 1L)
             player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
-        }else{
+        }/*else{ TODO: Po testach całkiem usunąć ten else
             plugin.coreProtectHook.logBlockPlace(player, block)
             logger.debug("Flaga nie zablokowana. Brak działki lub odpowiednie uprawnienia.")
-        }
+        }*/
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
