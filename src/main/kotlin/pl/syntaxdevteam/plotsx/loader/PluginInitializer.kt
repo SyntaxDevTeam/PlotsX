@@ -92,7 +92,7 @@ class PluginInitializer(private val plugin: PlotsX) {
         if (plugin.hookHandler.checkPlaceholderAPI()) {
             //PlaceholderHandler(plugin).register()
         }
-        val cleanerXApi = HookHandler(plugin).checkAndGetCleanerXApi()
+        val cleanerXApi = plugin.hookHandler.checkAndGetCleanerXApi()
         if (cleanerXApi != null) {
             plugin.logger.info("CleanerX API detected - integration enabled.")
         } else {

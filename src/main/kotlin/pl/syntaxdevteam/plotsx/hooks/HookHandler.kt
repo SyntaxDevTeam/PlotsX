@@ -23,7 +23,6 @@ class HookHandler(private val plugin: PlotsX) {
     private var luckPerms: LuckPerms? = null
     private var chat: Chat? = null
     private var permission: Permission? = null
-    private var cleanerXAPI: CleanerXAPI? = null
 
     /**
      * Initializes the HookHandler by checking if the required services are available on the server.
@@ -39,11 +38,20 @@ class HookHandler(private val plugin: PlotsX) {
         }
     }
     fun checkAndGetCleanerXApi(): CleanerXAPI? {
-        return if (Bukkit.getPluginManager().isPluginEnabled("CleanerX")) {
-            Bukkit.getPluginManager().getPlugin("CleanerX")
-                ?.takeIf { it.isEnabled }
-                ?.let { Bukkit.getServicesManager().load(CleanerXAPI::class.java) }
-        }else{
+        val cleanerX = Bukkit.getPluginManager().getPlugin("CleanerX")
+            ?.takeIf { it.isEnabled }
+            ?: return null
+
+        return try {
+            Bukkit.getServicesManager().load(CleanerXAPI::class.java)
+        } catch (exception: IllegalStateException) {
+            plugin.logger.warning(
+                "CleanerX integration could not be loaded because a dependency classloader is unavailable: " +
+                    exception.message
+            )
+            null
+        } catch (error: LinkageError) {
+            plugin.logger.warning("CleanerX integration could not be linked: ${error.message}")
             null
         }
     }
