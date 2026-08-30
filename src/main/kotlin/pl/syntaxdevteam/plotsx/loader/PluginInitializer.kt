@@ -78,6 +78,7 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.server.pluginManager.registerEvents(PlotProtectionListener(plugin), plugin)
         plugin.server.pluginManager.registerEvents(plugin.renamePlotChatListener, plugin)
         plugin.coreProtectHook = CoreProtectHook(plugin)
+        plugin.server.pluginManager.registerEvents(plugin.coreProtectHook, plugin)
         if (plugin.server.pluginManager.isPluginEnabled("WorldGuard")) {
             plugin.regionProtectionHook = WorldGuardHook(plugin)
             plugin.logger.success("WorldGuard detected - claims cannot overlap WorldGuard regions.")

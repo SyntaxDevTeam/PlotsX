@@ -6,35 +6,66 @@ import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.block.Block
 import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.server.PluginEnableEvent
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
 
-class CoreProtectHook(private val plugin: PlotsX) {
+class CoreProtectHook(private val plugin: PlotsX) : Listener {
     private var coreProtectAPI: CoreProtectAPI? = null
 
     init {
-        checkCoreProtect()
+        connect()
     }
 
-    private fun checkCoreProtect() {
+    private fun connect(): Boolean {
         val pm = Bukkit.getPluginManager()
-        if (!pm.isPluginEnabled("CoreProtect")) {
+        val provider = pm.getPlugin("CoreProtect")
+        if (provider == null) {
             plugin.logger.warning("CoreProtect plugin not found on server!")
-            return
+            return false
         }
 
-        val provider = pm.getPlugin("CoreProtect")
-        if (provider is CoreProtect && provider.isEnabled) {
+        if (!provider.isEnabled) {
+            plugin.logger.warning(
+                "CoreProtect ${provider.pluginMeta.version} is installed, but it is not enabled. " +
+                    "Check the earlier CoreProtect startup error."
+            )
+            return false
+        }
+
+        return try {
+            if (provider !is CoreProtect) {
+                plugin.logger.warning(
+                    "Plugin named CoreProtect has an unexpected main class: ${provider.javaClass.name}"
+                )
+                return false
+            }
+
             val api = provider.api
             if (api.isEnabled) {
                 coreProtectAPI = api
-                plugin.logger.debug("Hooked into CoreProtect!")
+                plugin.logger.success("Hooked into CoreProtect ${provider.pluginMeta.version}!")
                 api.testAPI()
+                true
             } else {
                 plugin.logger.warning("CoreProtect API is not enabled!")
+                false
             }
-        } else {
-            plugin.logger.warning("CoreProtect provider is null or disabled!")
+        } catch (exception: IllegalStateException) {
+            plugin.logger.warning("CoreProtect classloader is unavailable: ${exception.message}")
+            false
+        } catch (error: LinkageError) {
+            plugin.logger.warning("CoreProtect API could not be linked: ${error.message}")
+            false
+        }
+    }
+
+    @EventHandler
+    fun onPluginEnable(event: PluginEnableEvent) {
+        if (event.plugin.name.equals("CoreProtect", ignoreCase = true) && coreProtectAPI == null) {
+            connect()
         }
     }
 
