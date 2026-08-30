@@ -7,7 +7,6 @@ import net.milkbowl.vault.chat.Chat
 import net.milkbowl.vault.permission.Permission
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
-import pl.syntaxdevteam.cleanerx.api.CleanerXAPI
 import pl.syntaxdevteam.plotsx.PlotsX
 
 /**
@@ -23,6 +22,7 @@ class HookHandler(private val plugin: PlotsX) {
     private var luckPerms: LuckPerms? = null
     private var chat: Chat? = null
     private var permission: Permission? = null
+    private var cleanerXAPI: Any? = null
 
     /**
      * Initializes the HookHandler by checking if the required services are available on the server.
@@ -37,22 +37,37 @@ class HookHandler(private val plugin: PlotsX) {
             checkVaultUnlocked()
         }
     }
-    fun checkAndGetCleanerXApi(): CleanerXAPI? {
+    fun connectCleanerX(): Boolean {
         val cleanerX = Bukkit.getPluginManager().getPlugin("CleanerX")
             ?.takeIf { it.isEnabled }
-            ?: return null
+            ?: return false
 
         return try {
-            Bukkit.getServicesManager().load(CleanerXAPI::class.java)
+            cleanerXAPI = cleanerX.javaClass.getMethod("getApi").invoke(cleanerX)
+            cleanerXAPI != null
         } catch (exception: IllegalStateException) {
             plugin.logger.warning(
                 "CleanerX integration could not be loaded because a dependency classloader is unavailable: " +
                     exception.message
             )
-            null
+            false
+        } catch (exception: ReflectiveOperationException) {
+            plugin.logger.warning("CleanerX API is incompatible: ${exception.message}")
+            false
         } catch (error: LinkageError) {
             plugin.logger.warning("CleanerX integration could not be linked: ${error.message}")
-            null
+            false
+        }
+    }
+
+    fun censorWithCleanerX(message: String): String {
+        val api = cleanerXAPI ?: return message
+        return try {
+            api.javaClass.getMethod("censorMessage", String::class.java, Boolean::class.javaPrimitiveType)
+                .invoke(api, message, true) as? String ?: message
+        } catch (exception: ReflectiveOperationException) {
+            plugin.logger.warning("CleanerX failed to censor a plot name: ${exception.message}")
+            message
         }
     }
 

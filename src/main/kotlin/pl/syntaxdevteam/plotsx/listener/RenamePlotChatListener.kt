@@ -33,7 +33,8 @@ class RenamePlotChatListener(private val plugin: PlotsX) : Listener {
         event.isCancelled = true
         entry.second.cancel()
         val plotId = entry.first
-        val newName = PlainTextComponentSerializer.plainText().serialize(event.originalMessage()).trim()
+        val rawName = PlainTextComponentSerializer.plainText().serialize(event.originalMessage()).trim()
+        val newName = plugin.hookHandler.censorWithCleanerX(rawName)
 
         Bukkit.getScheduler().runTask(plugin, Runnable {
             val plot = plugin.databaseHandler.getPlotById(plotId)
@@ -54,4 +55,4 @@ class RenamePlotChatListener(private val plugin: PlotsX) : Listener {
             }
         })
     }
-} 
+}
