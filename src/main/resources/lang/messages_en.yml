@@ -22,6 +22,10 @@ error:
   create_error: "<red>An error occurred while creating the plot.</red>"
   no_plot_found: "<red>You do not own any plots.</red>"
   plot_not_found: "<red>Plot not found.</red>"
+  expand_radius_limit: "<red>This plot has reached the maximum radius allowed by your permissions.</red>"
+  expand_area_limit: "<red>Expanding would exceed your combined land allowance.</red>"
+  expand_collision: "<red>The new plot boundary would overlap another plot.</red>"
+  expand_failed: "<red>The plot could not be expanded.</red>"
 
 
   console: "<red>Only players can use this command.</red>"
@@ -42,6 +46,8 @@ plots:
   rename_exists: "<red>A plot with this name already exists!</red>"
   rename_not_found: "<red>Plot not found.</red>"
   rename_fail: "<red>Failed to change the plot name.</red>"
+  expand_success: "<green>Plot expanded to a radius of <white><radius></white> blocks.</green>"
+  expand_cancelled: "<yellow>Plot expansion cancelled.</yellow>"
 
 GUI:
   claim:
@@ -76,6 +82,13 @@ GUI:
   flags:
     title: "<b>Flag Settings</b>"
     back: "<gray>Back to plot settings</gray>"
+  expand:
+    title: "<b>Expand Plot</b>"
+    confirm: "<green>Confirm expansion</green>"
+    cancel: "<red>Cancel</red>"
+    radius: "<gray>Radius: <white><current></white> → <green><target></green></gray>"
+    area: "<gray>Total land after expansion: <white><used></white>/<white><max></white></gray>"
+    max_radius: "<gray>Maximum radius: <white><max></white></gray>"
 
 flags:
   desc_title: "Description: "

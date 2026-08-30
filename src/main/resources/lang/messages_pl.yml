@@ -22,6 +22,10 @@ error:
   create_error: "<red>Wystąpił błąd podczas tworzenia działki.</red>"
   no_plot_found: "<red>Nie posiadasz działki.</red>"
   plot_not_found: "<red>Nie znaleziono działki.</red>"
+  expand_radius_limit: "<red>Ta działka osiągnęła maksymalny promień wynikający z Twoich uprawnień.</red>"
+  expand_area_limit: "<red>Rozszerzenie przekroczyłoby Twój łączny limit terenu.</red>"
+  expand_collision: "<red>Nowa granica działki kolidowałaby z inną działką.</red>"
+  expand_failed: "<red>Nie udało się rozszerzyć działki.</red>"
 
   console: "<red>Tylko gracz może użyć tej komendy</red>"
   reload: "<red>Wystąpił błąd podczas przełądowania konfiguracji:</red> "
@@ -41,6 +45,8 @@ plots:
   rename_exists: "<red>Działka o tej nazwie już istnieje!" 
   rename_not_found: "<red>Działka nie istnieje." 
   rename_fail: "<red>Nie udało się zmienić nazwy działki."
+  expand_success: "<green>Rozszerzono działkę do promienia <white><radius></white> bloków.</green>"
+  expand_cancelled: "<yellow>Anulowano rozszerzanie działki.</yellow>"
 
 
 GUI:
@@ -76,6 +82,13 @@ GUI:
   flags:
     title: "<b>Ustawienia flag</b>"
     back: "<gray>Wróć do ustawień działki</gray>"
+  expand:
+    title: "<b>Rozszerzanie działki</b>"
+    confirm: "<green>Potwierdź rozszerzenie</green>"
+    cancel: "<red>Anuluj</red>"
+    radius: "<gray>Promień: <white><current></white> → <green><target></green></gray>"
+    area: "<gray>Łączny teren po zmianie: <white><used></white>/<white><max></white></gray>"
+    max_radius: "<gray>Maksymalny promień: <white><max></white></gray>"
 
 
 flags:

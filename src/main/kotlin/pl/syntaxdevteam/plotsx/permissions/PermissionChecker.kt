@@ -23,6 +23,7 @@ object PermissionChecker {
         UNCLAIM_PLOT("plotsx.cmd.unclaim"),
         VISIT_PLOT("plotsx.plot.visit"),
         INFO_PLOT("plotsx.plot.info"),
+        EXPAND_PLOT("plotsx.plot.expand"),
 
         // Administracyjne
         ADMIN_BYPASS("plotsx.admin.bypass"),
@@ -70,6 +71,7 @@ object PermissionChecker {
         PermissionKey.UNCLAIM_PLOT  -> "Usuwanie działki"
         PermissionKey.VISIT_PLOT    -> "Teleport do działki"
         PermissionKey.INFO_PLOT     -> "Informacje o działce"
+        PermissionKey.EXPAND_PLOT   -> "Rozszerzanie działki"
         PermissionKey.ADMIN_BYPASS  -> "Omijanie zabezpieczeń działek"
         PermissionKey.ADMIN_MANAGE  -> "Zarządzanie działkami globalnie"
         PermissionKey.OWNER        -> "Allows using the All PlotsX commands"
@@ -83,8 +85,8 @@ object PermissionChecker {
     fun canUnclaimPlot(player: CommandSender) = has(player, PermissionKey.UNCLAIM_PLOT)
     fun canVisitPlot(player: CommandSender)    = has(player, PermissionKey.VISIT_PLOT)
     fun canInfoPlot(player: CommandSender)     = has(player, PermissionKey.INFO_PLOT)
+    fun canExpandPlot(player: CommandSender)   = has(player, PermissionKey.EXPAND_PLOT)
     fun canBypassPlots(player: CommandSender)  = has(player, PermissionKey.ADMIN_BYPASS)
     fun canManagePlots(player: CommandSender)  = has(player, PermissionKey.ADMIN_MANAGE)
 }
-
 

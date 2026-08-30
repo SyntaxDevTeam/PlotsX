@@ -25,6 +25,16 @@ class DatabaseHandler(private val plugin: PlotsX) {
         data object DatabaseError : ClaimResult
     }
 
+    sealed interface ExpandResult {
+        data class Success(val newRadius: Int) : ExpandResult
+        data object PlotNotFound : ExpandResult
+        data object NotOwner : ExpandResult
+        data object RadiusLimitReached : ExpandResult
+        data object AreaLimitReached : ExpandResult
+        data object Overlap : ExpandResult
+        data object DatabaseError : ExpandResult
+    }
+
     init {
         setupDataSource()
     }
@@ -615,6 +625,122 @@ class DatabaseHandler(private val plugin: PlotsX) {
             logger.err("Błąd podczas aktualizacji działki: ${ex.message}")
             return false
         }
+    }
+
+    fun expandPlotAtomically(
+        plotId: Int,
+        ownerUuid: UUID,
+        actorUuid: UUID,
+        requestedRadius: Int,
+        maxRadius: Int,
+        maxTotalArea: Long
+    ): ExpandResult {
+        val plot = getPlotById(plotId) ?: return ExpandResult.PlotNotFound
+        val lock = claimLocks.computeIfAbsent(plot.world.lowercase(Locale.ROOT)) { ReentrantLock() }
+        return lock.withLock {
+            val connection = getConnection() ?: return@withLock ExpandResult.DatabaseError
+            connection.use { conn ->
+                try {
+                    conn.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
+                    conn.autoCommit = false
+                    val current = conn.prepareStatement(
+                        "SELECT owner_uuid, x, z, radius, world FROM plots WHERE plot_id = ?"
+                    ).use { stmt ->
+                        stmt.setInt(1, plotId)
+                        stmt.executeQuery().use { rs ->
+                            if (!rs.next()) null else arrayOf(
+                                rs.getString("owner_uuid"), rs.getInt("x"), rs.getInt("z"),
+                                rs.getInt("radius"), rs.getString("world")
+                            )
+                        }
+                    } ?: run {
+                        conn.rollback()
+                        return@withLock ExpandResult.PlotNotFound
+                    }
+
+                    if (current[0] != ownerUuid.toString()) {
+                        conn.rollback()
+                        return@withLock ExpandResult.NotOwner
+                    }
+                    val x = current[1] as Int
+                    val z = current[2] as Int
+                    val oldRadius = current[3] as Int
+                    val world = current[4] as String
+                    if (requestedRadius <= oldRadius || requestedRadius > maxRadius) {
+                        conn.rollback()
+                        return@withLock ExpandResult.RadiusLimitReached
+                    }
+
+                    val totalArea = conn.prepareStatement("SELECT radius FROM plots WHERE owner_uuid = ?").use { stmt ->
+                        stmt.setString(1, ownerUuid.toString())
+                        stmt.executeQuery().use { rs ->
+                            var sum = 0L
+                            while (rs.next()) sum = saturatingAreaSum(sum, rs.getInt(1))
+                            sum
+                        }
+                    }
+                    val proposedArea = plotArea(requestedRadius)
+                    val currentArea = plotArea(oldRadius)
+                    if (totalArea - currentArea > maxTotalArea - proposedArea) {
+                        conn.rollback()
+                        return@withLock ExpandResult.AreaLimitReached
+                    }
+
+                    val overlap = conn.prepareStatement(
+                        """
+                        SELECT 1 FROM plots
+                        WHERE plot_id <> ? AND world = ?
+                          AND (x + radius) >= ? AND (x - radius) <= ?
+                          AND (z + radius) >= ? AND (z - radius) <= ?
+                        LIMIT 1
+                        """.trimIndent()
+                    ).use { stmt ->
+                        stmt.setInt(1, plotId)
+                        stmt.setString(2, world)
+                        stmt.setInt(3, x - requestedRadius)
+                        stmt.setInt(4, x + requestedRadius)
+                        stmt.setInt(5, z - requestedRadius)
+                        stmt.setInt(6, z + requestedRadius)
+                        stmt.executeQuery().use(ResultSet::next)
+                    }
+                    if (overlap) {
+                        conn.rollback()
+                        return@withLock ExpandResult.Overlap
+                    }
+
+                    conn.prepareStatement("UPDATE plots SET radius = ? WHERE plot_id = ?").use { stmt ->
+                        stmt.setInt(1, requestedRadius)
+                        stmt.setInt(2, plotId)
+                        stmt.executeUpdate()
+                    }
+                    conn.prepareStatement(
+                        "INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp) VALUES (?, ?, ?, ?)"
+                    ).use { stmt ->
+                        stmt.setInt(1, plotId)
+                        stmt.setString(2, "EXPAND:$oldRadius->$requestedRadius")
+                        stmt.setString(3, actorUuid.toString())
+                        stmt.setLong(4, System.currentTimeMillis())
+                        stmt.executeUpdate()
+                    }
+                    conn.commit()
+                    ExpandResult.Success(requestedRadius)
+                } catch (exception: SQLException) {
+                    try { conn.rollback() } catch (_: SQLException) { }
+                    logger.err("Błąd podczas rozszerzania działki $plotId: ${exception.message}")
+                    ExpandResult.DatabaseError
+                }
+            }
+        }
+    }
+
+    private fun plotArea(radius: Int): Long {
+        val side = radius.toLong() * 2L + 1L
+        return if (side > 3_037_000_499L) Long.MAX_VALUE else side * side
+    }
+
+    private fun saturatingAreaSum(sum: Long, radius: Int): Long {
+        val area = plotArea(radius)
+        return if (Long.MAX_VALUE - sum < area) Long.MAX_VALUE else sum + area
     }
 
     /**

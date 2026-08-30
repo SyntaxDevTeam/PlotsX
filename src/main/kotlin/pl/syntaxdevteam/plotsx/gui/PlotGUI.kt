@@ -10,6 +10,7 @@ import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.Helpers
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.protection.SafeTeleportUtil
+import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -143,9 +144,12 @@ class PlotGUI(
             expandIndex -> {
                 if (pd == null) {
                     player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
+                } else if (!PermissionChecker.canExpandPlot(player)) {
+                    player.sendMessage(message.stringMessageToComponent("error", "no_permission"))
+                } else if (pd.ownerUuid != plugin.uuidManager.getUUID(player.name)) {
+                    player.sendMessage(message.stringMessageToComponent("error", "not_owner"))
                 } else {
-                    //plugin.guiHandler.registerGui(player, ExpandGUI(plugin, pd))
-                    player.sendMessage("Feature not implemented yet.")
+                    plugin.guiHandler.registerGui(player, ExpandGUI(plugin, pd.id))
                 }
             }
 

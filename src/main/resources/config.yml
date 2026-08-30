@@ -6,6 +6,13 @@ plots:
   maxPlots: 5
   radius: 16
   world: "world"
+  expansion:
+    # Radius added by one expansion (the full side grows by twice this value)
+    step: 8
+    # Used when the player has no plotsx.plot.size.<radius> permission
+    defaultMaxRadius: 64
+    # Combined block area of all owned plots; override with plotsx.plot.max-area.<blocks>
+    defaultMaxTotalArea: 16641
 
 # Settings for connecting to the database
 database:

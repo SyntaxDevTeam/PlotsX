@@ -18,6 +18,8 @@ import pl.syntaxdevteam.plotsx.PlotsX
  */
 class HookHandler(private val plugin: PlotsX) {
 
+    data class PlotLimits(val maxRadius: Int, val maxTotalArea: Long)
+
 
     private var luckPerms: LuckPerms? = null
     private var chat: Chat? = null
@@ -229,4 +231,38 @@ class HookHandler(private val plugin: PlotsX) {
     fun getAllLuckPermsMetData(player: Player): CachedMetaData? {
         return luckPerms?.getPlayerAdapter(Player::class.java)?.getMetaData(player)
     }
+
+    /**
+     * Resolves numeric plot limits from effective permission nodes. When more than one
+     * node is inherited, the highest value wins.
+     *
+     * Supported nodes:
+     * - plotsx.plot.size.<radius>
+     * - plotsx.plot.max-area.<blocks>
+     */
+    fun getPlotLimits(player: Player): PlotLimits {
+        val defaultRadius = plugin.config.getInt("plots.expansion.defaultMaxRadius", 64).coerceAtLeast(1)
+        val defaultArea = plugin.config.getLong("plots.expansion.defaultMaxTotalArea", 16641L).coerceAtLeast(1L)
+
+        if (player.isOp || player.hasPermission("plotsx.admin.bypass")) {
+            return PlotLimits(Int.MAX_VALUE, Long.MAX_VALUE)
+        }
+
+        val permissions = player.effectivePermissions
+            .asSequence()
+            .filter { it.value }
+            .map { it.permission.lowercase() }
+            .toList()
+
+        val maxRadius = numericPermission(permissions, "plotsx.plot.size.")?.coerceAtMost(Int.MAX_VALUE.toLong())
+            ?.toInt() ?: defaultRadius
+        val maxArea = numericPermission(permissions, "plotsx.plot.max-area.") ?: defaultArea
+        return PlotLimits(maxRadius.coerceAtLeast(1), maxArea.coerceAtLeast(1L))
+    }
+
+    private fun numericPermission(nodes: List<String>, prefix: String): Long? = nodes.asSequence()
+        .filter { it.startsWith(prefix) }
+        .mapNotNull { it.removePrefix(prefix).toLongOrNull() }
+        .filter { it > 0L }
+        .maxOrNull()
 }
