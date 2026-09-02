@@ -19,6 +19,8 @@ error:
   worldguard_collision: "<red>You cannot create this plot because its area overlaps a WorldGuard region.</red>"
   claim_world_not_allowed: "<red>You cannot create plots in this world.</red>"
   max_plots_reached: "<red>You have reached the maximum number of plots: <max>.</red>"
+  claim_radius_limit: "<red>The default plot radius exceeds your limit of <max> blocks.</red>"
+  claim_area_limit: "<red>Creating this plot would exceed your combined land allowance of <max> blocks.</red>"
   create_error: "<red>An error occurred while creating the plot.</red>"
   no_plot_found: "<red>You do not own any plots.</red>"
   plot_not_found: "<red>Plot not found.</red>"

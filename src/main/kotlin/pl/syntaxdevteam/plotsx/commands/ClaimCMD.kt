@@ -24,6 +24,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
         val x = location.blockX
         val z = location.blockZ
         val radius = plugin.config.getInt("plots.radius", 16)
+        val limits = plugin.hookHandler.getPlotLimits(player)
 
         if (!isClaimWorldAllowed(world)) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "claim_world_not_allowed"))
@@ -35,13 +36,28 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             return
         }
 
+        if (radius > limits.maxRadius) {
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                "error", "claim_radius_limit", mapOf("max" to limits.maxRadius.toString())
+            ))
+            return
+        }
+
         val maxPlots = plugin.config.getInt("plots.maxPlots", 5).coerceAtLeast(0)
         val ownerUuid = plugin.uuidManager.getUUID(player.name) // Celowe podczas testów jednoosobowych.
-        if (dbh.getPlotsByOwner(ownerUuid).size >= maxPlots) {
+        val ownedPlots = dbh.getPlotsByOwner(ownerUuid)
+        if (ownedPlots.size >= maxPlots) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent(
                 "error",
                 "max_plots_reached",
                 mapOf("max" to maxPlots.toString())
+            ))
+            return
+        }
+        val currentArea = ownedPlots.sumOf { plotArea(it.radius) }
+        if (currentArea > limits.maxTotalArea - plotArea(radius)) {
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                "error", "claim_area_limit", mapOf("max" to formatLimit(limits.maxTotalArea))
             ))
             return
         }
@@ -78,6 +94,14 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                 val y        = loc.blockY
                 val radius   = plugin.config.getInt("plots.radius", 16)
                 val maxPlots = plugin.config.getInt("plots.maxPlots", 5).coerceAtLeast(0)
+                val limits   = plugin.hookHandler.getPlotLimits(p)
+
+                if (radius > limits.maxRadius) {
+                    p.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                        "error", "claim_radius_limit", mapOf("max" to limits.maxRadius.toString())
+                    ))
+                    return@ClaimConfirmGUI
+                }
 
                 if (!isClaimWorldAllowed(world)) {
                     p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "claim_world_not_allowed"))
@@ -99,6 +123,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                         y = y,
                         radius = radius,
                         maxPlots = maxPlots,
+                        maxTotalArea = limits.maxTotalArea,
                         namePrefix = "Działka ${player.name}"
                     )) {
                         is DatabaseHandler.ClaimResult.Success -> {
@@ -121,6 +146,11 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                                 "error",
                                 "max_plots_reached",
                                 mapOf("max" to maxPlots.toString())
+                            ))
+                        })
+                        DatabaseHandler.ClaimResult.AreaLimitReached -> plugin.server.scheduler.runTask(plugin, Runnable {
+                            p.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                                "error", "claim_area_limit", mapOf("max" to formatLimit(limits.maxTotalArea))
                             ))
                         })
                         DatabaseHandler.ClaimResult.Overlap -> plugin.server.scheduler.runTask(plugin, Runnable {
@@ -147,5 +177,12 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
 
     private fun overlapsExternalRegion(world: org.bukkit.World, x: Int, z: Int, radius: Int): Boolean =
         plugin.regionProtectionHook?.overlapsProtectedRegion(world, x, z, radius) == true
+
+    private fun plotArea(radius: Int): Long {
+        val side = radius.toLong() * 2L + 1L
+        return side * side
+    }
+
+    private fun formatLimit(value: Long): String = if (value == Long.MAX_VALUE) "∞" else value.toString()
 
 }

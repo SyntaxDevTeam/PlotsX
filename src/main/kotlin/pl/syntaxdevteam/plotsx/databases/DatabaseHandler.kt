@@ -21,6 +21,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
     sealed interface ClaimResult {
         data class Success(val plotId: Int) : ClaimResult
         data object LimitReached : ClaimResult
+        data object AreaLimitReached : ClaimResult
         data object Overlap : ClaimResult
         data object DatabaseError : ClaimResult
     }
@@ -415,11 +416,14 @@ class DatabaseHandler(private val plugin: PlotsX) {
         y: Int,
         radius: Int,
         maxPlots: Int,
+        maxTotalArea: Long,
         namePrefix: String
     ): ClaimResult {
         val claimLock = claimLocks.computeIfAbsent(world.lowercase(Locale.ROOT)) { ReentrantLock() }
         return claimLock.withLock {
-            claimPlotInTransaction(ownerUuid, actorUuid, world, x, z, y, radius, maxPlots, namePrefix)
+            claimPlotInTransaction(
+                ownerUuid, actorUuid, world, x, z, y, radius, maxPlots, maxTotalArea, namePrefix
+            )
         }
     }
 
@@ -432,6 +436,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         y: Int,
         radius: Int,
         maxPlots: Int,
+        maxTotalArea: Long,
         namePrefix: String
     ): ClaimResult {
         val connection = getConnection() ?: run {
@@ -457,6 +462,22 @@ class DatabaseHandler(private val plugin: PlotsX) {
                 if (maxPlots >= 0 && ownerPlotCount >= maxPlots) {
                     conn.rollback()
                     return ClaimResult.LimitReached
+                }
+
+                val ownedArea = conn.prepareStatement(
+                    "SELECT radius FROM plots WHERE owner_uuid = ?"
+                ).use { stmt ->
+                    stmt.setString(1, ownerUuid.toString())
+                    stmt.executeQuery().use { rs ->
+                        var sum = 0L
+                        while (rs.next()) sum = saturatingAreaSum(sum, rs.getInt(1))
+                        sum
+                    }
+                }
+                val claimedArea = plotArea(radius)
+                if (ownedArea > maxTotalArea - claimedArea) {
+                    conn.rollback()
+                    return ClaimResult.AreaLimitReached
                 }
 
                 val overlap = conn.prepareStatement(

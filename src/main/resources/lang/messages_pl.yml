@@ -19,6 +19,8 @@ error:
   worldguard_collision: "<red>Nie możesz utworzyć działki, ponieważ jej obszar koliduje z regionem WorldGuard.</red>"
   claim_world_not_allowed: "<red>Nie możesz tworzyć działek w tym świecie.</red>"
   max_plots_reached: "<red>Osiągnięto maksymalną liczbę działek: <max>.</red>"
+  claim_radius_limit: "<red>Domyślny promień działki przekracza Twój limit <max> bloków.</red>"
+  claim_area_limit: "<red>Utworzenie działki przekroczyłoby Twój łączny limit terenu: <max> bloków.</red>"
   create_error: "<red>Wystąpił błąd podczas tworzenia działki.</red>"
   no_plot_found: "<red>Nie posiadasz działki.</red>"
   plot_not_found: "<red>Nie znaleziono działki.</red>"
