@@ -34,17 +34,27 @@ W panelu `/plot` wybierz rozszerzanie i potwierdź zakup. Wymagane są własnoś
 ```yaml
 plots:
   expansion:
-    step: 8
-    price: 0.0
+    levels:
+      1:
+        step: 8
+        price: 500.0
+      2:
+        step: 8
+        price: 1000.0
+      3:
+        step: 16
+        price: 2000.0
     defaultMaxRadius: 64
     defaultMaxTotalArea: 16641
 ```
 
-`price` to stała opłata za jeden krok, w domyślnej walucie dostawcy ekonomii. Na przykład `price: 500.0` oznacza 500 za każde rozszerzenie. Zero oznacza brak opłaty i nie wymaga ekonomii. Wartość ujemna lub nieprawidłowa blokuje rozszerzanie. Cena jest widoczna w GUI; zmiana ceny lub docelowego promienia po otwarciu GUI wymaga ponownego otwarcia panelu. OP i bypass nie zwalniają z opłaty.
+Każda działka zaczyna od poziomu 0. Kupuje się kolejno poziomy 1, 2, 3 itd.; brak następnego poziomu kończy rozszerzanie. Każdy poziom określa własne `step` (dodatni przyrost promienia) oraz `price` (opłata za ten poziom w domyślnej walucie). Zero oznacza brak opłaty i nie wymaga ekonomii. Nieprawidłowa cena lub niedodatni krok blokują zakup. GUI pokazuje docelowy poziom, promień i cenę. Zmiana oferty po otwarciu GUI wymaga ponownego otwarcia panelu. OP i bypass nie zwalniają z opłaty.
+
+Poziom jest zapisywany w tabeli `plot_expansion_levels` w tej samej transakcji co promień. Błąd lub kolizja nie zwiększa poziomu. Istniejące działki zachowują rozmiar i zaczynają nowy system od poziomu 0 — wcześniejsze rozszerzenia nie są przeliczane na poziomy. Dawne `plots.expansion.step` i `plots.expansion.price` nie są już używane. Zmiana konfiguracji poziomów nie zmienia zakupionego terenu ani zapisanego poziomu.
 
 Plugin wybiera usługę Economy VaultUnlocked (API v2), a gdy jest niedostępna — klasyczne Vault. Potrzebny jest również plugin ekonomii rejestrujący tę usługę. Sam Vault nie zapewnia kont ani sald. Brak usługi lub odrzucona płatność blokuje płatne rozszerzenie.
 
-Środek `(x, z)` pozostaje bez zmian. Promień rośnie o `step` (minimum 1), więc każda z czterech granic przesuwa się na zewnątrz o tę liczbę bloków: zachód `−X`, wschód `+X`, północ `−Z`, południe `+Z`. Nie wybiera się kierunku na podstawie pozycji lub spojrzenia gracza. Ochrona nadal obejmuje całą wysokość świata.
+Środek `(x, z)` pozostaje bez zmian. Promień rośnie o `step` kupowanego poziomu, więc każda z czterech granic przesuwa się na zewnątrz o tę liczbę bloków: zachód `−X`, wschód `+X`, północ `−Z`, południe `+Z`. Nie wybiera się kierunku na podstawie pozycji lub spojrzenia gracza. Ochrona nadal obejmuje całą wysokość świata.
 
 | Parametr | Przed | Po jednym domyślnym kroku |
 | --- | --- | --- |

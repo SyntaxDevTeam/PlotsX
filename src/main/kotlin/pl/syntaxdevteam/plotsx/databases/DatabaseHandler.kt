@@ -267,6 +267,13 @@ class DatabaseHandler(private val plugin: PlotsX) {
                     }
                     statement.executeUpdate(createPlotsTable)
                     logger.debug("Table 'plots' created.")
+                    statement.executeUpdate("""
+                        CREATE TABLE IF NOT EXISTS plot_expansion_levels (
+                            plot_id INTEGER PRIMARY KEY,
+                            expansion_level INTEGER NOT NULL,
+                            FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
+                        )
+                    """.trimIndent())
 
                     val createPlotMembersTable = when (dbType) {
                         "sqlite" -> """
@@ -648,13 +655,25 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
     }
 
+    fun getExpansionLevel(plotId: Int): Int {
+        val connection = getConnection() ?: throw SQLException("No database connection")
+        return connection.use { conn -> readExpansionLevel(conn, plotId) }
+    }
+
+    private fun readExpansionLevel(conn: Connection, plotId: Int): Int =
+        conn.prepareStatement("SELECT expansion_level FROM plot_expansion_levels WHERE plot_id = ?").use { stmt ->
+            stmt.setInt(1, plotId)
+            stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
+        }
+
     fun expandPlotAtomically(
         plotId: Int,
         ownerUuid: UUID,
         actorUuid: UUID,
         requestedRadius: Int,
         maxRadius: Int,
-        maxTotalArea: Long
+        maxTotalArea: Long,
+        expectedLevel: Int
     ): ExpandResult {
         val plot = getPlotById(plotId) ?: return ExpandResult.PlotNotFound
         val lock = claimLocks.computeIfAbsent(plot.world.lowercase(Locale.ROOT)) { ReentrantLock() }
@@ -664,6 +683,10 @@ class DatabaseHandler(private val plugin: PlotsX) {
                 try {
                     conn.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
                     conn.autoCommit = false
+                    if (readExpansionLevel(conn, plotId) != expectedLevel) {
+                        conn.rollback()
+                        return@withLock ExpandResult.DatabaseError
+                    }
                     val current = conn.prepareStatement(
                         "SELECT owner_uuid, x, z, radius, world FROM plots WHERE plot_id = ?"
                     ).use { stmt ->
@@ -729,6 +752,15 @@ class DatabaseHandler(private val plugin: PlotsX) {
                         return@withLock ExpandResult.Overlap
                     }
 
+                    conn.prepareStatement("DELETE FROM plot_expansion_levels WHERE plot_id = ?").use { stmt ->
+                        stmt.setInt(1, plotId)
+                        stmt.executeUpdate()
+                    }
+                    conn.prepareStatement("INSERT INTO plot_expansion_levels (plot_id, expansion_level) VALUES (?, ?)").use { stmt ->
+                        stmt.setInt(1, plotId)
+                        stmt.setInt(2, expectedLevel + 1)
+                        stmt.executeUpdate()
+                    }
                     conn.prepareStatement("UPDATE plots SET radius = ? WHERE plot_id = ?").use { stmt ->
                         stmt.setInt(1, requestedRadius)
                         stmt.setInt(2, plotId)

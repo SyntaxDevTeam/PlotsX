@@ -9,6 +9,7 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 
 # Error messages
 error:
+  expand_max_level: "<red>Maximum configured plot level reached.</red>"
   expand_invalid_price: "<red>Invalid expansion price in configuration.</red>"
   expand_quote_changed: "<red>The price or size changed. Reopen the expansion menu.</red>"
   expand_no_economy: "<red>Paid expansion requires Vault or VaultUnlocked and an economy provider.</red>"
@@ -123,6 +124,7 @@ GUI:
     title: "<b>Flag Settings</b>"
     back: "<gray>Back to plot settings</gray>"
   expand:
+    level: "<gold>Target level: <level></gold>"
     price: "<gold>Price per expansion: <price></gold>"
     title: "<b>Expand Plot</b>"
     confirm: "<green>Confirm expansion</green>"

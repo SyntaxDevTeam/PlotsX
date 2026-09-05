@@ -9,6 +9,7 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 
 # Wiadomości obsługi błędów
 error:
+  expand_max_level: "<red>Osiągnięto maksymalny skonfigurowany poziom działki.</red>"
   expand_invalid_price: "<red>Nieprawidłowa cena rozszerzenia w konfiguracji.</red>"
   expand_quote_changed: "<red>Cena lub rozmiar zmieniły się. Otwórz ponownie panel rozszerzania.</red>"
   expand_no_economy: "<red>Płatne rozszerzanie wymaga Vault lub VaultUnlocked i dostawcy ekonomii.</red>"
@@ -123,6 +124,7 @@ GUI:
     title: "<b>Ustawienia flag</b>"
     back: "<gray>Wróć do ustawień działki</gray>"
   expand:
+    level: "<gold>Docelowy poziom: <level></gold>"
     price: "<gold>Cena za jeden krok: <price></gold>"
     title: "<b>Rozszerzanie działki</b>"
     confirm: "<green>Potwierdź rozszerzenie</green>"

@@ -21,13 +21,18 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
     private var quotedPrice: BigDecimal? = null
     private var quotedRadius: Int? = null
     private var submitted = false
+    private var quotedLevel = 0
 
     override fun open(player: Player) {
         val plot = plugin.databaseHandler.getPlotById(plotId) ?: run {
             player.sendMessage(error("plot_not_found")); return
         }
-        val target = targetRadius(plot)
-        quotedPrice = ExpansionEconomy.price(plugin)
+        quotedLevel = plugin.databaseHandler.getExpansionLevel(plot.id) + 1
+        if (!plugin.config.isConfigurationSection("plots.expansion.levels.$quotedLevel")) {
+            player.sendMessage(error("expand_max_level")); return
+        }
+        val target = targetRadius(plot, quotedLevel)
+        quotedPrice = ExpansionEconomy.price(plugin, quotedLevel)
         quotedRadius = target
         val limits = plugin.hookHandler.getPlotLimits(player)
         val currentTotal = plugin.databaseHandler.getPlotsByOwner(plot.ownerUuid).sumOf { area(it.radius) }
@@ -37,7 +42,8 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
                 text("expand.radius", mapOf("current" to plot.radius.toString(), "target" to target.toString())),
                 text("expand.area", mapOf("used" to targetTotal.toString(), "max" to limit(limits.maxTotalArea))),
                 text("expand.max_radius", mapOf("max" to limit(limits.maxRadius.toLong()))),
-                text("expand.price", mapOf("price" to (quotedPrice?.toPlainString() ?: "?")))
+                text("expand.price", mapOf("price" to (quotedPrice?.toPlainString() ?: "?"))),
+                text("expand.level", mapOf("level" to quotedLevel.toString()))
             )))
         inventory.setItem(cancelIndex, item(Material.BARRIER, text("expand.cancel"), emptyList()))
         super.open(player)
@@ -67,8 +73,12 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         if (plot.ownerUuid != ownerUuid) {
             player.sendMessage(error("not_owner")); return
         }
-        val target = targetRadius(plot)
-        val price = ExpansionEconomy.price(plugin)
+        val nextLevel = plugin.databaseHandler.getExpansionLevel(plot.id) + 1
+        if (nextLevel != quotedLevel) {
+            player.sendMessage(error("expand_quote_changed")); return
+        }
+        val target = targetRadius(plot, nextLevel)
+        val price = ExpansionEconomy.price(plugin, nextLevel)
         if (price == null || quotedPrice == null) {
             player.sendMessage(error("expand_invalid_price")); return
         }
@@ -102,7 +112,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         }
         val result = try {
             plugin.databaseHandler.expandPlotAtomically(
-                plot.id, ownerUuid, player.uniqueId, target, limits.maxRadius, limits.maxTotalArea
+                plot.id, ownerUuid, player.uniqueId, target, limits.maxRadius, limits.maxTotalArea, nextLevel - 1
             )
         } catch (ex: Exception) {
             plugin.logger.err("Expansion failed for plot ${plot.id}: ${ex.message}")
@@ -141,8 +151,8 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         player.sendMessage(error(errorKey))
     }
 
-    private fun targetRadius(plot: PlotData): Int =
-        (plot.radius.toLong() + plugin.config.getInt("plots.expansion.step", 8).coerceAtLeast(1))
+    private fun targetRadius(plot: PlotData, level: Int): Int =
+        (plot.radius.toLong() + plugin.config.getInt("plots.expansion.levels.$level.step", 0).coerceAtLeast(0))
             .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
 
     private fun area(radius: Int): Long = (radius.toLong() * 2L + 1L).let { it * it }
