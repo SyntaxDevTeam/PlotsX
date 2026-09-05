@@ -9,6 +9,11 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 
 # Wiadomości obsługi błędów
 error:
+  expand_invalid_price: "<red>Nieprawidłowa cena rozszerzenia w konfiguracji.</red>"
+  expand_quote_changed: "<red>Cena lub rozmiar zmieniły się. Otwórz ponownie panel rozszerzania.</red>"
+  expand_no_economy: "<red>Płatne rozszerzanie wymaga Vault lub VaultUnlocked i dostawcy ekonomii.</red>"
+  expand_payment_failed: "<red>Płatność nie powiodła się. Sprawdź saldo; działka nie została powiększona.</red>"
+  expand_refund_failed: "<red>Nie udało się zwrócić opłaty. Skontaktuj się z administracją.</red>"
   no_permission: "<red>Nie masz uprawnień do tej komendy.</red>"
   claim_not_found: "<gold>Nie znaleziono gracza o nicku <player>.</gold>" ## WTF? Co tu autor miał na myśli?
   not_owner: "<red>Nie możesz ingerować w tą działkę, ponieważ nie jesteś jej właścicielem.</red>"
@@ -72,6 +77,18 @@ private_chest:
   info: "<gray>Właściciel: <white><owner></white> | Udostępniona: <white><trusted></white></gray>"
 
 
+members:
+  usage: "Użycie: /plot add <gracz>, /plot remove <gracz>, /plot members"
+  stand_on_plot: "Stań na swojej działce."
+  list: "Właściciel: <owner> | Członkowie: <players>"
+  unknown_player: "Nie znaleziono gracza. Podaj nick lub UUID gracza znanego serwerowi."
+  not_member: "Ten gracz nie jest członkiem działki."
+  owner: "Nie można zmieniać członkostwa właściciela."
+  already_member: "Ten gracz jest już członkiem."
+  failed: "Nie udało się zaktualizować członkostwa."
+  added: "Dodano gracza <player> do działki."
+  removed: "Usunięto gracza <player> z działki."
+
 GUI:
   claim:
     title_claim: "Potwierdź utworzenie działki!"
@@ -106,6 +123,7 @@ GUI:
     title: "<b>Ustawienia flag</b>"
     back: "<gray>Wróć do ustawień działki</gray>"
   expand:
+    price: "<gold>Cena za jeden krok: <price></gold>"
     title: "<b>Rozszerzanie działki</b>"
     confirm: "<green>Potwierdź rozszerzenie</green>"
     cancel: "<red>Anuluj</red>"

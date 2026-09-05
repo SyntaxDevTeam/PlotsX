@@ -209,6 +209,35 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         return PermissionChecker.canBypassPlots(player)
     }
 
+    private fun canUsePrivateChest(player: Player, plot: PlotData, chest: PrivateChestManager.Protection): Boolean =
+        hasBypass(player) || player.uniqueId == chest.owner ||
+            (chest.canAccess(player.uniqueId) && isPlotParticipant(player, plot))
+
+    private fun deniedPrivateInventory(player: Player, inventory: org.bukkit.inventory.Inventory): Boolean {
+        val block = inventory.location?.block ?: return false
+        val plot = plotAt(block) ?: return false
+        val chest = plugin.privateChestManager.getProtection(block, plot.id) ?: return false
+        return !canUsePrivateChest(player, plot, chest)
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPrivateInventoryOpen(event: org.bukkit.event.inventory.InventoryOpenEvent) {
+        val player = event.player as? Player ?: return
+        if (deniedPrivateInventory(player, event.inventory)) event.isCancelled = true
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPrivateInventoryClick(event: InventoryClickEvent) {
+        val player = event.whoClicked as? Player ?: return
+        if (deniedPrivateInventory(player, event.view.topInventory)) event.isCancelled = true
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onPrivateInventoryDrag(event: org.bukkit.event.inventory.InventoryDragEvent) {
+        val player = event.whoClicked as? Player ?: return
+        if (deniedPrivateInventory(player, event.view.topInventory)) event.isCancelled = true
+    }
+
     private fun isPlotParticipant(player: Player, plot: PlotData): Boolean =
         hasBypass(player) || player.uniqueId == plot.ownerUuid ||
             plugin.cacheManager.getMembers(plot.id).orEmpty().any {
@@ -696,7 +725,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         when (mat) {
             in containers -> {
                 val privateChest = plugin.privateChestManager.getProtection(block, plot.id)
-                if (privateChest != null && !privateChest.canAccess(player.uniqueId) && !hasBypass(player)) {
+                if (privateChest != null && !canUsePrivateChest(player, plot, privateChest)) {
                     event.isCancelled = true
                     player.sendMessage(message.stringMessageToComponent("private_chest", "access_denied"))
                     return

@@ -19,6 +19,9 @@ class CacheManager(private val plugin: PlotsX) {
     fun getPlot(plotId: Int): PlotData? = plotCache[plotId]
     fun getFlags(plotId: Int): List<PlotFlagData>? = flagCache[plotId]
     fun getMembers(plotId: Int): List<PlotMemberData>? = memberCache[plotId]
+    fun reloadMembersSync(plotId: Int) {
+        memberCache[plotId] = databaseHandler.getPlotMembers(plotId)
+    }
 
     fun getCachedPlots(): Collection<PlotData> = plotCache.values
 

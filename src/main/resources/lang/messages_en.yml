@@ -9,6 +9,11 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 
 # Error messages
 error:
+  expand_invalid_price: "<red>Invalid expansion price in configuration.</red>"
+  expand_quote_changed: "<red>The price or size changed. Reopen the expansion menu.</red>"
+  expand_no_economy: "<red>Paid expansion requires Vault or VaultUnlocked and an economy provider.</red>"
+  expand_payment_failed: "<red>Payment failed. Check your balance; the plot was not expanded.</red>"
+  expand_refund_failed: "<red>Refund failed. Please contact an administrator.</red>"
   no_permission: "<red>You don't have permission to use this command.</red>"
   claim_not_found: "<gold>No player found with the nickname <player>.</gold>" # Unclear message in PL, kept literal
   not_owner: "<red>You cannot interact with this plot because you are not the owner.</red>"
@@ -72,6 +77,18 @@ private_chest:
   not_shared: "<yellow><white><player></white> does not have access to this chest.</yellow>"
   info: "<gray>Owner: <white><owner></white> | Shared with: <white><trusted></white></gray>"
 
+members:
+  usage: "Usage: /plot add <player>, /plot remove <player>, /plot members"
+  stand_on_plot: "Stand on your own plot."
+  list: "Owner: <owner> | Members: <players>"
+  unknown_player: "Player not found. Use the name or UUID of a player known to the server."
+  not_member: "This player is not a plot member."
+  owner: "The owner's membership cannot be changed."
+  already_member: "This player is already a member."
+  failed: "Could not update membership."
+  added: "Added <player> to the plot."
+  removed: "Removed <player> from the plot."
+
 GUI:
   claim:
     title_claim: "Confirm plot creation!"
@@ -106,6 +123,7 @@ GUI:
     title: "<b>Flag Settings</b>"
     back: "<gray>Back to plot settings</gray>"
   expand:
+    price: "<gold>Price per expansion: <price></gold>"
     title: "<b>Expand Plot</b>"
     confirm: "<green>Confirm expansion</green>"
     cancel: "<red>Cancel</red>"

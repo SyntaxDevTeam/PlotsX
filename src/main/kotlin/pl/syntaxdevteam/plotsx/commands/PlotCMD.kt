@@ -27,6 +27,11 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         val uuid = player.uniqueId
         val plotName = args.getOrNull(0)
 
+        if (plotName?.lowercase() in listOf("add", "remove", "members")) {
+            manageMembers(player, args)
+            return
+        }
+
         if (plotName != null) {
             val plot = plugin.databaseHandler.getPlotByName(plotName, uuid)
             if (plot != null) {
@@ -63,6 +68,67 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         }
     }
 
+    private fun manageMembers(player: Player, args: Array<String>) {
+        fun reply(key: String, values: Map<String, String> = emptyMap()) {
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("members", key, values))
+        }
+        val action = args[0].lowercase()
+        if (args.size != if (action == "members") 1 else 2) {
+            reply("usage")
+            return
+        }
+        val plot = plugin.databaseHandler.getPlotAtLocation(player.world.name, player.location.blockX, player.location.blockZ)
+        if (plot == null) {
+            reply("stand_on_plot")
+            return
+        }
+        if (plot.ownerUuid != player.uniqueId) {
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "not_owner"))
+            return
+        }
+        try {
+            val members = plugin.databaseHandler.getPlotMembers(plot.id)
+            fun name(id: java.util.UUID) = plugin.server.getOfflinePlayer(id).name ?: id.toString()
+            if (action == "members") {
+                reply("list", mapOf("owner" to name(plot.ownerUuid), "players" to
+                    members.map { name(java.util.UUID.fromString(it.memberUuid)) }.sorted().joinToString(", ").ifEmpty { "-" }))
+                return
+            }
+            val input = args[1]
+            val parsed = runCatching { java.util.UUID.fromString(input) }.getOrNull()
+            val target = if (action == "remove") {
+                members.map { java.util.UUID.fromString(it.memberUuid) }
+                    .firstOrNull { it == parsed || name(it).equals(input, true) }
+            } else {
+                plugin.server.getPlayerExact(input)?.uniqueId ?: plugin.server.offlinePlayers
+                    .firstOrNull { it.uniqueId == parsed || it.name.equals(input, true) }?.uniqueId
+            }
+            if (target == null) {
+                reply(if (action == "remove") "not_member" else "unknown_player")
+                return
+            }
+            if (target == plot.ownerUuid) {
+                reply("owner")
+                return
+            }
+            if (action == "add" && members.any { it.memberUuid == target.toString() }) {
+                reply("already_member")
+                return
+            }
+            val success = if (action == "add") plugin.databaseHandler.addPlotMember(plot.id, target)
+                else plugin.databaseHandler.removePlotMember(plot.id, target)
+            if (!success) {
+                reply("failed")
+                return
+            }
+            plugin.cacheManager.reloadMembersSync(plot.id)
+            reply(if (action == "add") "added" else "removed", mapOf("player" to name(target)))
+        } catch (ex: java.sql.SQLException) {
+            plugin.logger.err("Cannot update plot membership: ${ex.message}")
+            reply("failed")
+        }
+    }
+
     override fun suggest(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>): List<String> {
         if (!PermissionChecker.canManagePlot(stack.sender)) return emptyList()
         if (args.size != 1) return emptyList()
@@ -70,9 +136,9 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         val player = stack.sender as? Player ?: return emptyList()
         val uuid = player.uniqueId
 
-        return plugin.databaseHandler
+        return (listOf("add", "remove", "members") + plugin.databaseHandler
             .getPlayerPlots(uuid)
-            .map { it.name }
+            .map { it.name })
             .filter { it.startsWith(args[0], ignoreCase = true) }
     }
 }
