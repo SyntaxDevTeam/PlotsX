@@ -10,18 +10,25 @@ import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.databases.Helpers
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
+import pl.syntaxdevteam.plotsx.hooks.ExpansionEconomy
+import java.math.BigDecimal
 
 class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractGUI(
     plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "expand.title"), 27
 ) {
     private val confirmIndex = 11
     private val cancelIndex = 15
+    private var quotedPrice: BigDecimal? = null
+    private var quotedRadius: Int? = null
+    private var submitted = false
 
     override fun open(player: Player) {
         val plot = plugin.databaseHandler.getPlotById(plotId) ?: run {
             player.sendMessage(error("plot_not_found")); return
         }
         val target = targetRadius(plot)
+        quotedPrice = ExpansionEconomy.price(plugin)
+        quotedRadius = target
         val limits = plugin.hookHandler.getPlotLimits(player)
         val currentTotal = plugin.databaseHandler.getPlotsByOwner(plot.ownerUuid).sumOf { area(it.radius) }
         val targetTotal = currentTotal - area(plot.radius) + area(target)
@@ -29,7 +36,8 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
             text("expand.confirm"), listOf(
                 text("expand.radius", mapOf("current" to plot.radius.toString(), "target" to target.toString())),
                 text("expand.area", mapOf("used" to targetTotal.toString(), "max" to limit(limits.maxTotalArea))),
-                text("expand.max_radius", mapOf("max" to limit(limits.maxRadius.toLong())))
+                text("expand.max_radius", mapOf("max" to limit(limits.maxRadius.toLong()))),
+                text("expand.price", mapOf("price" to (quotedPrice?.toPlainString() ?: "?")))
             )))
         inventory.setItem(cancelIndex, item(Material.BARRIER, text("expand.cancel"), emptyList()))
         super.open(player)
@@ -39,7 +47,8 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         if (!isThisInventory(event.inventory)) return
         event.isCancelled = true
         val player = event.whoClicked as? Player ?: return
-        if (event.slot !in setOf(confirmIndex, cancelIndex)) return
+        if (event.rawSlot !in setOf(confirmIndex, cancelIndex) || submitted) return
+        submitted = true
         player.closeInventory()
         plugin.guiHandler.unregisterGui(player)
         if (event.slot == cancelIndex) {
@@ -54,11 +63,18 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         val plot = plugin.databaseHandler.getPlotById(plotId) ?: run {
             player.sendMessage(error("plot_not_found")); return
         }
-        val ownerUuid = plugin.uuidManager.getUUID(player.name)
+        val ownerUuid = player.uniqueId
         if (plot.ownerUuid != ownerUuid) {
             player.sendMessage(error("not_owner")); return
         }
         val target = targetRadius(plot)
+        val price = ExpansionEconomy.price(plugin)
+        if (price == null || quotedPrice == null) {
+            player.sendMessage(error("expand_invalid_price")); return
+        }
+        if (price.compareTo(quotedPrice) != 0 || target != quotedRadius) {
+            player.sendMessage(error("expand_quote_changed")); return
+        }
         if (target <= plot.radius) {
             player.sendMessage(error("expand_radius_limit")); return
         }
@@ -69,12 +85,40 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         if (plugin.regionProtectionHook?.overlapsProtectedRegion(world, plot.x, plot.z, target) == true) {
             player.sendMessage(error("worldguard_collision")); return
         }
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            val result = plugin.databaseHandler.expandPlotAtomically(
+        // Economy APIs are synchronous. Finish withdrawal, SQL and compensation in this
+        // callback so disabling the plugin cannot strand an asynchronous refund callback.
+        val account = if (price.signum() > 0) {
+            try { ExpansionEconomy.account(plugin, player, price) } catch (ex: Exception) {
+                plugin.logger.err("Economy lookup failed: ${ex.message}")
+                null
+            } ?: run { player.sendMessage(error("expand_no_economy")); return }
+        } else null
+        if (account != null) {
+            val paid = try { account.withdraw() } catch (ex: Exception) {
+                plugin.logger.err("Expansion payment failed for $ownerUuid, amount=$price: ${ex.message}")
+                false
+            }
+            if (!paid) { player.sendMessage(error("expand_payment_failed")); return }
+        }
+        val result = try {
+            plugin.databaseHandler.expandPlotAtomically(
                 plot.id, ownerUuid, player.uniqueId, target, limits.maxRadius, limits.maxTotalArea
             )
-            plugin.server.scheduler.runTask(plugin, Runnable { showResult(player, plot, result) })
-        })
+        } catch (ex: Exception) {
+            plugin.logger.err("Expansion failed for plot ${plot.id}: ${ex.message}")
+            DatabaseHandler.ExpandResult.DatabaseError
+        }
+        if (result !is DatabaseHandler.ExpandResult.Success && account != null) {
+            val refunded = try { account.refund() } catch (ex: Exception) {
+                plugin.logger.err("Expansion refund exception: ${ex.message}")
+                false
+            }
+            if (!refunded) {
+                plugin.logger.err("REFUND REQUIRED: player=$ownerUuid plot=${plot.id} amount=$price")
+                player.sendMessage(error("expand_refund_failed"))
+            }
+        }
+        showResult(player, plot, result)
     }
 
     private fun showResult(player: Player, oldPlot: PlotData, result: DatabaseHandler.ExpandResult) {

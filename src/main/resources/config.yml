@@ -7,6 +7,9 @@ plots:
   radius: 16
   world: "world"
   expansion:
+    # Fixed price per expansion in the economy provider's default currency.
+    # 0 = free; positive values require Vault/VaultUnlocked and an economy provider.
+    price: 0.0
     # Radius added by one expansion (the full side grows by twice this value)
     step: 8
     # Used when the player has no plotsx.plot.size.<radius> permission
