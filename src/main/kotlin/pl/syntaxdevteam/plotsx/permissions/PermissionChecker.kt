@@ -24,6 +24,7 @@ object PermissionChecker {
         VISIT_PLOT("plotsx.plot.visit"),
         INFO_PLOT("plotsx.plot.info"),
         EXPAND_PLOT("plotsx.plot.expand"),
+        PRIVATE_CHEST("plotsx.cmd.privatechest"),
 
         // Administracyjne
         ADMIN_BYPASS("plotsx.admin.bypass"),
@@ -72,6 +73,7 @@ object PermissionChecker {
         PermissionKey.VISIT_PLOT    -> "Teleport do działki"
         PermissionKey.INFO_PLOT     -> "Informacje o działce"
         PermissionKey.EXPAND_PLOT   -> "Rozszerzanie działki"
+        PermissionKey.PRIVATE_CHEST -> "Zarządzanie prywatnymi skrzyniami"
         PermissionKey.ADMIN_BYPASS  -> "Omijanie zabezpieczeń działek"
         PermissionKey.ADMIN_MANAGE  -> "Zarządzanie działkami globalnie"
         PermissionKey.OWNER        -> "Allows using the All PlotsX commands"
@@ -86,7 +88,7 @@ object PermissionChecker {
     fun canVisitPlot(player: CommandSender)    = has(player, PermissionKey.VISIT_PLOT)
     fun canInfoPlot(player: CommandSender)     = has(player, PermissionKey.INFO_PLOT)
     fun canExpandPlot(player: CommandSender)   = has(player, PermissionKey.EXPAND_PLOT)
+    fun canManagePrivateChests(player: CommandSender) = has(player, PermissionKey.PRIVATE_CHEST)
     fun canBypassPlots(player: CommandSender)  = has(player, PermissionKey.ADMIN_BYPASS)
     fun canManagePlots(player: CommandSender)  = has(player, PermissionKey.ADMIN_MANAGE)
 }
-

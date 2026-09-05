@@ -38,6 +38,12 @@ class CommandsManager(private val plugin: PlotsX) {
                 "PlotsX plugin command. Type /ptx help to check available commands",
                 PlotCMD(plugin)
             )
+            commands.register(
+                "privatechest",
+                "Manage a private chest on your plot",
+                listOf("pchest"),
+                PrivateChestCMD(plugin)
+            )
 
             val aliases = plugin.config.getConfigurationSection("aliases")
             aliases?.getKeys(false)?.forEach { key ->

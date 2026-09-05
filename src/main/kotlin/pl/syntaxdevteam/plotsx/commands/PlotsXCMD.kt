@@ -76,6 +76,7 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
             "  <gold>/plotsx|ptx reload <gray>- <white>Reloads the configuration file.",
             "  <gold>/claim <gray>- <white>Pozwala zając dany teren podswoją diałkę",
             "  <gold>/unclaim <gray>- <white>usuwa działkę na której się znajdujesz.",
+            "  <gold>/privatechest|pchest <lock|unlock|trust|untrust|info> <gray>- <white>Zarządza prywatną skrzynią.",
             " ",
             " ",
             " ",

@@ -14,6 +14,12 @@ plots:
     # Combined block area of all owned plots; override with plotsx.plot.max-area.<blocks>
     defaultMaxTotalArea: 16641
 
+# Private containers (chests, trapped chests, barrels and shulker boxes)
+privateChests:
+  # Automatically assign newly placed containers to the player who placed them.
+  # Existing containers can be protected with /privatechest lock.
+  protectOnPlace: true
+
 # Settings for connecting to the database
 database:
   # Available options: mariadb, mysql, postgresql, sqlite, h2

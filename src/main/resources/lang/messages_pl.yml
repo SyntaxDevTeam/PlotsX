@@ -50,6 +50,27 @@ plots:
   expand_success: "<green>Rozszerzono działkę do promienia <white><radius></white> bloków.</green>"
   expand_cancelled: "<yellow>Anulowano rozszerzanie działki.</yellow>"
 
+private_chest:
+  usage: "<yellow>Użycie: /privatechest <lock|unlock|trust|untrust|info> [gracz]</yellow>"
+  look_at_chest: "<red>Spójrz na skrzynię, beczkę lub shulker box w zasięgu 6 bloków.</red>"
+  plot_required: "<red>Prywatne skrzynie można tworzyć wyłącznie na działce.</red>"
+  locked: "<green>Skrzynia jest teraz prywatna.</green>"
+  locked_on_place: "<green>Postawiona skrzynia została automatycznie zabezpieczona.</green>"
+  unlocked: "<green>Usunięto ochronę prywatnej skrzyni.</green>"
+  already_locked: "<yellow>Ta skrzynia jest już prywatna.</yellow>"
+  not_locked: "<yellow>Ta skrzynia nie jest prywatna.</yellow>"
+  not_chest_owner: "<red>Tylko właściciel tej skrzyni może nią zarządzać.</red>"
+  access_denied: "<red>Ta skrzynia jest prywatna i nie masz do niej dostępu.</red>"
+  break_denied: "<red>Tylko właściciel prywatnej skrzyni może ją zniszczyć.</red>"
+  join_denied: "<red>Nie możesz połączyć skrzyni z cudzą prywatną skrzynią.</red>"
+  player_not_on_plot: "<red>Gracz <white><player></white> nie jest właścicielem ani członkiem tej działki.</red>"
+  owner_cannot_be_shared: "<yellow>Właściciel skrzyni zawsze ma do niej dostęp.</yellow>"
+  shared: "<green>Udostępniono skrzynię graczowi <white><player></white>.</green>"
+  unshared: "<green>Cofnięto dostęp graczowi <white><player></white>.</green>"
+  already_shared: "<yellow>Gracz <white><player></white> ma już dostęp do tej skrzyni.</yellow>"
+  not_shared: "<yellow>Gracz <white><player></white> nie ma dostępu do tej skrzyni.</yellow>"
+  info: "<gray>Właściciel: <white><owner></white> | Udostępniona: <white><trusted></white></gray>"
+
 
 GUI:
   claim:

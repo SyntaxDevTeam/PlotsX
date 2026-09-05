@@ -209,6 +209,12 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         return PermissionChecker.canBypassPlots(player)
     }
 
+    private fun isPlotParticipant(player: Player, plot: PlotData): Boolean =
+        hasBypass(player) || player.uniqueId == plot.ownerUuid ||
+            plugin.cacheManager.getMembers(plot.id).orEmpty().any {
+                it.memberUuid == player.uniqueId.toString()
+            }
+
     private fun plotAt(block: Block): PlotData? =
         getPlotAtLocation(block.world.name, block.x, block.z)
 
@@ -327,6 +333,26 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 cancelAndRestore(event.block)
             }, 1L)
             player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
+        }
+
+        if (!event.isCancelled && plot != null && isPlotParticipant(player, plot) &&
+            plugin.config.getBoolean("privateChests.protectOnPlace", true) &&
+            plugin.privateChestManager.isSupported(block)
+        ) {
+            val existingProtection = plugin.privateChestManager.getProtection(block, plot.id)
+            if (existingProtection != null && existingProtection.owner != player.uniqueId && !hasBypass(player)) {
+                event.isCancelled = true
+                plugin.server.scheduler.runTaskLater(plugin, Runnable { cancelAndRestore(block) }, 1L)
+                player.sendMessage(message.stringMessageToComponent("private_chest", "join_denied"))
+                return
+            }
+            if (existingProtection == null) {
+                plugin.privateChestManager.lock(block, plot.id, player.uniqueId)
+                player.sendMessage(message.stringMessageToComponent("private_chest", "locked_on_place"))
+            } else {
+                // Copy metadata to the newly placed half of a double chest as well.
+                plugin.privateChestManager.synchronize(block, existingProtection)
+            }
         }/*else{ TODO: Po testach całkiem usunąć ten else
             plugin.coreProtectHook.logBlockPlace(player, block)
             logger.debug("Flaga nie zablokowana. Brak działki lub odpowiednie uprawnienia.")
@@ -340,6 +366,20 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val loc    = event.block.location
         val plot   = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ)
         val mat    = event.block.type
+
+        if (plot != null) {
+            val privateChest = plugin.privateChestManager.getProtection(block, plot.id)
+            if (privateChest != null && !privateChest.canAccess(player.uniqueId) && !hasBypass(player)) {
+                event.isCancelled = true
+                player.sendMessage(message.stringMessageToComponent("private_chest", "access_denied"))
+                return
+            }
+            if (privateChest != null && player.uniqueId != privateChest.owner && !hasBypass(player)) {
+                event.isCancelled = true
+                player.sendMessage(message.stringMessageToComponent("private_chest", "break_denied"))
+                return
+            }
+        }
 
         if (mat in spawnerBlocks) {
             logger.debug("Block należy do spawnerBlocks")
@@ -384,6 +424,17 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val sourcePlot = getPlotAtLocation(sourceLocation.world.name, sourceLocation.blockX, sourceLocation.blockZ)
         val destinationPlot = getPlotAtLocation(destinationLocation.world.name, destinationLocation.blockX, destinationLocation.blockZ)
 
+        val privateSource = sourcePlot?.let {
+            plugin.privateChestManager.getProtection(sourceLocation.block, it.id)
+        }
+        val privateDestination = destinationPlot?.let {
+            plugin.privateChestManager.getProtection(destinationLocation.block, it.id)
+        }
+        if (privateSource != null || privateDestination != null) {
+            event.isCancelled = true
+            return
+        }
+
         if (sourcePlot?.id == destinationPlot?.id) return
         if ((sourcePlot != null && !isFlagAllowed(sourcePlot.id, "item-transfer")) ||
             (destinationPlot != null && !isFlagAllowed(destinationPlot.id, "item-transfer"))
@@ -395,14 +446,18 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onEntityExplode(event: EntityExplodeEvent) {
         event.blockList().removeIf { block ->
-            plotAt(block)?.let { !isFlagAllowed(it.id, "explosions") } ?: false
+            plotAt(block)?.let {
+                plugin.privateChestManager.getProtection(block, it.id) != null || !isFlagAllowed(it.id, "explosions")
+            } ?: false
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onBlockExplode(event: BlockExplodeEvent) {
         event.blockList().removeIf { block ->
-            plotAt(block)?.let { !isFlagAllowed(it.id, "explosions") } ?: false
+            plotAt(block)?.let {
+                plugin.privateChestManager.getProtection(block, it.id) != null || !isFlagAllowed(it.id, "explosions")
+            } ?: false
         }
     }
 
@@ -640,6 +695,12 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         when (mat) {
             in containers -> {
+                val privateChest = plugin.privateChestManager.getProtection(block, plot.id)
+                if (privateChest != null && !privateChest.canAccess(player.uniqueId) && !hasBypass(player)) {
+                    event.isCancelled = true
+                    player.sendMessage(message.stringMessageToComponent("private_chest", "access_denied"))
+                    return
+                }
                 if (!hasPlotPermission(player, plot, "chest")) {
                     event.isCancelled = true
                     player.sendMessage(message.stringMessageToComponent("flags", "chest.not_allowed"))

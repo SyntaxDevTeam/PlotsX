@@ -51,6 +51,27 @@ plots:
   expand_success: "<green>Plot expanded to a radius of <white><radius></white> blocks.</green>"
   expand_cancelled: "<yellow>Plot expansion cancelled.</yellow>"
 
+private_chest:
+  usage: "<yellow>Usage: /privatechest <lock|unlock|trust|untrust|info> [player]</yellow>"
+  look_at_chest: "<red>Look at a chest, barrel, or shulker box within 6 blocks.</red>"
+  plot_required: "<red>Private chests can only be created on a plot.</red>"
+  locked: "<green>This chest is now private.</green>"
+  locked_on_place: "<green>The container you placed was protected automatically.</green>"
+  unlocked: "<green>Private chest protection removed.</green>"
+  already_locked: "<yellow>This chest is already private.</yellow>"
+  not_locked: "<yellow>This chest is not private.</yellow>"
+  not_chest_owner: "<red>Only this chest's owner can manage it.</red>"
+  access_denied: "<red>This chest is private and you cannot access it.</red>"
+  break_denied: "<red>Only the private chest owner can break it.</red>"
+  join_denied: "<red>You cannot connect a chest to someone else's private chest.</red>"
+  player_not_on_plot: "<red>Player <white><player></white> is not the owner or a member of this plot.</red>"
+  owner_cannot_be_shared: "<yellow>The chest owner always has access.</yellow>"
+  shared: "<green>Chest shared with <white><player></white>.</green>"
+  unshared: "<green>Chest access revoked from <white><player></white>.</green>"
+  already_shared: "<yellow><white><player></white> already has access to this chest.</yellow>"
+  not_shared: "<yellow><white><player></white> does not have access to this chest.</yellow>"
+  info: "<gray>Owner: <white><owner></white> | Shared with: <white><trusted></white></gray>"
+
 GUI:
   claim:
     title_claim: "Confirm plot creation!"

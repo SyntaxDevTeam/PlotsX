@@ -21,6 +21,7 @@ import pl.syntaxdevteam.plotsx.gui.GUIHandler
 import pl.syntaxdevteam.plotsx.loader.PluginInitializer
 import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
 import pl.syntaxdevteam.plotsx.loader.VersionChecker
+import pl.syntaxdevteam.plotsx.protection.PrivateChestManager
 import java.io.File
 
 class PlotsX : JavaPlugin() {
@@ -40,6 +41,7 @@ class PlotsX : JavaPlugin() {
     lateinit var hookHandler: HookHandler
     lateinit var guiHandler: GUIHandler
     lateinit var cacheManager: CacheManager
+    lateinit var privateChestManager: PrivateChestManager
     //lateinit var invitationManager: InvitationManager
     lateinit var renamePlotChatListener: RenamePlotChatListener
     lateinit var coreProtectHook: CoreProtectHook

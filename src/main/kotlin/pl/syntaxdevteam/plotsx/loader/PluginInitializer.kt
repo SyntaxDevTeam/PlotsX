@@ -13,6 +13,7 @@ import pl.syntaxdevteam.plotsx.gui.GUIHandler
 import pl.syntaxdevteam.plotsx.hooks.CoreProtectHook
 import pl.syntaxdevteam.plotsx.hooks.WorldGuardHook
 import pl.syntaxdevteam.plotsx.protection.PlotProtectionListener
+import pl.syntaxdevteam.plotsx.protection.PrivateChestManager
 import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
 
 class PluginInitializer(private val plugin: PlotsX) {
@@ -62,6 +63,7 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.hookHandler = HookHandler(plugin)
         plugin.guiHandler = GUIHandler(plugin)
         plugin.cacheManager = CacheManager(plugin)
+        plugin.privateChestManager = PrivateChestManager(plugin)
         plugin.renamePlotChatListener = RenamePlotChatListener(plugin)
     }
 
