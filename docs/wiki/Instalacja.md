@@ -22,6 +22,16 @@ Lista wersji rozpoznawanych przez plugin obejmuje 1.20.6, 1.21–1.21.11, 26.1, 
 
 Domyślna baza SQLite zapisuje dane lokalnie. Nie musisz zakładać osobnej bazy danych, żeby zacząć.
 
+## Kopia zapasowa SQL
+
+Komenda `/ptx export [mysql|mariadb|sqlite|postgresql|h2]` zapisuje schemat i wszystkie rekordy pięciu tabel PlotsX (`plots`, `plot_expansion_levels`, `plot_members`, `plot_flags`, `plot_logs`) do `plugins/PlotsX/dump/backup.sql`. Bez argumentu używa składni bieżącej bazy. Na przykład `/ptx export mysql` przygotowuje kopię dla MySQL lub MariaDB, również gdy obecnie korzystasz z SQLite. Kolejny udany eksport zastępuje plik, więc wcześniejsze kopie przenieś w inne miejsce.
+
+`/ptx import` odtwarza ten plik w aktualnie skonfigurowanej bazie i **zastępuje obecne dane PlotsX**. Składnia kopii musi pasować do docelowego silnika. Przy migracji najpierw wykonaj eksport ze składnią docelową, zmień konfigurację bazy, uruchom serwer ponownie i wykonaj import. Import obsługuje format kopii generowany przez tę wersję PlotsX, nie dowolne pliki SQL. Wgrywaj wyłącznie zaufane kopie.
+
+Wykonuj kopie i przywracanie podczas prac administracyjnych, bez graczy i innych zapisów do bazy. Przed importem zachowaj kopię bieżącej bazy. Błąd ładowania danych wycofuje transakcję; tworzenie brakujących tabel i ustawianie liczników H2 nie jest częścią tej gwarancji. Po udanym imporcie plugin odświeża pamięć podręczną.
+
+To kopia bazy PlotsX, a nie całego serwera: światy, konfigurację i dane innych pluginów kopiuj osobno. Komendy wymagają uprawnienia `plotsx.cmd.ptx`.
+
 ## Co z dodatkami?
 
 Podstawowe działki nie wymagają WorldGuarda ani pluginu ekonomii. Domyślne rozszerzanie działek są ustawione jako płatne z ekonomii serwera: aby działały, potrzebujesz Vault lub VaultUnlocked oraz pluginu obsługującego pieniądze. Możesz też ustawić ceny rozszerzeń na `0`.

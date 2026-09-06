@@ -4,6 +4,7 @@ import io.papermc.paper.command.brigadier.BasicCommand
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import org.jetbrains.annotations.NotNull
 import pl.syntaxdevteam.plotsx.PlotsX
+import pl.syntaxdevteam.plotsx.databases.SqlBackup
 
 @Suppress("UnstableApiUsage")
 class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
@@ -54,13 +55,28 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
 
                 args[0].equals("export", ignoreCase = true) -> {
 
-                    plugin.databaseHandler.exportDatabase()
+                    try {
+                        require(args.size <= 2) { "Usage: /ptx export [mysql|mariadb|sqlite|postgresql|h2]" }
+                        val file = if (args.size == 2) plugin.databaseHandler.exportDatabase(args[1])
+                            else plugin.databaseHandler.exportDatabase()
+                        stack.sender.sendMessage("Backup saved: ${file.absolutePath}")
+                    } catch (e: Exception) {
+                        plugin.logger.err("Database export failed: ${e.message}")
+                        stack.sender.sendMessage("Export failed: ${e.message}")
+                    }
 
                 }
 
                 args[0].equals("import", ignoreCase = true) -> {
 
-                    plugin.databaseHandler.importDatabase()
+                    try {
+                        require(args.size == 1) { "Usage: /ptx import" }
+                        plugin.databaseHandler.importDatabase()
+                        stack.sender.sendMessage("Database restored from dump/backup.sql.")
+                    } catch (e: Exception) {
+                        plugin.logger.err("Database import failed: ${e.message}")
+                        stack.sender.sendMessage("Import failed: ${e.message}")
+                    }
 
                 }
             }
@@ -74,6 +90,8 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
             "  <gold>/plotsx|ptx help <gray>- <white>Displays this prompt.",
             "  <gold>/plotsx|ptx version <gray>- <white>Shows plugin info.",
             "  <gold>/plotsx|ptx reload <gray>- <white>Reloads the configuration file.",
+            "  <gold>/ptx export [mysql|mariadb|sqlite|postgresql|h2] <gray>- <white>Exports an SQL backup.",
+            "  <gold>/ptx import <gray>- <white>Restores dump/backup.sql, replacing current data.",
             "  <gold>/claim <gray>- <white>Pozwala zając dany teren podswoją diałkę",
             "  <gold>/unclaim <gray>- <white>usuwa działkę na której się znajdujesz.",
             "  <gold>/plot add|remove <gracz> <gray>- <white>Zarządza członkami własnej działki.",
@@ -117,6 +135,9 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
         }
         return when (args.size) {
             1 -> listOf("help", "version", "reload", "export", "import")
+            2 -> if (args[0].equals("export", ignoreCase = true)) SqlBackup.dialects.filter {
+                it.startsWith(args[1], ignoreCase = true)
+            } else emptyList()
             else -> emptyList()
         }
     }

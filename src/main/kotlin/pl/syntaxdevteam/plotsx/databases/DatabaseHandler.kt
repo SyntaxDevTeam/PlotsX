@@ -4,7 +4,6 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import pl.syntaxdevteam.plotsx.PlotsX
 import java.io.File
-import java.io.IOException
 import java.sql.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -65,10 +64,10 @@ class DatabaseHandler(private val plugin: PlotsX) {
         when (dbType) {
             "mysql", "mariadb" -> {
                 hikariConfig.jdbcUrl =
-                    "jdbc:mysql://${plugin.config.getString("database.sql.host")}:${plugin.config.getString("database.sql.port")}/$dbName"
+                    "jdbc:mariadb://${plugin.config.getString("database.sql.host")}:${plugin.config.getString("database.sql.port")}/$dbName"
                 hikariConfig.username = user
                 hikariConfig.password = password
-                hikariConfig.driverClassName = "com.mysql.cj.jdbc.Driver"
+                hikariConfig.driverClassName = "org.mariadb.jdbc.Driver"
             }
 
             "postgresql" -> {
@@ -196,222 +195,10 @@ class DatabaseHandler(private val plugin: PlotsX) {
 
     fun createTables() {
         getConnection()?.use { conn ->
-            logger.debug("Database connection established from createTables")
             conn.createStatement().use { statement ->
-                try {
-                    val createPlotsTable = when (dbType) {
-                        "sqlite" -> """
-                            CREATE TABLE IF NOT EXISTS plots (
-                                plot_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                owner_uuid TEXT NOT NULL,
-                                x INTEGER NOT NULL,
-                                z INTEGER NOT NULL,
-                                y INTEGER NOT NULL,
-                                radius INTEGER NOT NULL,
-                                world TEXT NOT NULL,
-                                name TEXT NOT NULL,
-                                creation_time TEXT NOT NULL,
-                                UNIQUE(x, z, world)
-                            );
-                        """.trimIndent()
-
-                        "postgresql" -> """
-                            CREATE TABLE IF NOT EXISTS plots (
-                                plot_id SERIAL PRIMARY KEY,
-                                owner_uuid VARCHAR(36) NOT NULL,
-                                x INTEGER NOT NULL,
-                                z INTEGER NOT NULL,
-                                y INTEGER NOT NULL,
-                                radius INTEGER NOT NULL,
-                                world VARCHAR(255) NOT NULL,
-                                name VARCHAR(255) NOT NULL,
-                                creation_time BIGINT NOT NULL,
-                                UNIQUE(x, z, world)
-                            );
-                        """.trimIndent()
-
-                        "h2" -> """
-                            CREATE TABLE IF NOT EXISTS plots (
-                                plot_id INT AUTO_INCREMENT PRIMARY KEY,
-                                owner_uuid VARCHAR(36) NOT NULL,
-                                x INTEGER NOT NULL,
-                                z INTEGER NOT NULL,
-                                y INTEGER NOT NULL,
-                                radius INTEGER NOT NULL,
-                                world VARCHAR(255) NOT NULL,
-                                name VARCHAR(255) NOT NULL,
-                                creation_time BIGINT NOT NULL,
-                                UNIQUE(x, z, world)
-                            );
-                        """.trimIndent()
-
-                        else -> """
-                            CREATE TABLE IF NOT EXISTS plots (
-                                plot_id INT AUTO_INCREMENT PRIMARY KEY,
-                                owner_uuid VARCHAR(36) NOT NULL,
-                                x INT NOT NULL,
-                                z INT NOT NULL,
-                                y INTEGER NOT NULL,
-                                radius INT NOT NULL,
-                                world VARCHAR(255) NOT NULL,
-                                name VARCHAR(255) NOT NULL,
-                                creation_time BIGINT NOT NULL,
-                                
-                                INDEX idx_owner_uuid (owner_uuid),
-                                INDEX idx_world (world),
-                                INDEX idx_coordinates (x, z),
-                                INDEX idx_radius (radius),
-                                UNIQUE KEY unique_location (x, z, world)
-                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-                        """.trimIndent()
-                    }
-                    statement.executeUpdate(createPlotsTable)
-                    logger.debug("Table 'plots' created.")
-                    statement.executeUpdate("""
-                        CREATE TABLE IF NOT EXISTS plot_expansion_levels (
-                            plot_id INTEGER PRIMARY KEY,
-                            expansion_level INTEGER NOT NULL,
-                            FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
-                        )
-                    """.trimIndent())
-
-                    val createPlotMembersTable = when (dbType) {
-                        "sqlite" -> """
-                            CREATE TABLE IF NOT EXISTS plot_members (
-                                plot_id INTEGER NOT NULL,
-                                member_uuid TEXT NOT NULL,
-                                role TEXT NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, member_uuid)
-                            );
-                        """.trimIndent()
-
-                        "postgresql" -> """
-                            CREATE TABLE IF NOT EXISTS plot_members (
-                                plot_id INTEGER NOT NULL,
-                                member_uuid VARCHAR(36) NOT NULL,
-                                role VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, member_uuid)
-                            );
-                        """.trimIndent()
-
-                        "h2" -> """
-                            CREATE TABLE IF NOT EXISTS plot_members (
-                                plot_id INT NOT NULL,
-                                member_uuid VARCHAR(36) NOT NULL,
-                                role VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, member_uuid)
-                            );
-                        """.trimIndent()
-
-                        else -> """
-                            CREATE TABLE IF NOT EXISTS plot_members (
-                                plot_id INT NOT NULL,
-                                member_uuid VARCHAR(36) NOT NULL,
-                                role VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, member_uuid)
-                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-                        """.trimIndent()
-                    }
-                    statement.executeUpdate(createPlotMembersTable)
-                    logger.debug("Table 'plot_members' created.")
-
-                    val createPlotFlagsTable = when (dbType) {
-                        "sqlite" -> """
-                            CREATE TABLE IF NOT EXISTS plot_flags (
-                                plot_id INTEGER NOT NULL,
-                                flag_name TEXT NOT NULL,
-                                flag_value TEXT NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, flag_name)
-                            );
-                        """.trimIndent()
-
-                        "postgresql" -> """
-                            CREATE TABLE IF NOT EXISTS plot_flags (
-                                plot_id INTEGER NOT NULL,
-                                flag_name VARCHAR(255) NOT NULL,
-                                flag_value VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, flag_name)
-                            );
-                        """.trimIndent()
-
-                        "h2" -> """
-                            CREATE TABLE IF NOT EXISTS plot_flags (
-                                plot_id INT NOT NULL,
-                                flag_name VARCHAR(255) NOT NULL,
-                                flag_value VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, flag_name)
-                            );
-                        """.trimIndent()
-
-                        else -> """
-                            CREATE TABLE IF NOT EXISTS plot_flags (
-                                plot_id INT NOT NULL,
-                                flag_name VARCHAR(255) NOT NULL,
-                                flag_value VARCHAR(255) NOT NULL,
-                                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE,
-                                UNIQUE(plot_id, flag_name)
-                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-                        """.trimIndent()
-                    }
-                    statement.executeUpdate(createPlotFlagsTable)
-                    logger.debug("Table 'plot_flags' created.")
-
-                    val createPlotLogsTable = when (dbType) {
-                        "sqlite" -> """
-                            CREATE TABLE IF NOT EXISTS plot_logs (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                plot_id INTEGER NOT NULL,
-                                action TEXT NOT NULL,
-                                actor_uuid TEXT NOT NULL,
-                                timestamp TEXT NOT NULL
-                            );
-                        """.trimIndent()
-
-                        "postgresql" -> """
-                            CREATE TABLE IF NOT EXISTS plot_logs (
-                                id SERIAL PRIMARY KEY,
-                                plot_id INTEGER NOT NULL,
-                                action VARCHAR(255) NOT NULL,
-                                actor_uuid VARCHAR(36) NOT NULL,
-                                timestamp BIGINT NOT NULL
-                            );
-                        """.trimIndent()
-
-                        "h2" -> """
-                            CREATE TABLE IF NOT EXISTS plot_logs (
-                                id INT AUTO_INCREMENT PRIMARY KEY,
-                                plot_id INT NOT NULL,
-                                action VARCHAR(255) NOT NULL,
-                                actor_uuid VARCHAR(36) NOT NULL,
-                                timestamp TEXT NOT NULL
-                            );
-                        """.trimIndent()
-
-                        else -> """
-                            CREATE TABLE IF NOT EXISTS plot_logs (
-                                id INT AUTO_INCREMENT PRIMARY KEY,
-                                plot_id INT NOT NULL,
-                                action VARCHAR(255) NOT NULL,
-                                actor_uuid VARCHAR(36) NOT NULL,
-                                timestamp BIGINT (255) NOT NULL
-                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-                        """.trimIndent()
-                    }
-                    statement.executeUpdate(createPlotLogsTable)
-                    logger.debug("Table 'plot_logs' created.")
-                } catch (ex: SQLException) {
-                    logger.err("Error creating tables: ${ex.message}")
-                }
+                DatabaseSchema.statements(dbType).forEach { statement.executeUpdate(it) }
             }
-        } ?: logger.err("No database connection.")
-        logger.debug("Table creation operations completed.")
+        } ?: error("No database connection.")
     }
 
     fun claimPlotAtomically(
@@ -1389,104 +1176,17 @@ fun getPlotsFromAllUsers(): List<PlotData> {
         }
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /**
-     * Exports the database to a SQL dump file.
-     *
-     * This method retrieves the data from the database tables and writes it to a SQL dump file.
-     * The dump file contains valid SQL statements to recreate the tables and insert the data.
-     *
-     * The dump file is saved in the `dump` directory inside the plugin's data folder.
-     */
-    fun exportDatabase() {
-        val tables = listOf("punishments", "punishmenthistory")
-        try {
-            getConnection()?.use { conn ->
-                val dumpDir = File(plugin.dataFolder, "dump")
-                if (!dumpDir.exists()) {
-                    dumpDir.mkdirs()
-                }
-                val writer = File(dumpDir, "backup.sql").bufferedWriter()
-                for (table in tables) {
-                    val resultSet = conn.createStatement().executeQuery("SELECT * FROM $table")
-                    val metaData = resultSet.metaData
-                    val columnCount = metaData.columnCount
-
-                    if (!resultSet.isBeforeFirst) {
-                        continue
-                    }
-
-                    writer.write("INSERT INTO $table VALUES\n")
-                    var first = true
-                    while (resultSet.next()) {
-                        if (!first) {
-                            writer.write(",\n")
-                        }
-                        first = false
-                        writer.write("(")
-                        for (i in 1..columnCount) {
-                            val value = resultSet.getObject(i)
-                            if (value == null) {
-                                writer.write("NULL")
-                            } else {
-                                writer.write("'${value.toString().replace("'", "''")}'")
-                            }
-                            if (i < columnCount) writer.write(", ")
-                        }
-                        writer.write(")")
-                    }
-                    writer.write(";\n")
-                }
-                writer.close()
-                plugin.logger.success("Database exported to ${dumpDir}/backup.sql")
-            }
-        } catch (e: SQLException) {
-            plugin.logger.err("Failed to export database. ${e.message}")
-        } catch (e: IOException) {
-            plugin.logger.err("Failed to write to file. ${e.message}")
+    fun exportDatabase(dialect: String = dbType): File {
+        val target = SqlBackup.dialect(dialect)
+        return (getConnection() ?: error("No database connection.")).use { conn ->
+            SqlBackup.export(conn, target, File(plugin.dataFolder, "dump"))
         }
     }
 
-    /**
-     * Imports the database from a SQL dump file.
-     *
-     * This method reads the SQL dump file line by line and executes the SQL statements to recreate
-     * the database tables and insert the data. The dump file must contain valid SQL statements
-     * separated by semicolons.
-     */
     fun importDatabase() {
-        val filePath = File(plugin.dataFolder, "dump/backup.sql").absolutePath
-        try {
-            getConnection()?.use { conn ->
-                val lines = File(filePath).readLines()
-                val statement = conn.createStatement()
-                val sql = StringBuilder()
-                for (line in lines) {
-                    sql.append(line)
-                    if (line.trim().endsWith(";")) {
-                        statement.execute(sql.toString())
-                        sql.setLength(0)
-                    }
-                }
-                plugin.logger.success("Database imported from $filePath")
-            }
-        } catch (e: SQLException) {
-            plugin.logger.err("Failed to import database. ${e.message}")
-        } catch (e: IOException) {
-            plugin.logger.err("Failed to read from file. ${e.message}")
+        (getConnection() ?: error("No database connection.")).use { conn ->
+            SqlBackup.restore(conn, SqlBackup.dialect(dbType), File(plugin.dataFolder, "dump/backup.sql"))
         }
+        plugin.cacheManager.reloadAllCachesSync()
     }
 }
