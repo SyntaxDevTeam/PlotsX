@@ -131,10 +131,32 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
 
     override fun suggest(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>): List<String> {
         if (!PermissionChecker.canManagePlot(stack.sender)) return emptyList()
-        if (args.size != 1) return emptyList()
-
         val player = stack.sender as? Player ?: return emptyList()
         val uuid = player.uniqueId
+
+        if (args.size == 2 && (args[0].equals("add", true) || args[0].equals("remove", true))) {
+            val location = player.location
+            val plot = plugin.cacheManager.getCachedPlots().firstOrNull {
+                it.world.equals(location.world.name, true) &&
+                    location.blockX in (it.x - it.radius..it.x + it.radius) &&
+                    location.blockZ in (it.z - it.radius..it.z + it.radius)
+            } ?: return emptyList()
+            if (plot.ownerUuid != uuid) return emptyList()
+
+            val members = plugin.cacheManager.getMembers(plot.id).orEmpty()
+                .mapNotNull { runCatching { java.util.UUID.fromString(it.memberUuid) }.getOrNull() }
+                .toSet()
+            val candidates = if (args[0].equals("add", true)) {
+                plugin.server.onlinePlayers
+                    .filter { it.uniqueId != uuid && it.uniqueId !in members && player.canSee(it) }
+                    .map { it.name }
+            } else {
+                members.map { plugin.server.getOfflinePlayer(it).name ?: it.toString() }
+            }
+            return candidates.filter { it.startsWith(args[1], ignoreCase = true) }
+                .distinct().sortedWith(String.CASE_INSENSITIVE_ORDER)
+        }
+        if (args.size != 1) return emptyList()
 
         return (listOf("add", "remove", "members") + plugin.databaseHandler
             .getPlayerPlots(uuid)
