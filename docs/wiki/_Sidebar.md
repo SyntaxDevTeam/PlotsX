@@ -1,0 +1,16 @@
+## PlotsX Wiki
+
+- [Home](Home.md)
+- [Instalacja](Instalacja.md)
+- [Pierwsze kroki](Pierwsze-kroki.md)
+- [Panel działki](Panel-dzialki.md)
+- [Wspólna gra](Wspolna-gra.md)
+- [Prywatne skrzynie](Prywatne-skrzynie.md)
+- [Rozszerzanie i limity](Rozszerzanie.md)
+- [Ochrona i flagi](Ochrona-i-flagi.md)
+- [Komendy](Komendy.md)
+- [Uprawnienia](Uprawnienia.md)
+- [Konfiguracja](Konfiguracja.md)
+- [Integracje](Integracje.md)
+- [Administracja](Administracja.md)
+- [Pytania i problemy](FAQ.md)
