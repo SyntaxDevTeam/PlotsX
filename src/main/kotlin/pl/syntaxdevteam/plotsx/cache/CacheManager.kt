@@ -10,9 +10,9 @@ class CacheManager(private val plugin: PlotsX) {
 
     private val databaseHandler = plugin.databaseHandler
 
-    private val plotCache = ConcurrentHashMap<Int, PlotData>()
-    private val flagCache = ConcurrentHashMap<Int, List<PlotFlagData>>()
-    private val memberCache = ConcurrentHashMap<Int, List<PlotMemberData>>()
+    @Volatile private var plotCache = ConcurrentHashMap<Int, PlotData>()
+    @Volatile private var flagCache = ConcurrentHashMap<Int, List<PlotFlagData>>()
+    @Volatile private var memberCache = ConcurrentHashMap<Int, List<PlotMemberData>>()
 
     /** Public API - dostęp do cache */
 
@@ -68,24 +68,16 @@ class CacheManager(private val plugin: PlotsX) {
 
     private fun refreshPlotCacheSync() {
         val allPlots = databaseHandler.getPlotsFromAllUsers()
-        plotCache.clear()
-        allPlots.forEach { plot -> plotCache[plot.id] = plot }
+        // Publish a complete replacement so asynchronous API reads never see a half-filled map.
+        plotCache = ConcurrentHashMap(allPlots.associateBy { it.id })
     }
 
     private fun refreshFlagCacheSync() {
-        flagCache.clear()
-        plotCache.keys.forEach { plotId ->
-            val flags = databaseHandler.getPlotFlags(plotId)
-            flagCache[plotId] = flags
-        }
+        flagCache = ConcurrentHashMap(plotCache.keys.associateWith { databaseHandler.getPlotFlags(it) })
     }
 
     private fun refreshMemberCacheSync() {
-        memberCache.clear()
-        plotCache.keys.forEach { plotId ->
-            val members = databaseHandler.getPlotMembers(plotId)
-            memberCache[plotId] = members
-        }
+        memberCache = ConcurrentHashMap(plotCache.keys.associateWith { databaseHandler.getPlotMembers(it) })
     }
 
     /** Możliwość dodania lub zaktualizowania pojedynczego wpisu */

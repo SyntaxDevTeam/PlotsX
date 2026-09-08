@@ -8,5 +8,8 @@ data class FlagMeta(
     val type: FlagType,
     val material: Material,
     val displayKey: String,
-    val descriptionKey: String
+    val descriptionKey: String,
+    val memberBypass: Boolean = true,
+    val customDisplayName: String? = null,
+    val customDescription: String? = null
 )

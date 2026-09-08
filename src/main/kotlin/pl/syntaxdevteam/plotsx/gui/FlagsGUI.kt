@@ -12,7 +12,6 @@ import org.bukkit.persistence.PersistentDataType
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.databases.PlotFlagData
-import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 
 class FlagsGUI(
@@ -41,8 +40,10 @@ class FlagsGUI(
             val flagData = flags.firstOrNull { it.name == flagMeta.name }
             val current = flagData?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
 
-            val name = message.stringMessageToComponentNoPrefix("flags", flagMeta.displayKey)
-            val desc = message.stringMessageToComponentNoPrefix("flags", flagMeta.descriptionKey)
+            val name = flagMeta.customDisplayName?.let { Component.text(it) }
+                ?: message.stringMessageToComponentNoPrefix("flags", flagMeta.displayKey)
+            val desc = flagMeta.customDescription?.let { Component.text(it) }
+                ?: message.stringMessageToComponentNoPrefix("flags", flagMeta.descriptionKey)
             val descTitle = message.stringMessageToComponentNoPrefix("flags", "desc_title")
             val valueTitle = message.stringMessageToComponentNoPrefix("flags", "value_title")
             val valueText = message.stringMessageToComponentNoPrefix(
@@ -153,12 +154,11 @@ class FlagsGUI(
         val definition = PlotFlagRegistry.allFlags[flagKey] ?: return
         val current = plugin.databaseHandler.getPlotFlag(plot.id, flagKey)?.value?.toBooleanStrictOrNull()
             ?: definition.defaultValue
-        if (plugin.databaseHandler.updatePlotFlag(plot.id, flagKey, !current)) {
-            plugin.cacheManager.reloadFlagsSync(plot.id)
+        val result = plugin.api.setFlag(player, plot.id, flagKey, !current)
+        if (result == pl.syntaxdevteam.plotsx.api.FlagUpdateResult.UPDATED ||
+            result == pl.syntaxdevteam.plotsx.api.FlagUpdateResult.UNCHANGED) {
             player.sendMessage(message.stringMessageToComponent("flags", "toggle",
                 mapOf("flag" to flagKey, "value" to (!current).toString())))
-            plugin.databaseHandler.logPlotAction(PlotLogEntry(plot.id, "UpdateFlag: $flagKey: ${!current}",
-                player.uniqueId, System.currentTimeMillis()))
             plugin.guiHandler.registerGui(player, FlagsGUI(plugin, currentPlot, page))
         } else player.sendMessage(message.stringMessageToComponent("error", "flag_update_failed"))
     }

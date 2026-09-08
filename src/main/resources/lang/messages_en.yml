@@ -156,6 +156,9 @@ GUI:
     max_radius: "<gray>Maximum radius: <white><max></white></gray>"
 
 flags:
+  grave-create:
+    name: "Grave creation"
+    description: "Allows integrations to create graves on this plot, including for owners and members. Requires API support in the grave plugin."
   desc_title: "Description: "
   value_title: "Value: "
   value_true: "Enabled"

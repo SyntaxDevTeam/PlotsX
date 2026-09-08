@@ -25,6 +25,9 @@ import pl.syntaxdevteam.plotsx.protection.PrivateChestManager
 import java.io.File
 
 class PlotsX : JavaPlugin() {
+    lateinit var api: pl.syntaxdevteam.plotsx.api.PlotsXApi
+        private set
+    private var apiImplementation: pl.syntaxdevteam.plotsx.api.internal.DefaultPlotsXApi? = null
     private lateinit var pluginInitializer: PluginInitializer
 
     lateinit var logger: Logger
@@ -56,10 +59,18 @@ class PlotsX : JavaPlugin() {
         SyntaxCore.init(this)
         pluginInitializer = PluginInitializer(this)
         pluginInitializer.onEnable()
+        val service = pl.syntaxdevteam.plotsx.api.internal.DefaultPlotsXApi(this)
+        apiImplementation = service
+        api = service
+        server.servicesManager.register(pl.syntaxdevteam.plotsx.api.PlotsXApi::class.java, service, this,
+            org.bukkit.plugin.ServicePriority.Normal)
+        server.pluginManager.registerEvents(service, this)
         versionChecker.checkAndLog()
     }
 
     override fun onDisable() {
+        server.servicesManager.unregisterAll(this)
+        apiImplementation?.close()
         databaseHandler.closeConnection()
         pluginInitializer.onDisable()
     }

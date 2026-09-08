@@ -106,6 +106,16 @@ tasks.processResources {
     }
 }
 
+// Compile-only contract for integration authors; implementation and Kotlin runtime stay in PlotsX.
+val apiJar = tasks.register<Jar>("apiJar") {
+    archiveClassifier.set("api")
+    from(sourceSets.main.get().output) {
+        include("pl/syntaxdevteam/plotsx/api/**")
+        exclude("pl/syntaxdevteam/plotsx/api/internal/**")
+    }
+}
+tasks.named("assemble") { dependsOn(apiJar) }
+
 plugindeployer {
     paper { dir = "/home/debian/poligon/Paper/26.2/plugins" } //ostatnia wersja dla Paper
     folia { dir = "/home/debian/poligon/Folia/26.2/plugins" } //ostatnia wersja dla Folia

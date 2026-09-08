@@ -157,6 +157,9 @@ GUI:
 
 
 flags:
+  grave-create:
+    name: "Tworzenie grobów"
+    description: "Pozwala integracjom tworzyć groby na działce. Dotyczy także właściciela i członków; wymaga obsługi API przez plugin grobów."
   desc_title: "Opis: "
   value_title: "Wartość: "
   value_true: "Włączone"

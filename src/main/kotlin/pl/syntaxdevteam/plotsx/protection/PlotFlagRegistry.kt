@@ -4,7 +4,9 @@ import org.bukkit.Material
 import pl.syntaxdevteam.plotsx.compat.PlotCompat
 
 object PlotFlagRegistry {
-    val allFlags: Map<String, FlagMeta> = listOf(
+    private val builtInFlags: Map<String, FlagMeta> = listOf(
+        FlagMeta("grave-create", true, FlagType.WHITELIST, Material.SOUL_SAND,
+            "grave-create.name", "grave-create.description", memberBypass = false),
         FlagMeta("build", false, FlagType.WHITELIST, Material.STONE, "build.name", "build.description"),
         FlagMeta("pvp", false, FlagType.WHITELIST, Material.WOODEN_SWORD, "pvp.name", "pvp.description"),
         FlagMeta("chest", true, FlagType.BLACKLIST, Material.CHEST, "chest.name", "chest.description"),
@@ -60,4 +62,19 @@ object PlotFlagRegistry {
         // FlagMeta("allow-fly", false, FlagType.WHITELIST, Material.ELYTRA, "allow-fly.name", "allow-fly.description")
 
     ).associateBy { it.name }
+
+    @Volatile private var registered: Map<String, FlagMeta> = java.util.Collections.unmodifiableMap(builtInFlags)
+    val allFlags: Map<String, FlagMeta> get() = registered
+
+    @Synchronized internal fun register(flag: FlagMeta): Boolean {
+        if (flag.name in registered) return false
+        registered = java.util.Collections.unmodifiableMap(LinkedHashMap(registered).apply { put(flag.name, flag) })
+        return true
+    }
+
+    @Synchronized internal fun unregister(key: String): Boolean {
+        if (key in builtInFlags || key !in registered) return false
+        registered = java.util.Collections.unmodifiableMap(LinkedHashMap(registered).apply { remove(key) })
+        return true
+    }
 }

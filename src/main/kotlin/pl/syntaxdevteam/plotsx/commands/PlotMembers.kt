@@ -3,7 +3,6 @@ package pl.syntaxdevteam.plotsx.commands
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import pl.syntaxdevteam.plotsx.PlotsX
-import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 import pl.syntaxdevteam.plotsx.permissions.PlotAccess
 import java.util.UUID
 
@@ -31,11 +30,8 @@ class PlotMembers(private val plugin: PlotsX) {
                 if (!access.owner(sender, plot)) return fail(sender, "denied")
                 if (args.size != 4 || args[1] !in access.roles || args[2] !in access.actions ||
                     args[3].toBooleanStrictOrNull() == null) return fail(sender, "usage")
-                if (!plugin.databaseHandler.updatePlotFlag(plot.id, access.key(args[1], args[2]), args[3].toBoolean()))
-                    return fail(sender, "failed")
-                plugin.cacheManager.reloadFlagsSync(plot.id)
-                plugin.databaseHandler.logPlotAction(PlotLogEntry(plot.id, "RolePermission:${args.drop(1).joinToString(":")}",
-                    (sender as? Player)?.uniqueId ?: UUID(0, 0), System.currentTimeMillis()))
+                val result = plugin.api.setRolePermission(sender, plot.id, args[1], args[2], args[3].toBoolean())
+                if (result != pl.syntaxdevteam.plotsx.api.MemberUpdateResult.UPDATED) return reportFailure(sender, result)
                 reply(sender, "updated")
                 return true
             }
@@ -54,36 +50,14 @@ class PlotMembers(private val plugin: PlotsX) {
                     .firstOrNull { it.uniqueId == parsed || it.name.equals(input, true) }?.uniqueId
             } else members.map { UUID.fromString(it.memberUuid) }.firstOrNull { it == parsed || name(it).equals(input, true) }
             if (target == null) return fail(sender, if (action == "add") "unknown_player" else "not_member")
-            if (target == plot.ownerUuid) return fail(sender, "owner")
-            val targetMember = members.firstOrNull { it.memberUuid == target.toString() }
-            if (action == "add" && targetMember != null) return fail(sender, "already_member")
-            // Delegated kick cannot remove peers/superiors, including unknown legacy roles.
-            if (action == "remove" && !access.owner(sender, plot)) {
-                val actorRole = members.firstOrNull { it.memberUuid == (sender as Player).uniqueId.toString() }?.memberRole
-                if (!RoleHierarchy.canRemove(actorRole, targetMember?.memberRole)) return fail(sender, "denied")
+            if (action == "transfer" && args[2] != "confirm") return fail(sender, "usage")
+            val result = when (action) {
+                "add" -> plugin.api.addMember(sender, plot.id, target)
+                "remove" -> plugin.api.removeMember(sender, plot.id, target)
+                "role" -> plugin.api.setMemberRole(sender, plot.id, target, args[2])
+                else -> plugin.api.transferOwnership(sender, plot.id, target)
             }
-            val success = when (action) {
-                "add" -> plugin.databaseHandler.addPlotMember(plot.id, target)
-                "remove" -> plugin.databaseHandler.removePlotMember(plot.id, target)
-                "role" -> {
-                    if (args[2] !in access.roles) return fail(sender, "usage")
-                    plugin.databaseHandler.updatePlotMemberRole(plot.id, target, args[2])
-                }
-                else -> {
-                    if (args[2] != "confirm") return fail(sender, "usage")
-                    // Online recipient supplies current permission-based size/area limits.
-                    val recipient = plugin.server.getPlayer(target) ?: return fail(sender, "recipient_offline")
-                    val limits = plugin.hookHandler.getPlotLimits(recipient)
-                    plugin.databaseHandler.transferPlotOwnership(plot.id, plot.ownerUuid, target,
-                        plugin.config.getInt("plots.maxPlots", 5).coerceAtLeast(0), limits.maxRadius, limits.maxTotalArea)
-                }
-            }
-            if (!success) return fail(sender, if (action == "transfer") "transfer_failed" else "failed")
-            plugin.cacheManager.reloadMembersSync(plot.id)
-            plugin.cacheManager.reloadPlotSync(plot.id)
-            plugin.databaseHandler.logPlotAction(PlotLogEntry(plot.id,
-                "Member:$action:$target:${args.getOrNull(2).orEmpty()}",
-                (sender as? Player)?.uniqueId ?: UUID(0, 0), System.currentTimeMillis()))
+            if (result != pl.syntaxdevteam.plotsx.api.MemberUpdateResult.UPDATED) return reportFailure(sender, result)
             reply(sender, when (action) { "add" -> "added"; "remove" -> "removed"; "transfer" -> "transferred"; else -> "updated" },
                 mapOf("player" to name(target)))
             return true
@@ -91,6 +65,22 @@ class PlotMembers(private val plugin: PlotsX) {
             plugin.logger.err("Plot member operation failed: ${ex.message}")
             return fail(sender, "failed")
         }
+    }
+
+    private fun reportFailure(sender: CommandSender, result: pl.syntaxdevteam.plotsx.api.MemberUpdateResult): Boolean {
+        val key = when (result) {
+            pl.syntaxdevteam.plotsx.api.MemberUpdateResult.DENIED -> "denied"
+            pl.syntaxdevteam.plotsx.api.MemberUpdateResult.OWNER -> "owner"
+            pl.syntaxdevteam.plotsx.api.MemberUpdateResult.ALREADY_MEMBER -> "already_member"
+            pl.syntaxdevteam.plotsx.api.MemberUpdateResult.NOT_MEMBER -> "not_member"
+            pl.syntaxdevteam.plotsx.api.MemberUpdateResult.PLOT_NOT_FOUND -> "stand_on_plot"
+            pl.syntaxdevteam.plotsx.api.MemberUpdateResult.RECIPIENT_OFFLINE -> "recipient_offline"
+            pl.syntaxdevteam.plotsx.api.MemberUpdateResult.TRANSFER_REJECTED -> "transfer_failed"
+            pl.syntaxdevteam.plotsx.api.MemberUpdateResult.UNKNOWN_ROLE,
+            pl.syntaxdevteam.plotsx.api.MemberUpdateResult.UNKNOWN_ACTION -> "usage"
+            else -> "failed"
+        }
+        return fail(sender, key)
     }
 
     private fun fail(sender: CommandSender, key: String): Boolean { reply(sender, key); return false }
