@@ -8,22 +8,30 @@ Lista odpowiada aktualnej implementacji. `[argument]` jest opcjonalny, a `<argum
 | --- | --- | --- |
 | `/claim` | `plotsx.cmd.claim` | Otwiera potwierdzenie utworzenia działki w miejscu gracza. Obowiązują dozwolone światy, limity terenu i kontrola kolizji. |
 | `/unclaim` | `plotsx.cmd.unclaim` | Otwiera potwierdzenie usunięcia własnej działki, na której stoi gracz. |
-| `/plot` | `plotsx.cmd.plot` | Otwiera panel działki pod graczem, jeśli jest jej właścicielem lub ma bypass; poza działką pokazuje listę własnych działek. |
-| `/plot <nazwa>` | `plotsx.cmd.plot` | Otwiera panel własnej działki wyszukanej po nazwie. |
+| `/plot` | `plotsx.cmd.plot` | Otwiera panel działki pod graczem, jeśli jest jej właścicielem, członkiem lub ma dostęp administracyjny; poza działką pokazuje listę dostępnych działek. |
+| `/plot <nazwa>` | `plotsx.cmd.plot` | Otwiera panel dostępnej działki wyszukanej po nazwie; własna ma pierwszeństwo. |
 
-Te komendy są dostępne tylko dla graczy. `/unclaim` nie obsługuje wyboru działki po nazwie, mimo że podpowiedzi komendy zawierają nazwy działek. Panel `/plot` udostępnia flagi, teleportację, zmianę nazwy, listę działek, wizualizację granic i rozszerzanie; rozszerzanie wymaga dodatkowo `plotsx.plot.expand`.
+Zwykłe komendy działek są dostępne tylko dla graczy; `/plot admin <id> <podkomenda>` działa również z konsoli. `/unclaim` nie obsługuje wyboru działki po nazwie, mimo że podpowiedzi komendy zawierają nazwy działek. Panel `/plot` udostępnia flagi, teleportację, zmianę nazwy, listę działek, wizualizację granic i rozszerzanie; rozszerzanie wymaga dodatkowo `plotsx.plot.expand`.
 
 ### Członkowie działki
 
-Komendy wymagają `plotsx.cmd.plot` i stania na własnej działce. Tylko właściciel może zarządzać członkostwem oraz wyświetlać listę.
+Komendy wymagają `plotsx.cmd.plot` i stania na działce, do której gracz ma dostęp. Właściciel i administrator zarządzają wszystkimi opcjami; członkowie korzystają z grantów swojej roli.
 
-| Komenda | Działanie |
+| Komenda | Działanie i wymagany dostęp |
 | --- | --- |
-| `/plot add <gracz>` | Dodaje gracza znanego serwerowi po nicku lub UUID, także gdy jest offline. |
-| `/plot remove <gracz>` | Usuwa członka po nicku lub UUID. |
-| `/plot members` | Wyświetla właściciela i członków działki. |
+| `/plot add <gracz>` | Dodaje znanego serwerowi gracza po nicku lub UUID, również offline. Wymaga grantu `invite` lub własności/administracji. |
+| `/plot remove <gracz>` | Usuwa członka. Grant `kick` pozwala usuwać wyłącznie niższe role: `member < builder < manager`. Właściciel/administrator nie podlega temu ograniczeniu. |
+| `/plot members` | Otwiera panel członków, dostępny także członkom działki. |
+| `/plot role <gracz> <member\|builder\|manager>` | Zmienia rolę członka; tylko właściciel/administrator. |
+| `/plot permission <rola> <grant> <true\|false>` | Ustawia grant roli dla tej działki; tylko właściciel/administrator. |
+| `/plot transfer <gracz> confirm` | Przekazuje własność obecnemu członkowi, który jest online; tylko właściciel/administrator. Sprawdza limity liczby, promienia i powierzchni odbiorcy oraz konflikt nazwy działki. |
+| `/plot admin <id>` | Otwiera panel członków wskazanej działki; wymaga `plotsx.admin.manage`. |
+| `/plot admin <id> <podkomenda> [argumenty]` | Wykonuje powyższe operacje na wskazanej działce, także z konsoli. Wymaga `plotsx.admin.manage`, bez osobnego wymogu `plotsx.cmd.plot`. `members` wypisuje listę. |
 
-Członkowie mogą budować i korzystać z działki zgodnie z istniejącym mechanizmem uprawnień członków. Dostęp do cudzych prywatnych skrzyń wymaga osobnego udostępnienia. Po usunięciu członka udostępnienie przestaje pozwalać na dostęp, również w już otwartym oknie skrzyni. Lista udostępnień pozostaje zapisana w bloku: ponowne dodanie do działki przywraca taki dostęp. Własność jego własnych skrzyń pozostaje bez zmian. Nazwy `add`, `remove` i `members` są zarezerwowane jako podkomendy; działkę o takiej nazwie można otworzyć przez `/plot`, stojąc na niej.
+Przykłady: `/plot permission builder flag.build true`, `/plot role Alex manager`, `/plot admin 12 members`.
+Granty to `invite`, `kick`, `rename` i `flag.<identyfikator>`; nie obsługują `flag.*`.
+
+Członkowie mogą budować i korzystać z działki zgodnie z istniejącym mechanizmem uprawnień członków. Dostęp do cudzych prywatnych skrzyń wymaga osobnego udostępnienia. Po usunięciu członka udostępnienie przestaje pozwalać na dostęp, również w już otwartym oknie skrzyni. Lista udostępnień pozostaje zapisana w bloku: ponowne dodanie do działki przywraca taki dostęp. Własność jego własnych skrzyń pozostaje bez zmian. Nazwy `add`, `remove`, `members`, `role`, `permission`, `transfer` i `admin` są zarezerwowane jako podkomendy; działkę o takiej nazwie można otworzyć przez `/plot`, stojąc na niej.
 
 Domyślne dodatkowe aliasy to `/c` dla `/claim` i `/unc` dla `/unclaim`. Można je zmienić w `config.yml` przez `aliases.claim` i `aliases.unclaim`.
 
@@ -68,6 +76,18 @@ Płatność jest pobierana przed transakcją rozszerzenia. Odrzucenie rozszerzen
 
 Dokumentacja API: [Vault](https://milkbowl.github.io/VaultAPI/net/milkbowl/vault/economy/Economy.html), [VaultUnlocked](https://github.com/TheNewEconomy/VaultUnlockedAPI).
 
+## Tworzenie działek: limity i światy
+
+`/claim` korzysta z `plots.world`, które przyjmuje listę, np. `["world", "survival"]`.
+Stary pojedynczy wpis nadal działa; `["*"]` dopuszcza wszystkie światy, a `[]` blokuje tworzenie.
+Światy muszą być załadowane, np. przez Multiverse-Core; osobna integracja nie jest wymagana.
+
+`plotsx.plot.max-plots.<liczba>` nadpisuje `plots.maxPlots`, a `plotsx.plot.radius.<promień>`
+nadpisuje `plots.radius`. Najwyższa przyznana wartość danego uprawnienia wygrywa.
+Liczba i powierzchnia działek są liczone łącznie we wszystkich światach.
+Promień początkowy podlega również limitowi `plotsx.plot.size.<promień>` i łącznej powierzchni.
+Limity i świat są sprawdzane ponownie przy potwierdzeniu utworzenia działki.
+
 ## Prywatne skrzynie
 
 Wszystkie poniższe komendy wymagają `plotsx.cmd.privatechest`. Alias `/pchest` działa tak samo jak `/privatechest`. Gracz musi patrzeć na skrzynię, skrzynię-pułapkę, beczkę lub shulker box na działce, w zasięgu 6 bloków.
@@ -85,7 +105,7 @@ Wszystkie poniższe komendy wymagają `plotsx.cmd.privatechest`. Alias `/pchest`
 
 `unlock`, `trust` i `untrust` wymagają własności skrzyni lub bypassu administracyjnego. Argument gracza może być nickiem znanym serwerowi albo UUID. Obecnie również cofanie udostępnienia wyszukuje gracza wyłącznie wśród aktualnego właściciela i członków działki. Samo udostępnienie nie pozwala niszczyć skrzyni ani zarządzać jej ochroną.
 
-Nowe kontenery właścicieli i członków działki są automatycznie zabezpieczane, gdy `privateChests.protectOnPlace` ma wartość `true` (domyślnie). Istniejące kontenery można zabezpieczyć przez `lock`.
+Nowe kontenery właścicieli i członków działki są automatycznie zabezpieczane, gdy `privateChests.protectOnPlace` ma wartość `true` (w dołączonym configu: `false`). Istniejące kontenery można zabezpieczyć przez `lock`.
 
 ## Obsługa pluginu
 

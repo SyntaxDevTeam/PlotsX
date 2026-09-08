@@ -1,11 +1,37 @@
-### Config version 1.0.0
+  config-version: 100
+
+# /********************************************/
+#    Global settings
+# /********************************************/
+
+# Plugin language selection. Possible values:  EN, PL, ES, FR, DE
+# If you would like to add your own language file, please contact us on Discord (https://discord.gg/Zk6mxv7eMh).
+language: "EN"
+
+# /********************************************/
+#    Settings for connecting to the database
+# /********************************************/
+database:
+  # Available options: mariadb, mysql, postgresql, sqlite, h2
+  type: "sqlite"
+  sql:
+    host: "localhost"
+    port: 3306 # 5432 if you use PostgreSQL default for MySQL is 3306
+    dbname: "my_database"
+    username: "root"
+    password: "password"
 
 # Plots settings
 plots:
-  # The maximum number of plots a player can own
+  # Maximum plots across ALL worlds; override with plotsx.plot.max-plots.<number>.
+  # Highest granted numeric permission wins; without one, this value is used.
   maxPlots: 5
+  # Initial radius; override with plotsx.plot.radius.<radius> (e.g. VIP: 24).
+  # Still subject to maximum radius and combined area limits below.
   radius: 16
-  world: "world"
+  # Allowed loaded worlds, including worlds loaded by Multiverse-Core.
+  # A legacy single string is also supported. ["*"] = all worlds; [] = none.
+  world: ["world"]
   expansion:
     # Sequential upgrades from level 0. step adds blocks to EACH border.
     # price is per upgrade in the default economy currency; 0 = free.
@@ -29,26 +55,12 @@ plots:
 privateChests:
   # Automatically assign newly placed containers to the player who placed them.
   # Existing containers can be protected with /privatechest lock.
-  protectOnPlace: true
-
-# Settings for connecting to the database
-database:
-  # Available options: mariadb, mysql, postgresql, sqlite, h2
-  type: "sqlite"
-  sql:
-    host: "localhost"
-    port: 3306 # 5432 if you use PostgreSQL default for MySQL is 3306
-    dbname: "my_database"
-    username: "root"
-    password: "password"
-
-# Plugin language selection. Possible values:  EN, PL, ES, FR, DE
-# If you would like to add your own language file, please contact us on Discord (https://discord.gg/Zk6mxv7eMh).
-language: "PL"
+  protectOnPlace: false
 
 # Default grants; owners can override each grant per plot in /plot members.
 # Hierarchy: member < builder < manager. Only owner/admin assigns ranks.
 # Supported grants: invite, kick, rename, flag.<registered flag name>.
+# Publication reference: docs/wiki/Ochrona-i-flagi.md (flags and role grants).
 plot-roles:
   member:
     permissions: []
@@ -57,11 +69,19 @@ plot-roles:
   manager:
     permissions: [invite, kick, rename]
 
+# /********************************************/
+#    Settings for main commands
+# /********************************************/
+
 # You can set your own aliases for the commands below
 aliases:
   claim: "c"
   unclaim: "unc"
 
+
+# /********************************************/
+#    Internal settings
+# /********************************************/
 
 # Discord webhook settings
 webhook:
@@ -69,13 +89,18 @@ webhook:
     enabled: false
     url: "YOUR_WEBHOOK_URL_HERE"
 
-# Update check and auto-update settings
-checkForUpdates: true
-autoDownloadUpdates: false
+  # Update check and auto-download settings.
+update:
+  check-for-updates: true
+  auto-download: false
+  hangar: true
+  github: true
+  modrinth: true
 
-# Debug mode set to true provides more detailed logs in the console
-debug: true
+  # Debug mode provides more detailed console logs.
+  # Debug level: off | info | diag | dev
+debug: off
 
-# Should StatsCollector be enabled? Recommended setting: true
+  # Should StatsCollector be enabled? Recommended: true.
 stats:
-  enabled: false
+  enabled: true

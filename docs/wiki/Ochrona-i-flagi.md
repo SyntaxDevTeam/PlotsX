@@ -1,5 +1,28 @@
 # Ochrona i flagi
 
+## Supported grants — granty ról działki
+
+Granty wpisuje się do `plot-roles.<rola>.permissions`, dla ról `member`, `builder`
+i `manager`. To role działki, niezależne od rang serwera, np. VIP.
+Właściciel może nadpisywać ich granty dla konkretnej działki w `/plot members`.
+
+| Grant | Znaczenie |
+| --- | --- |
+| `invite` | Dodawanie członków. |
+| `kick` | Usuwanie członków z uwzględnieniem hierarchii ról. |
+| `rename` | Zmiana nazwy działki. |
+| `flag.<identyfikator>` | Zmiana wskazanej flagi, np. `flag.build`. |
+
+Każda flaga w tabelach poniżej ma grant `flag.<identyfikator>`. Dotyczy to także
+dodatkowych flag rejestrowanych przez integracje API. Nie ma grantu `flag.*`.
+Grant pozwala zmieniać flagę, ale sam nie zmienia jej wartości.
+Nadawanie ról i przekazywanie własności pozostaje dostępne właścicielowi lub administratorowi.
+Przykład: `permissions: [invite, rename, flag.build, flag.pvp]`.
+Domyślnie tylko `manager` ma granty: `invite`, `kick`, `rename`.
+
+Flaga integracyjna `grave-create` (domyślnie TAK) pozwala na tworzenie grobów
+przez integracje korzystające z tej flagi; członkostwo nie omija tej zasady.
+
 [← Home](Home.md)
 
 Flagi to przełączniki zasad na twojej działce. Otwórz `/plot`, wybierz flagi i kliknij ustawienie, które chcesz zmienić.

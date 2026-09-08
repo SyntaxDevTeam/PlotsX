@@ -23,7 +23,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
         val world = location.world.name
         val x = location.blockX
         val z = location.blockZ
-        val radius = plugin.config.getInt("plots.radius", 16)
+        val radius = plugin.hookHandler.getClaimRadius(player)
         val limits = plugin.hookHandler.getPlotLimits(player)
 
         if (!isClaimWorldAllowed(world)) {
@@ -43,7 +43,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             return
         }
 
-        val maxPlots = plugin.config.getInt("plots.maxPlots", 5).coerceAtLeast(0)
+        val maxPlots = plugin.hookHandler.getMaxPlots(player)
         val ownerUuid = plugin.uuidManager.getUUID(player.name) // Celowe podczas testów jednoosobowych.
         val ownedPlots = dbh.getPlotsByOwner(ownerUuid)
         if (ownedPlots.size >= maxPlots) {
@@ -92,8 +92,8 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                 val x        = loc.blockX
                 val z        = loc.blockZ
                 val y        = loc.blockY
-                val radius   = plugin.config.getInt("plots.radius", 16)
-                val maxPlots = plugin.config.getInt("plots.maxPlots", 5).coerceAtLeast(0)
+                val radius   = plugin.hookHandler.getClaimRadius(p)
+                val maxPlots = plugin.hookHandler.getMaxPlots(p)
                 val limits   = plugin.hookHandler.getPlotLimits(p)
 
                 if (radius > limits.maxRadius) {
@@ -171,8 +171,14 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
     }
 
     private fun isClaimWorldAllowed(world: String): Boolean {
-        val configuredWorld = plugin.config.getString("plots.world")?.trim().orEmpty()
-        return configuredWorld.isEmpty() || configuredWorld == "*" || configuredWorld.equals(world, ignoreCase = true)
+        val configured = plugin.config.get("plots.world")
+        val worlds = when (configured) {
+            null -> return true
+            is String -> if (configured.isBlank()) return true else listOf(configured)
+            is List<*> -> configured.filterIsInstance<String>()
+            else -> return false
+        }
+        return worlds.any { it.trim() == "*" || it.trim().equals(world, ignoreCase = true) }
     }
 
     private fun overlapsExternalRegion(world: org.bukkit.World, x: Int, z: Int, radius: Int): Boolean =

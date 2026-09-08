@@ -1,5 +1,8 @@
 # Config — ustawienia serwera
 
+Opis limitów zależnych od rang i konfiguracji wielu światów:
+[Limity rang i światy](../limits-and-worlds.md).
+
 [← Home](Home.md)
 
 Ustawienia znajdziesz w `plugins/PlotsX/config.yml`. Wartość `true` oznacza „tak”, a `false` — „nie”. Zachowaj wcięcia i używaj spacji zamiast tabulatorów.

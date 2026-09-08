@@ -111,7 +111,7 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
                     val recipient = plugin.server.getPlayer(target) ?: return MemberUpdateResult.RECIPIENT_OFFLINE
                     val limits = plugin.hookHandler.getPlotLimits(recipient)
                     plugin.databaseHandler.transferPlotOwnership(plotId, plot.ownerUuid, target,
-                        plugin.config.getInt("plots.maxPlots", 5).coerceAtLeast(0), limits.maxRadius, limits.maxTotalArea)
+                        plugin.hookHandler.getMaxPlots(recipient), limits.maxRadius, limits.maxTotalArea)
                 }
             }
             if (!success) return if (action == "transfer") MemberUpdateResult.TRANSFER_REJECTED else MemberUpdateResult.DATABASE_ERROR

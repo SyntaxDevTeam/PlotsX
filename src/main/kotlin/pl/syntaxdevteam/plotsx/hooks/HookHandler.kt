@@ -260,6 +260,21 @@ class HookHandler(private val plugin: PlotsX) {
         return PlotLimits(maxRadius.coerceAtLeast(1), maxArea.coerceAtLeast(1L))
     }
 
+    fun getMaxPlots(player: Player): Int = numericPlayerSetting(player, "plotsx.plot.max-plots.",
+        plugin.config.getInt("plots.maxPlots", 5).coerceAtLeast(0))
+
+    fun getClaimRadius(player: Player): Int = numericPlayerSetting(player, "plotsx.plot.radius.",
+        plugin.config.getInt("plots.radius", 16).coerceAtLeast(1)).coerceAtLeast(1)
+
+    private fun numericPlayerSetting(player: Player, prefix: String, fallback: Int): Int =
+        player.effectivePermissions.asSequence()
+            .filter { it.value }
+            .map { it.permission.lowercase() }
+            .filter { it.startsWith(prefix) }
+            .mapNotNull { it.removePrefix(prefix).toIntOrNull() }
+            .filter { it >= 0 }
+            .maxOrNull() ?: fallback
+
     private fun numericPermission(nodes: List<String>, prefix: String): Long? = nodes.asSequence()
         .filter { it.startsWith(prefix) }
         .mapNotNull { it.removePrefix(prefix).toLongOrNull() }
