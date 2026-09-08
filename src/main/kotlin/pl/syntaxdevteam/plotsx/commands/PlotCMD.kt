@@ -3,164 +3,82 @@ package pl.syntaxdevteam.plotsx.commands
 import io.papermc.paper.command.brigadier.BasicCommand
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import org.bukkit.entity.Player
-import org.jetbrains.annotations.NotNull
 import pl.syntaxdevteam.plotsx.PlotsX
+import pl.syntaxdevteam.plotsx.gui.MembersGUI
 import pl.syntaxdevteam.plotsx.gui.PlotGUI
 import pl.syntaxdevteam.plotsx.gui.PlotListGUI
 import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
+import pl.syntaxdevteam.plotsx.permissions.PlotAccess
 
 class PlotCMD(private val plugin: PlotsX) : BasicCommand {
+    private val actions = listOf("add", "remove", "members", "role", "permission", "transfer")
+    private val access = PlotAccess(plugin)
 
-    override fun execute(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>) {
-        if (stack.sender !is Player) {
-            stack.sender.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "console"))
+    override fun execute(stack: CommandSourceStack, args: Array<String>) {
+        val sender = stack.sender
+        val members = PlotMembers(plugin)
+        if (args.firstOrNull().equals("admin", true)) {
+            if (!access.admin(sender)) { members.reply(sender, "denied"); return }
+            val id = args.getOrNull(1)?.toIntOrNull()
+            if (id == null) { members.reply(sender, "admin_usage"); return }
+            val plot = plugin.databaseHandler.getPlotById(id)
+            if (plot == null) { members.reply(sender, "stand_on_plot"); return }
+            if (args.size == 2 && sender is Player) {
+                plugin.guiHandler.registerGui(sender, MembersGUI(plugin, id))
+            } else members.execute(sender, id, args.drop(2))
             return
         }
-
-        val player = stack.sender as Player
-        if (!PermissionChecker.canManagePlot(player)) {
-            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_permission"))
+        val player = sender as? Player ?: run { members.reply(sender, "admin_usage"); return }
+        if (!PermissionChecker.canManagePlot(player)) { members.reply(player, "denied"); return }
+        val standing = plugin.databaseHandler.getPlotAtLocation(player.world.name, player.location.blockX, player.location.blockZ)
+        if (args.firstOrNull()?.lowercase() in actions) {
+            if (standing == null) { members.reply(player, "stand_on_plot"); return }
+            if (args.size == 1 && args[0].equals("members", true) && access.canOpen(player, standing)) {
+                plugin.guiHandler.registerGui(player, MembersGUI(plugin, standing.id))
+            } else members.execute(player, standing.id, args.toList())
             return
         }
-
-        // The command sender is online, so no external/offline UUID lookup is needed.
-        val uuid = player.uniqueId
-        val plotName = args.getOrNull(0)
-
-        if (plotName?.lowercase() in listOf("add", "remove", "members")) {
-            manageMembers(player, args)
-            return
+        val plot = if (args.isEmpty()) standing else {
+            plugin.databaseHandler.getPlotByName(args[0], player.uniqueId) ?: plugin.databaseHandler.getPlotsFromAllUsers()
+                .firstOrNull { it.name.equals(args[0], true) && access.canOpen(player, it) }
         }
-
-        if (plotName != null) {
-            val plot = plugin.databaseHandler.getPlotByName(plotName, uuid)
-            if (plot != null) {
-                if (plot.ownerUuid != uuid && !PermissionChecker.canBypassPlots(player)) {
-                    player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "not_owner"))
-                    return
-                }
-                plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot, plot.ownerUuid))
-            } else {
-                player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "plot_not_found"))
-            }
-            return
-        }
-
-        val standingPlot = plugin.databaseHandler.getPlotAtLocation(
-            player.world.name,
-            player.location.blockX,
-            player.location.blockZ
-        )
-        if (standingPlot != null) {
-            if (standingPlot.ownerUuid != uuid && !PermissionChecker.canBypassPlots(player)) {
-                player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "not_owner"))
-                return
-            }
-            plugin.guiHandler.registerGui(player, PlotGUI(plugin, standingPlot, standingPlot.ownerUuid))
-            return
-        }
-
-        val playerPlots = plugin.databaseHandler.getPlayerPlots(uuid)
-        if (playerPlots.isNotEmpty()) {
-            plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, uuid))
-        } else {
-            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_plot_found"))
-        }
+        if (plot != null) {
+            if (!access.canOpen(player, plot)) { members.reply(player, "denied"); return }
+            plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot, plot.ownerUuid))
+        } else if (args.isEmpty()) {
+            val plots = plugin.databaseHandler.getPlotsFromAllUsers().filter { access.canOpen(player, it) }
+            if (plots.isEmpty()) members.reply(player, "stand_on_plot")
+            else plugin.guiHandler.registerGui(player, PlotListGUI(plugin, plots, player.uniqueId))
+        } else player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "plot_not_found"))
     }
 
-    private fun manageMembers(player: Player, args: Array<String>) {
-        fun reply(key: String, values: Map<String, String> = emptyMap()) {
-            player.sendMessage(plugin.messageHandler.stringMessageToComponent("members", key, values))
+    override fun suggest(stack: CommandSourceStack, args: Array<String>): List<String> {
+        val sender = stack.sender
+        if (!PermissionChecker.canManagePlot(sender) && !access.admin(sender)) return emptyList()
+        val admin = args.firstOrNull().equals("admin", true)
+        if (admin && !access.admin(sender)) return emptyList()
+        if (admin && args.size == 2) return plugin.cacheManager.getCachedPlots().map { it.id.toString() }
+            .filter { it.startsWith(args[1]) }
+        val words = if (admin) args.drop(2) else args.toList()
+        val plot = if (admin) args.getOrNull(1)?.toIntOrNull()?.let { plugin.cacheManager.getPlot(it) }
+            else (sender as? Player)?.let { p -> plugin.cacheManager.getCachedPlots().firstOrNull {
+                it.world == p.world.name && p.location.blockX in it.x - it.radius..it.x + it.radius &&
+                    p.location.blockZ in it.z - it.radius..it.z + it.radius
+            } }
+        val candidates = when {
+            words.size <= 1 -> actions + (if (!admin && access.admin(sender)) listOf("admin") else emptyList())
+            plot == null || !access.canOpen(sender, plot) -> emptyList()
+            words.size == 2 && words[0] == "permission" -> if (access.owner(sender, plot)) access.roles else emptyList()
+            words.size == 3 && words[0] == "permission" -> access.actions
+            words.size == 4 && words[0] == "permission" -> listOf("true", "false")
+            words.size == 3 && words[0] == "role" -> access.roles
+            words.size == 3 && words[0] == "transfer" -> listOf("confirm")
+            words.size == 2 && words[0] in listOf("add", "remove", "role", "transfer") -> {
+                if (words[0] == "add") plugin.server.onlinePlayers.filter { sender !is Player || sender.canSee(it) }.map { it.name }
+                else plugin.databaseHandler.getPlotMembers(plot.id).map { PlotMembers(plugin).name(java.util.UUID.fromString(it.memberUuid)) }
+            }
+            else -> emptyList()
         }
-        val action = args[0].lowercase()
-        if (args.size != if (action == "members") 1 else 2) {
-            reply("usage")
-            return
-        }
-        val plot = plugin.databaseHandler.getPlotAtLocation(player.world.name, player.location.blockX, player.location.blockZ)
-        if (plot == null) {
-            reply("stand_on_plot")
-            return
-        }
-        if (plot.ownerUuid != player.uniqueId) {
-            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "not_owner"))
-            return
-        }
-        try {
-            val members = plugin.databaseHandler.getPlotMembers(plot.id)
-            fun name(id: java.util.UUID) = plugin.server.getOfflinePlayer(id).name ?: id.toString()
-            if (action == "members") {
-                reply("list", mapOf("owner" to name(plot.ownerUuid), "players" to
-                    members.map { name(java.util.UUID.fromString(it.memberUuid)) }.sorted().joinToString(", ").ifEmpty { "-" }))
-                return
-            }
-            val input = args[1]
-            val parsed = runCatching { java.util.UUID.fromString(input) }.getOrNull()
-            val target = if (action == "remove") {
-                members.map { java.util.UUID.fromString(it.memberUuid) }
-                    .firstOrNull { it == parsed || name(it).equals(input, true) }
-            } else {
-                plugin.server.getPlayerExact(input)?.uniqueId ?: plugin.server.offlinePlayers
-                    .firstOrNull { it.uniqueId == parsed || it.name.equals(input, true) }?.uniqueId
-            }
-            if (target == null) {
-                reply(if (action == "remove") "not_member" else "unknown_player")
-                return
-            }
-            if (target == plot.ownerUuid) {
-                reply("owner")
-                return
-            }
-            if (action == "add" && members.any { it.memberUuid == target.toString() }) {
-                reply("already_member")
-                return
-            }
-            val success = if (action == "add") plugin.databaseHandler.addPlotMember(plot.id, target)
-                else plugin.databaseHandler.removePlotMember(plot.id, target)
-            if (!success) {
-                reply("failed")
-                return
-            }
-            plugin.cacheManager.reloadMembersSync(plot.id)
-            reply(if (action == "add") "added" else "removed", mapOf("player" to name(target)))
-        } catch (ex: java.sql.SQLException) {
-            plugin.logger.err("Cannot update plot membership: ${ex.message}")
-            reply("failed")
-        }
-    }
-
-    override fun suggest(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>): List<String> {
-        if (!PermissionChecker.canManagePlot(stack.sender)) return emptyList()
-        val player = stack.sender as? Player ?: return emptyList()
-        val uuid = player.uniqueId
-
-        if (args.size == 2 && (args[0].equals("add", true) || args[0].equals("remove", true))) {
-            val location = player.location
-            val plot = plugin.cacheManager.getCachedPlots().firstOrNull {
-                it.world.equals(location.world.name, true) &&
-                    location.blockX in (it.x - it.radius..it.x + it.radius) &&
-                    location.blockZ in (it.z - it.radius..it.z + it.radius)
-            } ?: return emptyList()
-            if (plot.ownerUuid != uuid) return emptyList()
-
-            val members = plugin.cacheManager.getMembers(plot.id).orEmpty()
-                .mapNotNull { runCatching { java.util.UUID.fromString(it.memberUuid) }.getOrNull() }
-                .toSet()
-            val candidates = if (args[0].equals("add", true)) {
-                plugin.server.onlinePlayers
-                    .filter { it.uniqueId != uuid && it.uniqueId !in members && player.canSee(it) }
-                    .map { it.name }
-            } else {
-                members.map { plugin.server.getOfflinePlayer(it).name ?: it.toString() }
-            }
-            return candidates.filter { it.startsWith(args[1], ignoreCase = true) }
-                .distinct().sortedWith(String.CASE_INSENSITIVE_ORDER)
-        }
-        if (args.size != 1) return emptyList()
-
-        return (listOf("add", "remove", "members") + plugin.databaseHandler
-            .getPlayerPlots(uuid)
-            .map { it.name })
-            .filter { it.startsWith(args[0], ignoreCase = true) }
+        return candidates.filter { it.startsWith(words.lastOrNull().orEmpty(), true) }.distinct().sorted()
     }
 }

@@ -17,7 +17,8 @@ import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 
 class FlagsGUI(
     private val plugin: PlotsX,
-    private val plot: PlotData
+    private val plot: PlotData,
+    private val page: Int = 0
 ) : AbstractGUI(
     title = plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "flags.title"),
     size = 54
@@ -27,12 +28,15 @@ class FlagsGUI(
     private val keyFlag = NamespacedKey(plugin, "plot_flag_key")
 
     override fun open(player: Player) {
+        val currentPlot = plugin.databaseHandler.getPlotById(plot.id) ?: return
+        val access = pl.syntaxdevteam.plotsx.permissions.PlotAccess(plugin)
+        if (!access.canOpen(player, currentPlot)) return
+        val allowedActions = access.allowedActions(player, currentPlot)
         inventory.clear()
 
         val flags = plugin.cacheManager.getFlags(plot.id) ?: plugin.databaseHandler.getPlotFlags(plot.id)
 
-        PlotFlagRegistry.allFlags.values.forEachIndexed { idx: Int, flagMeta ->
-            if (idx >= inventory.size) return@forEachIndexed
+        PlotFlagRegistry.allFlags.values.drop(page * 45).take(45).forEachIndexed { idx: Int, flagMeta ->
 
             val flagData = flags.firstOrNull { it.name == flagMeta.name }
             val current = flagData?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
@@ -88,6 +92,9 @@ class FlagsGUI(
                         .build()
                 )
             )
+            if ("flag.${flagMeta.name}" !in allowedActions) {
+                meta.lore(meta.lore().orEmpty() + message.stringMessageToComponentNoPrefix("members", "read_only"))
+            }
             item.itemMeta = meta
 
             inventory.setItem(idx, item)
@@ -100,6 +107,10 @@ class FlagsGUI(
             )
         )
 
+        if (page > 0) inventory.setItem(45, plugin.guiHandler.createItem(Material.ARROW,
+            message.stringMessageToComponentNoPrefix("members", "previous")))
+        if ((page + 1) * 45 < PlotFlagRegistry.allFlags.size) inventory.setItem(53, plugin.guiHandler.createItem(Material.ARROW,
+            message.stringMessageToComponentNoPrefix("members", "next")))
         super.open(player)
     }
 
@@ -107,6 +118,7 @@ class FlagsGUI(
         if (!isThisInventory(event.inventory)) return
 
         event.isCancelled = true
+        if (event.clickedInventory !== inventory) return
         val player = event.whoClicked as? Player ?: return
         val clicked = event.currentItem ?: return
         val meta = clicked.itemMeta ?: return
@@ -117,6 +129,15 @@ class FlagsGUI(
         val flagKey = meta.persistentDataContainer
             .get(keyFlag, PersistentDataType.STRING)
 
+        if (event.slot == 45 && page > 0) {
+            plugin.guiHandler.registerGui(player, FlagsGUI(plugin, plot, page - 1))
+            return
+        }
+        if (event.slot == 53 && (page + 1) * 45 < PlotFlagRegistry.allFlags.size) {
+            plugin.guiHandler.registerGui(player, FlagsGUI(plugin, plot, page + 1))
+            return
+        }
+
         if (event.slot == 49) {
             plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot, plot.ownerUuid))
             return
@@ -124,47 +145,22 @@ class FlagsGUI(
 
         if (flagKey == null) return
 
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            val current = plugin.databaseHandler
-                .getPlotFlag(plot.id, flagKey)
-                ?.value
-                ?.toBooleanStrictOrNull() ?: false
-            val updated = !current
-
-            if (plugin.databaseHandler.updatePlotFlag(plot.id, flagKey, updated)) {
-                player.sendMessage(
-                    message.stringMessageToComponent(
-                        "flags", "toggle", mapOf(
-                            "flag" to flagKey,
-                            "value" to updated.toString()
-                        )
-                    )
-                )
-
-                plugin.cacheManager.updateFlagCacheAsync(plot.id) {
-                    plugin.server.scheduler.runTask(plugin, Runnable {
-                        plugin.guiHandler.registerGui(player, FlagsGUI(plugin, plot))
-
-                        plugin.databaseHandler.logPlotAction(
-                            PlotLogEntry(
-                                plotId = plot.id,
-                                action = "UpdateFlag: $flagKey: $updated",
-                                actorUUID = player.uniqueId,
-                                timestamp = System.currentTimeMillis()
-                            )
-                        )
-                        if (plugin.config.getBoolean("debug", false)) {
-                            val cacheFlags = plugin.cacheManager.getFlags(plot.id) ?: emptyList()
-                            val dbFlags = plugin.databaseHandler.getPlotFlags(plot.id)
-                            val table = formatFlagComparison(cacheFlags, dbFlags)
-                            plugin.logger.debug("Flagi dla działki ID=${plot.id}\n$table")
-                        }
-                    })
-                }
-            } else {
-                player.sendMessage(message.stringMessageToComponent("error", "flag_update_failed"))
-            }
-        })
+        val currentPlot = plugin.databaseHandler.getPlotById(plot.id) ?: return
+        if (!pl.syntaxdevteam.plotsx.permissions.PlotAccess(plugin).allowed(player, currentPlot, "flag.$flagKey")) {
+            player.sendMessage(message.stringMessageToComponent("error", "no_permission"))
+            return
+        }
+        val definition = PlotFlagRegistry.allFlags[flagKey] ?: return
+        val current = plugin.databaseHandler.getPlotFlag(plot.id, flagKey)?.value?.toBooleanStrictOrNull()
+            ?: definition.defaultValue
+        if (plugin.databaseHandler.updatePlotFlag(plot.id, flagKey, !current)) {
+            plugin.cacheManager.reloadFlagsSync(plot.id)
+            player.sendMessage(message.stringMessageToComponent("flags", "toggle",
+                mapOf("flag" to flagKey, "value" to (!current).toString())))
+            plugin.databaseHandler.logPlotAction(PlotLogEntry(plot.id, "UpdateFlag: $flagKey: ${!current}",
+                player.uniqueId, System.currentTimeMillis()))
+            plugin.guiHandler.registerGui(player, FlagsGUI(plugin, currentPlot, page))
+        } else player.sendMessage(message.stringMessageToComponent("error", "flag_update_failed"))
     }
 
     fun formatFlagComparison(cacheFlags: List<PlotFlagData>, dbFlags: List<PlotFlagData>): String {

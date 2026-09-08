@@ -11,6 +11,7 @@ import pl.syntaxdevteam.plotsx.databases.Helpers
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.protection.SafeTeleportUtil
 import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
+import pl.syntaxdevteam.plotsx.permissions.PlotAccess
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -31,6 +32,7 @@ class PlotGUI(
     private val renameIndex = 29
     private val listIndex = 31
     private val expandIndex = 33
+    private val membersIndex = 13
 
     override fun open(player: Player) {
         val targetPlot = plot ?: plugin.databaseHandler.getPlotAtLocation(
@@ -43,6 +45,14 @@ class PlotGUI(
             player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
             return
         }
+
+        val current = plugin.databaseHandler.getPlotById(targetPlot.id) ?: return
+        if (!PlotAccess(plugin).canOpen(player, current)) {
+            player.sendMessage(message.stringMessageToComponent("error", "no_permission"))
+            return
+        }
+        inventory.setItem(membersIndex, createItem(Material.PLAYER_HEAD,
+            message.stringMessageToComponentNoPrefix("members", "title")))
 
         inventory.setItem(plotIndex, createPlotHead(player, targetPlot))
         inventory.setItem(
@@ -88,29 +98,29 @@ class PlotGUI(
         if (!isThisInventory(event.inventory)) return
 
         event.isCancelled = true
+        if (event.clickedInventory !== inventory) return
         val player = event.whoClicked as? Player ?: return
 
         plugin.guiHandler.unregisterGui(player)
         player.closeInventory()
-        val pd = plot ?: plugin.databaseHandler.getPlotAtLocation(
+        val pd = if (plot != null) plugin.databaseHandler.getPlotById(plot.id) else plugin.databaseHandler.getPlotAtLocation(
             player.location.world!!.name,
             player.location.blockX,
             player.location.blockZ
         )
 
+        if (pd == null || !PlotAccess(plugin).canOpen(player, pd)) {
+            player.sendMessage(message.stringMessageToComponent("error", "no_permission"))
+            return
+        }
+
         when (event.slot) {
+            membersIndex -> plugin.guiHandler.registerGui(player, MembersGUI(plugin, pd.id))
             flagsIndex -> {
-                if (pd == null) {
-                    player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
-                } else {
-                    plugin.guiHandler.registerGui(player, FlagsGUI(plugin, pd))
-                }
+                plugin.guiHandler.registerGui(player, FlagsGUI(plugin, pd))
             }
 
             tpaIndex -> {
-                if (pd == null) {
-                    player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
-                } else {
                     plugin.server.scheduler.runTask(plugin, Runnable {
                         val success = SafeTeleportUtil.safeTeleport(player, pd)
                         if (success) {
@@ -119,20 +129,18 @@ class PlotGUI(
                             player.sendMessage(message.stringMessageToComponent("plots", "teleport_failed"))
                         }
                     })
-                }
             }
 
             renameIndex -> {
-                if (pd == null) {
-                    player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
-                } else {
-                    player.closeInventory()
-                    plugin.renamePlotChatListener.startRenameProcess(player, pd.id)
+                if (!PlotAccess(plugin).allowed(player, pd, "rename")) {
+                    player.sendMessage(message.stringMessageToComponent("error", "no_permission"))
+                    return
                 }
+                plugin.renamePlotChatListener.startRenameProcess(player, pd.id)
             }
 
             listIndex -> {
-                val playerPlots = plugin.databaseHandler.getPlayerPlots(ownerUuid)
+                val playerPlots = plugin.databaseHandler.getPlotsFromAllUsers().filter { PlotAccess(plugin).canOpen(player, it) }
                 if (playerPlots.isNotEmpty()) {
                     plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, ownerUuid, pd))
                 } else {
@@ -142,9 +150,7 @@ class PlotGUI(
             }
 
             expandIndex -> {
-                if (pd == null) {
-                    player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
-                } else if (!PermissionChecker.canExpandPlot(player)) {
+                if (!PermissionChecker.canExpandPlot(player)) {
                     player.sendMessage(message.stringMessageToComponent("error", "no_permission"))
                 } else if (pd.ownerUuid != plugin.uuidManager.getUUID(player.name)) {
                     player.sendMessage(message.stringMessageToComponent("error", "not_owner"))
@@ -154,10 +160,6 @@ class PlotGUI(
             }
 
             plotIndex -> {
-                if (pd == null) {
-                    player.sendMessage(message.stringMessageToComponent("error", "no_in_plot"))
-                    return
-                }
                 plugin.server.scheduler.runTask(plugin, Runnable {
                     helpers.visualizePlotBorder3D(
                         player = player,

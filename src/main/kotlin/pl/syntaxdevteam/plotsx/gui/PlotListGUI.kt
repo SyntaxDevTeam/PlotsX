@@ -2,7 +2,6 @@ package pl.syntaxdevteam.plotsx.gui
 
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
@@ -67,16 +66,9 @@ class PlotListGUI(
         }
         if (event.slot >= footerStart) return
 
-        val clickedItem = event.currentItem ?: return
-        val meta        = clickedItem.itemMeta ?: return
-
         plugin.guiHandler.unregisterGui(player)
         player.closeInventory()
-
-        val displayName = meta.displayName() ?: return
-        val plotName    = PlainTextComponentSerializer.plainText().serialize(displayName)
-
-        plots.firstOrNull { it.name.equals(plotName, ignoreCase = true) }
+        plots.getOrNull(event.slot)
             ?.let { plugin.guiHandler.registerGui(player, PlotGUI(plugin, it, ownerUuid)) }
     }
 

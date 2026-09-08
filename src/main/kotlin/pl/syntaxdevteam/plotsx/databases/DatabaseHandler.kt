@@ -778,6 +778,16 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
     }
 
+    fun transferPlotOwnership(plotId: Int, expectedOwner: UUID, recipient: UUID,
+                              maxPlots: Int, maxRadius: Int, maxArea: Long): Boolean {
+        val plot = getPlotById(plotId) ?: return false
+        return claimLocks.computeIfAbsent(plot.world.lowercase(Locale.ROOT)) { ReentrantLock() }.withLock {
+            (getConnection() ?: return@withLock false).use {
+                OwnershipTransfer.transfer(it, plotId, expectedOwner, recipient, maxPlots, maxRadius, maxArea)
+            }
+        }
+    }
+
     /**
      * Zmiana roli członka działki
      *

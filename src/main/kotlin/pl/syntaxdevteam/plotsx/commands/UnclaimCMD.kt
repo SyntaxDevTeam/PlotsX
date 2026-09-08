@@ -47,6 +47,11 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
             plugin = plugin,
             player = player,
             onConfirm = { p ->
+                val current = plugin.databaseHandler.getPlotById(plotId)
+                if (current == null || current.ownerUuid != p.uniqueId || !PermissionChecker.canUnclaimPlot(p)) {
+                    p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "not_owner"))
+                    return@UnclaimConfirmGUI
+                }
                 val success = plugin.databaseHandler.deletePlot(plotId)
                 if (!success) {
                     p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "create_error"))

@@ -42,6 +42,10 @@ class RenamePlotChatListener(private val plugin: PlotsX) : Listener {
                 player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_not_found"))
                 return@Runnable
             }
+            if (!pl.syntaxdevteam.plotsx.permissions.PlotAccess(plugin).allowed(player, plot, "rename")) {
+                player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_permission"))
+                return@Runnable
+            }
             if (plugin.databaseHandler.getPlotByName(newName, plot.ownerUuid) != null) {
                 player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_exists"))
                 return@Runnable

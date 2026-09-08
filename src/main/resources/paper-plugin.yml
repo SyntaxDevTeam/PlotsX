@@ -23,6 +23,49 @@ softdepend: [Folia]
 features:
   debug: true
 
+permissions:
+  # Keep access checks in PermissionChecker; these entries register the nodes.
+  # No children: plotsx.owner and plotsx.* retain their existing code-level scope.
+  plotsx.*:
+    description: Grant all permissions checked by PermissionChecker.
+    default: op
+  plotsx.owner:
+    description: Grant all permissions checked by PermissionChecker, including administrative access.
+    default: op
+  plotsx.cmd.claim:
+    description: Create a plot using /claim.
+    default: op
+  plotsx.cmd.plot:
+    description: Open plot menus and use plot member management commands.
+    default: op
+  plotsx.cmd.unclaim:
+    description: Remove an owned plot using /unclaim.
+    default: op
+  plotsx.cmd.privatechest:
+    description: Manage private containers using /privatechest and /pchest.
+    default: op
+  plotsx.cmd.ptx:
+    description: Use /ptx and /plotsx, including reload, database export and import.
+    default: op
+  plotsx.plot.visit:
+    description: Reserved for plot visits; currently not checked by GUI teleportation.
+    default: op
+  plotsx.plot.info:
+    description: Reserved for plot information; currently not checked by the plot GUI.
+    default: op
+  plotsx.plot.expand:
+    description: Expand an owned plot through the plot GUI.
+    default: op
+  plotsx.admin.bypass:
+    description: Bypass plot and private container protection, radius and total area limits.
+    default: op
+  plotsx.admin.manage:
+    description: Manage members, ranks, permissions and ownership of any plot using /plot admin.
+    default: op
+  # Numeric permissions are read dynamically from effective permissions:
+  # plotsx.plot.size.<radius> and plotsx.plot.max-area.<blocks>.
+  # Assign concrete values in the permission manager; placeholder nodes are not registered.
+
 dependencies:
   server:
     PlaceholderAPI:

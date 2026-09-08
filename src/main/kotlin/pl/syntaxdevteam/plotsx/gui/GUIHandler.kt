@@ -6,6 +6,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryDragEvent
 import org.bukkit.inventory.ItemStack
 import pl.syntaxdevteam.plotsx.PlotsX
 import java.util.*
@@ -31,8 +32,16 @@ class GUIHandler(@Suppress("UNUSED_PARAMETER") plugin: PlotsX) : Listener {
         if (!gui.isThisInventory(event.inventory)) return
 
         event.isCancelled = true
+        if (event.clickedInventory !== gui.inventory) return
 
         gui.handleClick(event)
+    }
+
+    @EventHandler
+    fun onInventoryDrag(event: InventoryDragEvent) {
+        val player = event.whoClicked as? Player ?: return
+        val gui = openGuis[player.uniqueId] ?: return
+        if (gui.isThisInventory(event.inventory) && event.rawSlots.any { it < gui.inventory.size }) event.isCancelled = true
     }
 
     fun createItem(material: Material, name: Component): ItemStack {

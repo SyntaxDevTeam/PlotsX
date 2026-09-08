@@ -46,6 +46,17 @@ database:
 # If you would like to add your own language file, please contact us on Discord (https://discord.gg/Zk6mxv7eMh).
 language: "PL"
 
+# Default grants; owners can override each grant per plot in /plot members.
+# Hierarchy: member < builder < manager. Only owner/admin assigns ranks.
+# Supported grants: invite, kick, rename, flag.<registered flag name>.
+plot-roles:
+  member:
+    permissions: []
+  builder:
+    permissions: []
+  manager:
+    permissions: [invite, kick, rename]
+
 # You can set your own aliases for the commands below
 aliases:
   claim: "c"
