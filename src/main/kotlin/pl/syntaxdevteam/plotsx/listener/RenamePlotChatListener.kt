@@ -2,68 +2,42 @@ package pl.syntaxdevteam.plotsx.listener
 
 import io.papermc.paper.event.player.AsyncChatEvent
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
-import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
-import org.bukkit.event.Listener
 import org.bukkit.event.EventPriority
-import org.bukkit.scheduler.BukkitTask
+import org.bukkit.event.Listener
+import org.bukkit.event.player.PlayerQuitEvent
 import pl.syntaxdevteam.plotsx.PlotsX
-import java.util.*
+import pl.syntaxdevteam.plotsx.interaction.RenamePlotService
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class RenamePlotChatListener(private val plugin: PlotsX) : Listener {
-
-    private val waiting = mutableMapOf<UUID, Pair<Int, BukkitTask>>()
-    private val timeoutSeconds = 60
+    private data class Pending(val plotId: Int, val token: UUID = UUID.randomUUID())
+    private val waiting = ConcurrentHashMap<UUID, Pending>()
 
     fun startRenameProcess(player: Player, plotId: Int) {
-        waiting[player.uniqueId]?.second?.cancel()
-        val task = Bukkit.getScheduler().runTaskLater(plugin, Runnable {
-            waiting.remove(player.uniqueId)
-            player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_timeout"))
-        }, timeoutSeconds * 20L)
-        waiting[player.uniqueId] = plotId to task
+        val pending = Pending(plotId)
+        waiting[player.uniqueId] = pending
+        player.scheduler.runDelayed(plugin, {
+            if (waiting.remove(player.uniqueId, pending))
+                player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_timeout"))
+        }, { waiting.remove(player.uniqueId, pending) }, 1200L)
         player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_hint"))
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onChat(event: AsyncChatEvent) {
         val player = event.player
-        val entry = waiting.remove(player.uniqueId) ?: return
+        val pending = waiting.remove(player.uniqueId) ?: return
         event.isCancelled = true
-        entry.second.cancel()
-        val plotId = entry.first
-        val rawName = PlainTextComponentSerializer.plainText().serialize(event.originalMessage()).trim()
-        val newName = rawName
-
-        Bukkit.getScheduler().runTask(plugin, Runnable {
-            val plot = plugin.databaseHandler.getPlotById(plotId)
-            if (plot == null) {
-                player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_not_found"))
-                return@Runnable
-            }
-            if (!pl.syntaxdevteam.plotsx.permissions.PlotAccess(plugin).allowed(player, plot, "rename")) {
-                player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_permission"))
-                return@Runnable
-            }
-            val allowed = if (newName.isBlank()) false else plugin.hookHandler.isPlotNameAllowed(newName)
-            if (allowed != true) {
-                player.sendMessage(plugin.messageHandler.stringMessageToComponent(
-                    "plots", if (allowed == null) "rename_filter_unavailable" else "rename_rejected"
-                ))
-                return@Runnable
-            }
-            if (plugin.databaseHandler.getPlotByName(newName, plot.ownerUuid) != null) {
-                player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_exists"))
-                return@Runnable
-            }
-            val success = plugin.databaseHandler.updatePlotDetails(plot.id, newName)
-            if (success) {
-                plugin.cacheManager.updatePlotCacheAsync(plot.id)
-                player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_success", mapOf("name" to newName)))
-            } else {
-                player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "rename_fail"))
-            }
-        })
+        val input = PlainTextComponentSerializer.plainText().serialize(event.originalMessage())
+        player.scheduler.run(plugin, {
+            RenamePlotService(plugin).rename(player, pending.plotId, input)?.let(player::sendMessage)
+        }, null)
     }
+
+    @EventHandler fun onQuit(event: PlayerQuitEvent) { waiting.remove(event.player.uniqueId) }
+    fun cancel(player: Player) { waiting.remove(player.uniqueId) }
+    fun close() { waiting.clear() }
 }

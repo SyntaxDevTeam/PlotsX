@@ -104,8 +104,19 @@ class MembersGUI(
         button(49, Material.ARROW, "back") {
             if (screen == "members") plugin.guiHandler.registerGui(it, PlotGUI(plugin, plot, plot.ownerUuid)) else show(it)
         }
-        super.open(player)
+        if (screen in listOf("remove", "transfer") && target != null &&
+            plugin.interactions.confirm(player,
+                plugin.messageHandler.stringMessageToComponentNoPrefix("members", "confirm_$screen",
+                    mapOf("player" to operations.name(target))),
+                listOf(plugin.interactions.text("${screen}_body", mapOf(
+                    "plot" to plot.name, "player" to operations.name(target)))),
+                onConfirm = { run(it, if (screen == "transfer") listOf("transfer", target.toString(), "confirm")
+                    else listOf("remove", target.toString())) },
+                onCancel = { show(it) }, fallback = { openLegacy(player) })) return
+        openLegacy(player)
     }
+
+    private fun openLegacy(player: Player) { plugin.guiHandler.openLegacy(player, this) }
 
     private fun pages(count: Int) {
         if (page > 0) button(45, Material.ARROW, "previous") { show(it, screen, target, role, page - 1) }

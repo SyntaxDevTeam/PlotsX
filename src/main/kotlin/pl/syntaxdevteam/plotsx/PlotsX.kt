@@ -47,6 +47,7 @@ class PlotsX : JavaPlugin() {
     lateinit var privateChestManager: PrivateChestManager
     //lateinit var invitationManager: InvitationManager
     lateinit var renamePlotChatListener: RenamePlotChatListener
+    lateinit var interactions: pl.syntaxdevteam.plotsx.interaction.PlotInteractions
     lateinit var coreProtectHook: CoreProtectHook
     var regionProtectionHook: RegionProtectionHook? = null
     lateinit var versionChecker: VersionChecker
@@ -69,6 +70,8 @@ class PlotsX : JavaPlugin() {
     }
 
     override fun onDisable() {
+        if (::interactions.isInitialized) interactions.close()
+        if (::renamePlotChatListener.isInitialized) renamePlotChatListener.close()
         server.servicesManager.unregisterAll(this)
         apiImplementation?.close()
         databaseHandler.closeConnection()

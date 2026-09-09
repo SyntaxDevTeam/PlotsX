@@ -65,6 +65,8 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.cacheManager = CacheManager(plugin)
         plugin.privateChestManager = PrivateChestManager(plugin)
         plugin.renamePlotChatListener = RenamePlotChatListener(plugin)
+        plugin.interactions = pl.syntaxdevteam.plotsx.interaction.PlotInteractions(plugin)
+        plugin.server.pluginManager.registerEvents(plugin.interactions, plugin)
     }
 
     private fun registerCommands() {

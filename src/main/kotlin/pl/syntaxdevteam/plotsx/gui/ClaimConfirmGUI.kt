@@ -16,6 +16,26 @@ class ClaimConfirmGUI(
 
     private val confirmIndex = 11
     private val cancelIndex  = 15
+    private var submitted = false
+
+    override fun open(player: Player) {
+        val loc = player.location
+        val body = plugin.interactions.text("claim_body", mapOf(
+            "world" to loc.world.name, "x" to loc.blockX.toString(), "z" to loc.blockZ.toString(),
+            "radius" to plugin.hookHandler.getClaimRadius(player).toString()))
+        if (!plugin.interactions.confirm(player,
+                message.stringMessageToComponentNoPrefix("GUI", "claim.title_claim"), listOf(body),
+                onConfirm = { submit(it, true) }, onCancel = { submit(it, false) },
+                fallback = { openLegacy(player) })) openLegacy(player)
+    }
+
+    private fun openLegacy(player: Player) { plugin.guiHandler.openLegacy(player, this) }
+
+    private fun submit(player: Player, confirmed: Boolean) {
+        if (submitted) return
+        submitted = true
+        if (confirmed) onConfirm(player) else onCancel(player)
+    }
 
     init {
         inventory.setItem(
@@ -40,12 +60,12 @@ class ClaimConfirmGUI(
             confirmIndex -> {
                 player.closeInventory()
                 plugin.guiHandler.unregisterGui(player)
-                onConfirm(player)
+                submit(player, true)
             }
             cancelIndex  -> {
                 player.closeInventory()
                 plugin.guiHandler.unregisterGui(player)
-                onCancel(player)
+                submit(player, false)
             }
         }
     }

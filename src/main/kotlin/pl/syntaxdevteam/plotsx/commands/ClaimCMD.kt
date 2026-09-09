@@ -82,10 +82,21 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
     }
 
     fun openClaimGui(player: Player) {
+        val quotedLocation = player.location.clone()
+        val quotedRadius = plugin.hookHandler.getClaimRadius(player)
         val gui = ClaimConfirmGUI(
             plugin = plugin,
             player = player,
             onConfirm = { p ->
+                if (!PermissionChecker.canCreatePlot(p)) {
+                    p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_permission"))
+                    return@ClaimConfirmGUI
+                }
+                if (p.world != quotedLocation.world || p.location.blockX != quotedLocation.blockX ||
+                    p.location.blockZ != quotedLocation.blockZ || plugin.hookHandler.getClaimRadius(p) != quotedRadius) {
+                    p.sendMessage(plugin.interactions.text("claim_changed"))
+                    return@ClaimConfirmGUI
+                }
                 val loc      = p.location
                 val uuid     = plugin.uuidManager.getUUID(player.name) // Celowe podczas testów jednoosobowych.
                 val world    = loc.world!!.name

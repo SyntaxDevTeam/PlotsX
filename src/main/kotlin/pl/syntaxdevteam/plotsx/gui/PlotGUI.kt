@@ -136,7 +136,9 @@ class PlotGUI(
                     player.sendMessage(message.stringMessageToComponent("error", "no_permission"))
                     return
                 }
-                plugin.renamePlotChatListener.startRenameProcess(player, pd.id)
+                if (!plugin.interactions.rename(player, pd.id, pd.name)) {
+                    plugin.renamePlotChatListener.startRenameProcess(player, pd.id)
+                }
             }
 
             listIndex -> {

@@ -46,8 +46,21 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
                 text("expand.level", mapOf("level" to quotedLevel.toString()))
             )))
         inventory.setItem(cancelIndex, item(Material.BARRIER, text("expand.cancel"), emptyList()))
-        super.open(player)
+        val summary = listOf(
+            plugin.interactions.text("plot", mapOf("plot" to plot.name)),
+            text("expand.radius", mapOf("current" to plot.radius.toString(), "target" to target.toString())),
+            text("expand.area", mapOf("used" to targetTotal.toString(), "max" to limit(limits.maxTotalArea))),
+            text("expand.max_radius", mapOf("max" to limit(limits.maxRadius.toLong()))),
+            text("expand.price", mapOf("price" to (quotedPrice?.toPlainString() ?: "?"))),
+            text("expand.level", mapOf("level" to quotedLevel.toString())))
+        if (!plugin.interactions.confirm(player, text("expand.title"), summary,
+                yes = text("expand.confirm"), no = text("expand.cancel"),
+                onConfirm = { if (!submitted) { submitted = true; expand(it) } },
+                onCancel = { submitted = true; it.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "expand_cancelled")) },
+                fallback = { openLegacy(player) })) openLegacy(player)
     }
+
+    private fun openLegacy(player: Player) { plugin.guiHandler.openLegacy(player, this) }
 
     override fun handleClick(event: InventoryClickEvent) {
         if (!isThisInventory(event.inventory)) return

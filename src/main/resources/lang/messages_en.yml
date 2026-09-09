@@ -354,3 +354,15 @@ flags:
   utility:
     name: "Utility Block Use"
     description: "Allows non-members to use..."
+dialogs:
+  confirm: "Confirm"
+  cancel: "Cancel"
+  save: "Save"
+  rename: "Plot name"
+  expired: "This form has expired. Open it again to continue."
+  plot: "Plot: <plot>"
+  claim_body: "Create a plot in <world>, at X: <x>, Z: <z>, radius: <radius>?"
+  claim_changed: "Your position or claim radius changed. Run /claim again."
+  unclaim_body: "Delete plot <plot>? Its protection will be removed."
+  transfer_body: "Transfer ownership of <plot> to <player>? You will lose owner privileges."
+  remove_body: "Remove <player> from plot <plot>?"

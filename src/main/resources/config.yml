@@ -8,6 +8,13 @@
 # If you would like to add your own language file, please contact us on Discord (https://discord.gg/Zk6mxv7eMh).
 language: "EN"
 
+# auto: native dialogs when available; legacy: existing inventory menus and chat.
+interactions:
+  mode: auto
+  # Set true when a proxy translates client protocols (e.g. ViaVersion/Geyser).
+  # Locally installed translators are detected automatically and use legacy UI.
+  translated-clients: false
+
 # /********************************************/
 #    Settings for connecting to the database
 # /********************************************/

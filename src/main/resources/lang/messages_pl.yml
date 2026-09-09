@@ -359,3 +359,15 @@ flags:
   team:
     name: "Zarządzanie Teamem"
     description: "Dodaj lub usuń wszystkich członków swojego Teamu z działki"
+dialogs:
+  confirm: "Potwierdź"
+  cancel: "Anuluj"
+  save: "Zapisz"
+  rename: "Nazwa działki"
+  expired: "Formularz wygasł. Otwórz go ponownie, aby kontynuować."
+  plot: "Działka: <plot>"
+  claim_body: "Utworzyć działkę w <world>, X: <x>, Z: <z>, o promieniu <radius>?"
+  claim_changed: "Pozycja lub promień działki uległy zmianie. Użyj ponownie /claim."
+  unclaim_body: "Usunąć działkę <plot>? Jej ochrona zostanie wyłączona."
+  transfer_body: "Przekazać działkę <plot> graczowi <player>? Utracisz uprawnienia właściciela."
+  remove_body: "Usunąć gracza <player> z działki <plot>?"

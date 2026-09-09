@@ -24,6 +24,11 @@ class GUIHandler(@Suppress("UNUSED_PARAMETER") plugin: PlotsX) : Listener {
         openGuis.remove(player.uniqueId)
     }
 
+    fun openLegacy(player: Player, gui: GUI) {
+        openGuis[player.uniqueId] = gui
+        player.openInventory(gui.inventory)
+    }
+
     @EventHandler
     fun onInventoryClick(event: InventoryClickEvent) {
         val player = event.whoClicked as? Player ?: return
