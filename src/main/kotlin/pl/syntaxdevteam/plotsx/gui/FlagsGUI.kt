@@ -38,9 +38,7 @@ class FlagsGUI(
 
             val item = SettingItem.create(flagMeta.material, SettingItem.name(plugin, flagMeta),
                 SettingItem.description(plugin, flagMeta), current,
-                message.stringMessageToComponentNoPrefix("flags", "value_title"),
                 message.stringMessageToComponentNoPrefix("flags", if (current) "value_true" else "value_false"),
-                message.stringMessageToComponentNoPrefix("flags", "desc_title"),
                 if ("flag.${flagMeta.name}" !in allowedActions)
                     listOf(message.stringMessageToComponentNoPrefix("members", "read_only")) else emptyList())
             val meta = item.itemMeta!!

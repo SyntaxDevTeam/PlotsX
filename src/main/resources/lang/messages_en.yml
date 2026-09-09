@@ -16,11 +16,11 @@ error:
   expand_payment_failed: "<red>Payment failed. Check your balance; the plot was not expanded.</red>"
   expand_refund_failed: "<red>Refund failed. Please contact an administrator.</red>"
   no_permission: "<red>You don't have permission to use this command.</red>"
-  claim_not_found: "<gold>No player found with the nickname <player>.</gold>" # Unclear message in PL, kept literal
+  claim_not_found: "<gold>No player found with the nickname <player>.</gold>"
   not_owner: "<red>You cannot interact with this plot because you are not the owner.</red>"
   there_is_no_plot: "<red>There is no plot in this location.</red>"
   is_plot: "<red>You can't claim here because a plot already exists.</red>"
-  no_in_plot: "<red>You are not inside a plot.</red><grey>Use /plot <name> to select a plot or stand on your plot.</grey>"
+  no_in_plot: "<red>You are not inside a plot.</red> <grey>Use /plot [name] to select a plot or stand on your plot.</grey>"
   in_collision: "<red>You can't claim here because it overlaps with another plot.</red>"
   worldguard_collision: "<red>You cannot create this plot because its area overlaps a WorldGuard region.</red>"
   claim_world_not_allowed: "<red>You cannot create plots in this world.</red>"
@@ -40,8 +40,9 @@ error:
   reload: "<red>An error occurred while reloading the configuration:</red> "
 
 plots:
-  rename_rejected: "<red>The name is empty or contains words banned by CleanerX. Choose another name.</red>"
+  rename_rejected: "<red>The name must contain 1–255 characters, with no control characters or words banned by CleanerX.</red>"
   rename_filter_unavailable: "<red>CleanerX is unavailable. The name was not changed; contact an administrator.</red>"
+  claim_cancelled: "<yellow>Plot creation cancelled.</yellow>"
   claim_success: "<green>Plot has been successfully created!</green>"
   unclaim_success: "<green>Plot has been successfully removed.</green>"
   unclaim_cancelled: "<yellow>Plot removal has been cancelled.</yellow>"
@@ -151,7 +152,7 @@ GUI:
       confirm: "<red>Remove plot</red>"
       cancel: "<yellow>Cancel</yellow>"
   plot:
-    title_plot: "<b>Plot Settings"
+    title_plot: "<b>Plot Settings</b>"
     material_name:
       info: "<gold><bold>Plot Information</bold></gold>"
       flags: "<color:#852579>Flag Settings</color>"
@@ -161,9 +162,9 @@ GUI:
       expand: "<gold>Expand Plot</gold>"
     info:
       owner: "<green>Owner:</green> <white><owner></white>"
-      plot_name: "<green>Name:</green> <white><plot>"
-      id: "<green>ID:</green> <white><id>"
-      creation_time: "<green>Created:</green> <white><time>"
+      plot_name: "<green>Name:</green> <white><plot></white>"
+      id: "<green>ID:</green> <white><id></white>"
+      creation_time: "<green>Created:</green> <white><time></white>"
       click: "<white>Click to see boundaries</white>"
     list_title: "<b>Your plot list:</b>"
     list_click_hint: "<gray>Click to open plot options</gray>"
@@ -193,191 +194,195 @@ flags:
   toggle: "<gray>Flag <white><flag></white> set to <white><value></white></gray>"
   build:
     name: "Build Permission"
-    description: "Allows non-members to place and break blocks"
+    description: "Allows non-members to place and break blocks."
     not_allowed: "<red>You can't place blocks on this plot.</red>"
     break_not_allowed: "<red>You can't break blocks on this plot.</red>"
   pvp:
     name: "PvP Permission"
-    description: "Blocks damage from players and their weapons"
+    description: "Blocks damage from players and their weapons."
     not_allowed: "<red>You can't attack players on this plot.</red>"
   chest:
     name: "Chest Access"
-    description: "Blocks chest access for non-members"
+    description: "Blocks chest access for non-members."
     not_allowed: "<red>You can't open chests on this plot.</red>"
   ender-chest:
     name: "Ender Chest Access"
-    description: "Blocks Ender chest access for non-members"
+    description: "Blocks Ender chest access for non-members."
     not_allowed: "<red>You can't open Ender chests on this plot.</red>"
   lever:
     name: "Lever Use"
-    description: "Blocks use of levers and redstone mechanisms"
+    description: "Blocks use of levers and redstone mechanisms."
     not_allowed: "<red>You can't use levers on this plot.</red>"
   button:
     name: "Button Use"
-    description: "Blocks use of wooden and stone buttons"
+    description: "Blocks use of wooden and stone buttons."
     not_allowed: "<red>You can't use buttons on this plot.</red>"
   door:
     name: "Door Access"
-    description: "Blocks opening doors, trapdoors, and gates by non-members"
+    description: "Blocks opening doors, trapdoors, and gates by non-members."
     not_allowed: "<red>You can't open doors on this plot.</red>"
   spawn-monsters:
     name: "Monster Spawning"
-    description: "Prevents monsters from spawning"
+    description: "Prevents monsters from spawning."
   spawn-animals:
     name: "Animal Spawning"
-    description: "Prevents animals from spawning"
+    description: "Prevents animals from spawning."
   passives:
     name: "Passive Mob Interaction"
-    description: "Blocks interaction and damage to passive mobs"
+    description: "Blocks interactions with and attacks on passive mobs."
     not_allowed: "<red>You can't interact with mobs on this plot.</red>"
   flow:
     name: "Liquid Flow"
-    description: "Blocks the flow of water and lava"
+    description: "Blocks the flow of water and lava."
     not_allowed: "<red>You can't use water or lava on this plot.</red>"
     bucket_not_allowed: "<red>You can't use buckets on this plot.</red>"
   fire:
     name: "Fire Spread"
-    description: "Blocks explosions, fire and its spread"
+    description: "Blocks explosions, fire and its spread."
     not_allowed: "<red>You can't use fire on this plot.</red>"
   minecart:
     name: "Minecart/Boat Usage"
-    description: "Allows non-members to place and break minecarts/boats"
+    description: "Allows non-members to place and break minecarts/boats."
     not_allowed: "<red>You can't use minecarts on this plot.</red>"
   allow-home:
     name: "Allow /home"
-    description: "Allows non-members to use /home and /sethome"
-    not_allowed: "<red>You can't use or set home on this plot.</red>"
+    description: "Allows non-members to use /home and /sethome."
+    not_allowed: "<red>You can't use /home or /sethome on this plot.</red>"
   smart-door:
     name: "Iron and Double Doors"
-    description: "Allows opening iron doors without redstone and double doors together"
+    description: "Allows opening iron doors without redstone and double doors together."
     not_allowed: "<red>You can't open iron doors on this plot.</red>"
   use-potions:
     name: "Potion Usage"
-    description: "Allows the use of potions"
+    description: "Allows the use of potions."
     not_allowed: "<red>You can't use potions on this plot.</red>"
   mob-loot:
     name: "Mob Griefing"
-    description: "Allows mobs to break blocks"
+    description: "Allows mobs to break blocks."
   flow-damage:
     name: "Liquid Block Breaking"
-    description: "Allows liquids to break blocks"
+    description: "Allows liquids to break blocks."
   iceform-player:
     name: "Player Ice Creation"
-    description: "Allows players to create ice (e.g., Frost Walker)"
+    description: "Allows players to create ice (e.g., Frost Walker)."
   iceform-world:
     name: "World Ice/Snow Creation"
-    description: "Allows snow golems, weather, and other sources to form ice/snow"
+    description: "Allows snow golems, weather, and other sources to form ice/snow."
   allow-fly:
     name: "Allow Flying"
-    description: "Allows flying in the region"
+    description: "Allows flying in the region."
   teleport:
     name: "Teleportation Blocking"
-    description: "Blocks teleportation with pearls and chorus fruit"
+    description: "Blocks teleportation with pearls and chorus fruit."
   cant-grow:
     name: "Plant Growth"
-    description: "Prevents crop and plant growth"
+    description: "Prevents crop and plant growth."
   allow-spawners:
     name: "Spawner Access"
-    description: "Allows non-members to place and break spawners"
+    description: "Allows non-members to place and break spawners."
     not_allowed: "<red>You can't place or break spawners on this plot.</red>"
   leaves-decay:
     name: "Leaf Decay"
-    description: "Prevents leaves from decaying"
+    description: "Prevents leaves from decaying."
   block-transform:
     name: "Block Transformation"
-    description: "Prevents automatic block transformations (e.g., moss or concrete)"
+    description: "Prevents automatic block transformations (e.g., moss or concrete)."
   fall:
     name: "Falling Blocks"
-    description: "Blocks falling block physics from settling"
+    description: "Prevents falling blocks from settling."
   explosions:
     name: "Explosion Protection"
-    description: "Protects blocks and entities on the plot from explosions"
+    description: "Protects blocks and entities on the plot from explosions."
   decorations:
     name: "Decoration Interaction"
-    description: "Allows non-members to place, break and modify paintings, frames and armor stands"
+    description: "Allows non-members to place, break and modify paintings, frames and armor stands."
     not_allowed: "<red>You cannot modify decorations on this plot.</red>"
   item-transfer:
     name: "Item Transfer"
-    description: "Allows hoppers to move items across the plot boundary"
+    description: "Allows hoppers to move items across the plot boundary."
   portal-create:
     name: "Portal Creation"
-    description: "Allows portals to be created on the plot"
+    description: "Allows portals to be created on the plot."
   portal-use:
     name: "Portal Usage"
-    description: "Allows non-members to use portals on the plot"
+    description: "Allows non-members to use portals on the plot."
     not_allowed: "<red>You cannot use portals on this plot.</red>"
   projectiles:
     name: "Projectiles"
-    description: "Allows non-members to hit objects on the plot with projectiles"
+    description: "Allows non-members to hit objects on the plot with projectiles."
     not_allowed: "<red>You cannot use projectiles on this plot.</red>"
   item-pickup:
     name: "Item Pickup"
-    description: "Allows non-members to pick up items on the plot"
+    description: "Allows non-members to pick up items on the plot."
     not_allowed: "<red>You cannot pick up items on this plot.</red>"
   item-drop:
     name: "Item Drop"
-    description: "Allows non-members to drop items on the plot"
+    description: "Allows non-members to drop items on the plot."
     not_allowed: "<red>You cannot drop items on this plot.</red>"
   crop-trample:
     name: "Crop Trampling"
-    description: "Allows non-members to trample farmland on the plot"
+    description: "Allows non-members to trample farmland on the plot."
     not_allowed: "<red>You cannot trample crops on this plot.</red>"
   animal-interact:
     name: "Animal Interaction"
-    description: "Allows non-members to leash, breed and mount animals"
+    description: "Allows non-members to leash, breed and mount animals."
     not_allowed: "<red>You cannot perform this action with an animal on the plot.</red>"
   command-use:
     name: "Command Usage"
-    description: "Allows non-members to use commands other than PlotsX commands on the plot"
+    description: "Allows non-members to use commands other than PlotsX commands on the plot."
     not_allowed: "<red>You cannot use this command on this plot.</red>"
   fishing:
     name: "Fishing"
-    description: "Allows non-members to fish on the plot or cast a hook into it"
+    description: "Allows non-members to fish on the plot or cast a hook into it."
     not_allowed: "<red>You cannot fish on this plot.</red>"
   elytra:
     name: "Elytra Usage"
-    description: "Allows non-members to start gliding with an elytra on the plot"
+    description: "Allows non-members to start gliding with an elytra on the plot."
     not_allowed: "<red>You cannot start gliding on this plot.</red>"
   special-weapons:
     name: "Special Weapons"
-    description: "Allows non-members to use tridents and maces on the plot"
+    description: "Allows non-members to use tridents and maces on the plot."
     not_allowed: "<red>You cannot use this weapon on this plot.</red>"
   weather:
     name: "Weather and Lightning"
-    description: "Allows lightning to strike and deal damage on the plot"
+    description: "Allows lightning to strike and deal damage on the plot."
   bed-use:
     name: "Bed Usage"
-    description: "Allows non-members to use beds on the plot"
+    description: "Allows non-members to use beds on the plot."
     not_allowed: "<red>You cannot use beds on this plot.</red>"
   crafting:
     name: "Crafting"
-    description: "Allows non-members to use crafting tables and crafters"
+    description: "Allows non-members to use crafting tables and crafters."
     not_allowed: "<red>You cannot craft on this plot.</red>"
   enchanting:
     name: "Enchanting"
-    description: "Allows non-members to use enchanting tables"
+    description: "Allows non-members to use enchanting tables."
     not_allowed: "<red>You cannot enchant items on this plot.</red>"
   respawn-anchor:
     name: "Respawn Anchor"
-    description: "Allows non-members to use respawn anchors"
+    description: "Allows non-members to use respawn anchors."
     not_allowed: "<red>You cannot use a respawn anchor on this plot.</red>"
   conduit-effects:
     name: "Conduit Effects"
-    description: "Allows conduits to apply effects to players on the plot"
+    description: "Allows conduits to apply effects to players on the plot."
   flight:
     name: "Flight"
-    description: "Allows non-members to start regular flight on the plot"
+    description: "Allows non-members to start regular flight on the plot."
     not_allowed: "<red>You cannot start flying on this plot.</red>"
   effects:
     name: "Effect Blocking"
-    description: "Blocks effects (including potions)"
+    description: "Blocks effects (including potions)."
   redstone:
     name: "Redstone Use"
-    description: "Allows non-members to use redstone (excluding levers, buttons, and pressure plates)"
+    description: "Allows non-members to use redstone (excluding levers, buttons, and pressure plates)."
     not_allowed: "<red>You can't use redstone on this plot.</red>"
   utility:
     name: "Utility Block Use"
-    description: "Allows non-members to use..."
+    description: "Allows non-members to use utility blocks (e.g., furnaces and anvils)."
+    not_allowed: "<red>You cannot use utility blocks on this plot.</red>"
+  team:
+    name: "Team Management"
+    description: "Add or remove all members of your team from the plot."
 dialogs:
   confirm: "Confirm"
   cancel: "Cancel"
@@ -390,3 +395,34 @@ dialogs:
   unclaim_body: "Delete plot <plot>? Its protection will be removed."
   transfer_body: "Transfer ownership of <plot> to <player>? You will lose owner privileges."
   remove_body: "Remove <player> from plot <plot>?"
+
+help:
+  header: "<gold><bold><plugin> commands</bold></gold>"
+  hint: "<green>Type <gold>/plx help</gold> to see available commands.</green>"
+  aliases: "<gray>Aliases: /plx = /plotsx = /ptx; /pchest = /privatechest.</gray>"
+  page: "<gray>Page <page>/<pages></gray>"
+  previous: "<white>[Previous]</white>"
+  next: "<white>[Next]</white>"
+  commands:
+    help: "Displays help and the selected page."
+    version: "Displays plugin information."
+    reload: "Reloads configuration; does not reconnect to the database."
+    export: "Exports an SQL backup in the selected format."
+    import: "Restores dump/backup.sql, replacing current data."
+    claim: "Creates a plot at your location after confirmation."
+    unclaim: "Removes the plot you are standing on after confirmation."
+    plot: "Opens the plot panel or a list of your plots."
+    plot_name: "Opens an accessible plot by name."
+    members: "Opens the members, ranks and permissions panel."
+    add: "Adds a player to the plot."
+    remove: "Removes a player according to the rank hierarchy."
+    role: "Assigns the member, builder or manager rank."
+    permission: "Sets a rank permission: invite, kick, rename or flag.[key]."
+    transfer: "Transfers ownership to an online plot member."
+    admin_list: "Lists a player's plots and their IDs."
+    admin: "Manages members of any plot; requires plotsx.admin.manage."
+    lock: "Protects the chest you are looking at on the plot."
+    unlock: "Removes protection from the private chest you are looking at."
+    trust: "Shares the chest with a plot participant."
+    untrust: "Revokes a player's shared chest access."
+    info: "Displays the chest owner and players with access."

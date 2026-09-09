@@ -134,8 +134,7 @@ class MembersGUI(
                     val name = flag?.let { SettingItem.name(plugin, it) } ?: text("actions.$action.name")
                     val description = flag?.let { SettingItem.description(plugin, it) } ?: text("actions.$action.description")
                     inventory.setItem(slot, SettingItem.create(material, name, description, granted,
-                        text("grant_title"), text(if (granted) "grant_true" else "grant_false"),
-                        plugin.messageHandler.stringMessageToComponentNoPrefix("flags", "desc_title"),
+                        text(if (granted) "grant_true" else "grant_false"),
                         listOf(Component.empty(), text(if (flag != null) "flag_permission_hint" else "action_permission_hint"),
                             text(if (access.owner(player, plot)) "toggle_permission_hint" else "permission_read_only"))))
                     clicks[slot] = {

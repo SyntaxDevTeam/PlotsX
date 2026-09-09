@@ -17,20 +17,17 @@ internal object SettingItem {
         ?: plugin.messageHandler.stringMessageToComponentNoPrefix("flags", flag.descriptionKey)
 
     fun create(material: Material, name: Component, description: Component, enabled: Boolean,
-               valueTitle: Component, value: Component, descriptionTitle: Component,
+               value: Component,
                extra: List<Component> = emptyList()): ItemStack {
         val item = ItemStack(material)
         val meta = item.itemMeta!!
-        meta.displayName(Component.text("=> ", NamedTextColor.GOLD)
-            .append(name.decorate(TextDecoration.BOLD)).append(Component.text(" <="))
+        meta.displayName(name.colorIfAbsent(NamedTextColor.GOLD).decorate(TextDecoration.BOLD)
             .decoration(TextDecoration.ITALIC, false))
         meta.lore((listOf(
-            Component.text("     ", NamedTextColor.AQUA).append(valueTitle).append(Component.space())
-                .append(Component.text(if (enabled) "✔ " else "✘ ",
-                    if (enabled) NamedTextColor.GREEN else NamedTextColor.RED).decorate(TextDecoration.BOLD))
+            Component.text(if (enabled) "✔ " else "✘ ",
+                    if (enabled) NamedTextColor.GREEN else NamedTextColor.RED).decorate(TextDecoration.BOLD)
                 .append(value.color(if (enabled) NamedTextColor.GREEN else NamedTextColor.RED)),
             Component.empty(),
-            descriptionTitle.color(NamedTextColor.AQUA),
             description.color(NamedTextColor.GRAY)
         ) + extra).map { it.decoration(TextDecoration.ITALIC, false) })
         item.itemMeta = meta

@@ -26,6 +26,7 @@ class CommandsManager(private val plugin: PlotsX) {
             commands.register(
                 "plotsx",
                 "PlotsX plugin command. Type /ptx help to check available commands",
+                listOf("plx"),
                 PlotsXCMD(plugin)
             )
             commands.register(

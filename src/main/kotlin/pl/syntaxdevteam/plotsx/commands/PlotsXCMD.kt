@@ -81,56 +81,70 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
                 }
             }
         } else {
-            stack.sender.sendMessage(mH.miniMessageFormat("<green>Type </green><gold>/ptx help</gold> <green>to see available commands</green>"))
+            stack.sender.sendMessage(mH.stringMessageToComponentNoPrefix("help", "hint"))
         }
     }
 
+    private val helpEntries = listOf(
+        "/plx help [page]" to "help",
+        "/plx version" to "version",
+        "/plx reload" to "reload",
+        "/plx export [mysql|mariadb|sqlite|postgresql|h2]" to "export",
+        "/plx import" to "import",
+        "/claim" to "claim",
+        "/unclaim" to "unclaim",
+        "/plot" to "plot",
+        "/plot <name>" to "plot_name",
+        "/plot members" to "members",
+        "/plot add <player>" to "add",
+        "/plot remove <player>" to "remove",
+        "/plot role <player> <member|builder|manager>" to "role",
+        "/plot permission <rank> <action> <true|false>" to "permission",
+        "/plot transfer <player> confirm" to "transfer",
+        "/plot admin list <player|UUID>" to "admin_list",
+        "/plot admin <id> [action ...]" to "admin",
+        "/privatechest lock" to "lock",
+        "/privatechest unlock" to "unlock",
+        "/privatechest trust|share <player>" to "trust",
+        "/privatechest untrust|unshare <player>" to "untrust",
+        "/privatechest info" to "info"
+    )
+    private val helpPageSize = 12
+    private val helpPages get() = (helpEntries.size + helpPageSize - 1) / helpPageSize
+
     private fun sendHelp(stack: CommandSourceStack, page: Int) {
-        val commands = listOf(
-            "  <gold>/plotsx|ptx help <gray>- <white>Displays this prompt.",
-            "  <gold>/plotsx|ptx version <gray>- <white>Shows plugin info.",
-            "  <gold>/plotsx|ptx reload <gray>- <white>Reloads the configuration file.",
-            "  <gold>/ptx export [mysql|mariadb|sqlite|postgresql|h2] <gray>- <white>Exports an SQL backup.",
-            "  <gold>/ptx import <gray>- <white>Restores dump/backup.sql, replacing current data.",
-            "  <gold>/claim <gray>- <white>Pozwala zając dany teren podswoją diałkę",
-            "  <gold>/unclaim <gray>- <white>usuwa działkę na której się znajdujesz.",
-            "  <gold>/plot add|remove <gracz> <gray>- <white>Zarządza członkami własnej działki.",
-            "  <gold>/plot members <gray>- <white>GUI graczy i rang działki.",
-            "  <gold>/plot role gracz ranga <gray>- <white>Nadaje rangę member, builder lub manager.",
-            "  <gold>/plot permission ranga akcja true/false <gray>- <white>Zmienia uprawnienia rangi na działce.",
-            "  <gold>/plot transfer gracz confirm <gray>- <white>Przekazuje własność członkowi online.",
-            "  <gold>/plot admin id [akcja] <gray>- <white>Zarządzanie dowolną działką (plotsx.admin.manage).",
-            "  <gold>/privatechest|pchest <lock|unlock|trust|untrust|info> <gray>- <white>Zarządza prywatną skrzynią.",
-            " ",
-            " ",
-            " ",
-            " "
-        )
-
-        val itemsPerPage = 12
-        val totalPages = (commands.size + itemsPerPage - 1) / itemsPerPage
-        val currentPage = page.coerceIn(1, totalPages)
-
-        stack.sender.sendMessage(mH.miniMessageFormat(" <gray>+-------------------------------------------------"))
-        stack.sender.sendMessage(mH.miniMessageFormat(" <gray>|    <gold>Available commands for $plName:"))
-        stack.sender.sendMessage(mH.miniMessageFormat(" <gray>|"))
-
-        val startIndex = (currentPage - 1) * itemsPerPage
-        val endIndex = (currentPage * itemsPerPage).coerceAtMost(commands.size)
-        for (i in startIndex until endIndex) {
-            stack.sender.sendMessage(mH.miniMessageFormat(" <gray>|  ${commands[i]}"))
+        val currentPage = page.coerceIn(1, helpPages)
+        fun text(key: String, values: Map<String, String> = emptyMap()) =
+            mH.stringMessageToComponentNoPrefix("help", key, values)
+        fun line(content: net.kyori.adventure.text.Component) =
+            stack.sender.sendMessage(mH.miniMessageFormat(" <gray>|  ").append(content))
+        val border = mH.miniMessageFormat(" <gray>+-------------------------------------------------")
+        stack.sender.sendMessage(border)
+        line(text("header", mapOf("plugin" to plName)))
+        line(net.kyori.adventure.text.Component.empty())
+        helpEntries.drop((currentPage - 1) * helpPageSize).take(helpPageSize).forEach { (syntax, key) ->
+            // Command arguments are literal text, not MiniMessage tags.
+            line(net.kyori.adventure.text.Component.text(syntax, net.kyori.adventure.text.format.NamedTextColor.GOLD)
+                .append(net.kyori.adventure.text.Component.text(" — ", net.kyori.adventure.text.format.NamedTextColor.GRAY))
+                .append(text("commands.$key").colorIfAbsent(net.kyori.adventure.text.format.NamedTextColor.WHITE)))
         }
-
-        val prevPage = if (currentPage > 1) currentPage - 1 else totalPages
-        val nextPage = if (currentPage < totalPages) currentPage + 1 else 1
-        stack.sender.sendMessage(mH.miniMessageFormat(" <gray>|"))
-        stack.sender.sendMessage(mH.miniMessageFormat(" <gray>|"))
-        stack.sender.sendMessage(mH.miniMessageFormat(
-            " <gray>| (Page $currentPage/$totalPages) <click:run_command:'/ptx help $prevPage'><white>[Previous]</white></click>   " +
-                    "<click:run_command:'/ptx help $nextPage'><white>[Next]</white></click>"
-        ))
-        stack.sender.sendMessage(mH.miniMessageFormat(" <gray>|"))
-        stack.sender.sendMessage(mH.miniMessageFormat(" <gray>+-------------------------------------------------"))
+        line(net.kyori.adventure.text.Component.empty())
+        line(text("aliases"))
+        val configured = plugin.config.getConfigurationSection("aliases")
+        listOf("claim", "unclaim").forEach { command ->
+            val alias = configured?.getString(command)
+            if (!alias.isNullOrBlank() && alias != command) {
+                line(net.kyori.adventure.text.Component.text("/$alias → /$command",
+                    net.kyori.adventure.text.format.NamedTextColor.GRAY))
+            }
+        }
+        var footer = text("page", mapOf("page" to currentPage.toString(), "pages" to helpPages.toString()))
+        if (currentPage > 1) footer = footer.append(net.kyori.adventure.text.Component.space())
+            .append(text("previous").clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/plx help ${currentPage - 1}")))
+        if (currentPage < helpPages) footer = footer.append(net.kyori.adventure.text.Component.space())
+            .append(text("next").clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/plx help ${currentPage + 1}")))
+        line(footer)
+        stack.sender.sendMessage(border)
     }
 
     override fun suggest(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>): List<String> {
@@ -139,7 +153,9 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
         }
         return when (args.size) {
             1 -> listOf("help", "version", "reload", "export", "import")
-            2 -> if (args[0].equals("export", ignoreCase = true)) SqlBackup.dialects.filter {
+            2 -> if (args[0].equals("help", ignoreCase = true)) (1..helpPages).map(Int::toString)
+                .filter { it.startsWith(args[1]) }
+            else if (args[0].equals("export", ignoreCase = true)) SqlBackup.dialects.filter {
                 it.startsWith(args[1], ignoreCase = true)
             } else emptyList()
             else -> emptyList()

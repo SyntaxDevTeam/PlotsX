@@ -2,7 +2,7 @@
 # Author: WieszczY
 # Formatowanie tekstów wiadomości:
 # Można używać formatowania MiniMessage oraz Legacy (Minecraft).
-# Przykłady jak stosować MiniMessage: https://docs.advntr.dev/minimessage/format.html
+# Przykłady stosowania MiniMessage: https://docs.advntr.dev/minimessage/format.html
 # Nie mieszaj formatów w jednej wiadomości. Jeśli używasz Legacy, nie wstawiaj formatowania MiniMessage, w przeciwnym wypadku zostanie użyty tylko ten drugi.
 
 prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</gradient>"
@@ -16,11 +16,11 @@ error:
   expand_payment_failed: "<red>Płatność nie powiodła się. Sprawdź saldo; działka nie została powiększona.</red>"
   expand_refund_failed: "<red>Nie udało się zwrócić opłaty. Skontaktuj się z administracją.</red>"
   no_permission: "<red>Nie masz uprawnień do tej komendy.</red>"
-  claim_not_found: "<gold>Nie znaleziono gracza o nicku <player>.</gold>" ## WTF? Co tu autor miał na myśli?
-  not_owner: "<red>Nie możesz ingerować w tą działkę, ponieważ nie jesteś jej właścicielem.</red>"
+  claim_not_found: "<gold>Nie znaleziono gracza o nicku <player>.</gold>"
+  not_owner: "<red>Nie możesz ingerować w tę działkę, ponieważ nie jesteś jej właścicielem.</red>"
   there_is_no_plot: "<red>Nie ma działki w tej lokalizacji.</red>"
   is_plot: "<red>Nie możesz postawić działki tutaj, ponieważ działka już istnieje.</red>"
-  no_in_plot: "<red>Nie jesteś w działce.</red><grey>Użyj /plot <nazwa>, aby wybrać działkę lub stań na swojej działce.</grey>"
+  no_in_plot: "<red>Nie jesteś na działce.</red> <grey>Użyj /plot [nazwa], aby wybrać działkę, lub stań na swojej działce.</grey>"
   in_collision: "<red>Nie możesz postawić działki tutaj, ponieważ koliduje z inną działką.</red>"
   worldguard_collision: "<red>Nie możesz utworzyć działki, ponieważ jej obszar koliduje z regionem WorldGuard.</red>"
   claim_world_not_allowed: "<red>Nie możesz tworzyć działek w tym świecie.</red>"
@@ -35,26 +35,27 @@ error:
   expand_collision: "<red>Nowa granica działki kolidowałaby z inną działką.</red>"
   expand_failed: "<red>Nie udało się rozszerzyć działki.</red>"
 
-  console: "<red>Tylko gracz może użyć tej komendy</red>"
-  reload: "<red>Wystąpił błąd podczas przełądowania konfiguracji:</red> "
+  console: "<red>Tylko gracz może użyć tej komendy.</red>"
+  reload: "<red>Wystąpił błąd podczas przeładowania konfiguracji:</red> "
 
 plots:
-  rename_rejected: "<red>Nazwa jest pusta lub zawiera słowa zabronione przez CleanerX. Wybierz inną nazwę.</red>"
+  rename_rejected: "<red>Nazwa musi mieć od 1 do 255 znaków, nie może zawierać znaków sterujących ani słów zabronionych przez CleanerX.</red>"
   rename_filter_unavailable: "<red>CleanerX jest niedostępny. Nazwa nie została zmieniona; skontaktuj się z administracją.</red>"
-  claim_success: "<green>Działka została pomyślnie ustawiona!</green>"
+  claim_cancelled: "<yellow>Anulowano tworzenie działki.</yellow>"
+  claim_success: "<green>Działka została pomyślnie utworzona!</green>"
   unclaim_success: "<green>Działka została pomyślnie usunięta.</green>"
   unclaim_cancelled: "<yellow>Anulowano usuwanie działki.</yellow>"
   enter_plot: "<green>Wszedłeś na działkę <white><plot></white></green>"
   leave_plot: "<green>Opuszczono działkę <white><plot></white></green>"
   approaching_plot: "<yellow>Zbliżasz się do działki <white><plot></white>. Ochrona za chwilę się zmieni.</yellow>"
   teleport: "<green>Teleportowano na działkę!</green>"
-  teleport_failed: "<red>Nie znaleziono bezpiecznego miejsca do teleportacji na tą działkę.</red>"
+  teleport_failed: "<red>Nie znaleziono bezpiecznego miejsca do teleportacji na tę działkę.</red>"
   rename_hint: "Wpisz nową nazwę działki na czacie (masz 60 sekund)."
-  rename_timeout: "<red>Czas na wpisanie nowej nazwy minął. Proces anulowany." 
-  rename_success: "<green>Zmieniono nazwę działki na: <white><name></white>" 
-  rename_exists: "<red>Działka o tej nazwie już istnieje!" 
-  rename_not_found: "<red>Działka nie istnieje." 
-  rename_fail: "<red>Nie udało się zmienić nazwy działki."
+  rename_timeout: "<red>Czas na wpisanie nowej nazwy minął. Anulowano zmianę nazwy.</red>"
+  rename_success: "<green>Zmieniono nazwę działki na: <white><name></white></green>"
+  rename_exists: "<red>Działka o tej nazwie już istnieje!</red>"
+  rename_not_found: "<red>Działka nie istnieje.</red>"
+  rename_fail: "<red>Nie udało się zmienić nazwy działki.</red>"
   expand_success: "<green>Rozszerzono działkę do promienia <white><radius></white> bloków.</green>"
   expand_cancelled: "<yellow>Anulowano rozszerzanie działki.</yellow>"
 
@@ -89,7 +90,7 @@ members:
   updated: "Zapisano ustawienia rangi."
   recipient_offline: "Nowy właściciel musi być online, aby sprawdzić jego limity działek."
   transfer_failed: "Nie przekazano działki. Sprawdź członkostwo, limity odbiorcy i czy nie ma on działki o tej samej nazwie."
-  transferred: "Przekazano działkę graczowi <player>. Poprzedni właściciel otrzymał rangę member."
+  transferred: "Przekazano działkę graczowi <player>. Poprzedni właściciel otrzymał rangę członka."
   title: "Gracze i rangi działki"
   read_only: "<red>Brak uprawnienia do zmiany tej flagi.</red>"
   member_item: "<player> — <role>"
@@ -151,7 +152,7 @@ GUI:
       confirm: "<red>Usuń działkę</red>"
       cancel: "<yellow>Anuluj</yellow>"
   plot:
-    title_plot: "<b>Ustawienia dla działki"
+    title_plot: "<b>Ustawienia działki</b>"
     material_name:
       info: "<gold><bold>Informacje o działce</bold></gold>"
       flags: "<color:#852579>Ustawienia flag</color>"
@@ -161,12 +162,12 @@ GUI:
       expand: "<gold>Rozszerz działkę</gold>"
     info:
       owner: "<green>Właściciel:</green> <white><owner></white>"
-      plot_name: "<green>Nazwa:</green> <white><plot>"
-      id: "<green>ID:</green> <white><id>"
-      creation_time: "<green>Utworzona:</green> <white><time>"
+      plot_name: "<green>Nazwa:</green> <white><plot></white>"
+      id: "<green>ID:</green> <white><id></white>"
+      creation_time: "<green>Utworzona:</green> <white><time></white>"
       click: "<white>Kliknij, aby zobaczyć granice</white>"
     list_title: "<b>Lista Twoich działek:</b>"
-    list_click_hint: "<gray>Kliknij, aby zobaczyć opcję działki</gray>"
+    list_click_hint: "<gray>Kliknij, aby zobaczyć opcje działki</gray>"
     list_back: "<gray>Wróć do ustawień działki</gray>"
     list_close: "<gray>Zamknij listę działek</gray>"
   flags:
@@ -193,196 +194,196 @@ flags:
   value_false: "Wyłączone"
   toggle: "<gray>Zmieniono flagę <white><flag></white> na <white><value></white></gray>"
   build:
-    name: "Zezwolenie budowy"
-    description: "Pozwala obcym graczom stawiać i niszczyć bloki"
+    name: "Zezwolenie na budowę"
+    description: "Pozwala obcym graczom stawiać i niszczyć bloki."
     not_allowed: "<red>Nie możesz stawiać bloków na tej działce.</red>"
     break_not_allowed: "<red>Nie możesz niszczyć bloków na tej działce.</red>"
   pvp:
     name: "Zezwolenie na PvP"
-    description: "Blokuje obrażenia od graczy i ich broni"
+    description: "Blokuje obrażenia od graczy i ich broni."
     not_allowed: "<red>Nie możesz atakować graczy na tej działce.</red>"
   chest:
     name: "Blokowanie skrzyń"
-    description: "Blokuje dostęp do skrzyń dla obcych"
+    description: "Blokuje dostęp do skrzyń dla obcych."
     not_allowed: "<red>Nie możesz otwierać skrzyń na tej działce.</red>"
   ender-chest:
     name: "Blokowanie skrzyń Endu"
-    description: "Blokuje dostęp do skrzyń Endu dla obcych"
+    description: "Blokuje dostęp do skrzyń Endu dla obcych."
     not_allowed: "<red>Nie możesz otwierać skrzyń Endu na tej działce.</red>"
   lever:
     name: "Blokowanie dźwigni"
-    description: "Blokuje używanie dźwigni i mechanizmów redstone"
+    description: "Blokuje używanie dźwigni i mechanizmów redstone."
     not_allowed: "<red>Nie możesz używać dźwigni na tej działce.</red>"
   button:
     name: "Blokowanie przycisków"
-    description: "Blokuje używanie przycisków drewnianych i kamiennych"
+    description: "Blokuje używanie przycisków drewnianych i kamiennych."
     not_allowed: "<red>Nie możesz używać przycisków na tej działce.</red>"
   door:
     name: "Blokowanie drzwi"
-    description: "Blokuje otwieranie drzwi, trapdoorów i furtek dla obcych"
+    description: "Blokuje otwieranie drzwi, klap i furtek dla obcych."
     not_allowed: "<red>Nie możesz otwierać drzwi na tej działce.</red>"
   spawn-monsters:
     name: "Spawnowanie potworów"
-    description: "Blokuje spawnowanie się potworów"
+    description: "Blokuje spawnowanie się potworów."
   spawn-animals:
     name: "Spawnowanie zwierząt"
-    description: "Blokuje spawnowanie się zwierząt"
+    description: "Blokuje spawnowanie się zwierząt."
   passives:
     name: "Interakcje z mobami pasywnymi"
-    description: "Blokuje interakcję i ataki na pasywne moby"
+    description: "Blokuje interakcje z pasywnymi mobami i ataki na nie."
     not_allowed: "<red>Nie możesz wchodzić w interakcję z mobami na tej działce.</red>"
   flow:
     name: "Blokowanie przepływu cieczy"
-    description: "Blokuje przepływ wody i lawy"
+    description: "Blokuje przepływ wody i lawy."
     not_allowed: "<red>Nie możesz używać wody i lawy na tej działce.</red>"
     bucket_not_allowed: "<red>Nie możesz używać wiader na tej działce.</red>"
   fire:
     name: "Blokowanie ognia"
-    description: "Blokuje eksplozje, ogień i jego rozprzestrzenianie"
+    description: "Blokuje eksplozje, ogień i jego rozprzestrzenianie."
     not_allowed: "<red>Nie możesz używać ognia na tej działce.</red>"
   minecart:
     name: "Blokowanie wagoników"
-    description: "Pozwala obcym umieszczać i niszczyć wagoniki/łodzie"
+    description: "Pozwala obcym umieszczać i niszczyć wagoniki/łodzie."
     not_allowed: "<red>Nie możesz używać wagoników na tej działce.</red>"
   allow-home:
     name: "Zezwolenie na /home"
-    description: "Pozwala obcym używać /home i /sethome"
-    not_allowed: "<red>Nie możesz używać ani ustawiać home na tej działce.</red>"
+    description: "Pozwala obcym używać /home i /sethome."
+    not_allowed: "<red>Nie możesz używać komend /home ani /sethome na tej działce.</red>"
   smart-door:
     name: "Żelazne i podwójne drzwi"
     description: "Pozwala otwierać żelazne drzwi bez redstone oraz podwójne drzwi jednocześnie."
     not_allowed: "<red>Nie możesz otwierać żelaznych drzwi na tej działce.</red>"
   use-potions:
     name: "Używanie mikstur"
-    description: "Pozwala na używanie mikstur"
+    description: "Pozwala na używanie mikstur."
     not_allowed: "<red>Nie możesz używać mikstur na tej działce.</red>"
   mob-loot:
     name: "Niszczenie bloków przez moby"
-    description: "Pozwala mobom niszczyć bloki"
+    description: "Pozwala mobom niszczyć bloki."
   flow-damage:
     name: "Zezwolenie na niszczenie przez ciecz"
-    description: "Pozwala cieczom niszczyć bloki"
+    description: "Pozwala cieczom niszczyć bloki."
   iceform-player:
     name: "Tworzenie lodu przez graczy"
-    description: "Pozwala graczom tworzyć lód (np. zaklęcie Frost Walker)"
+    description: "Pozwala graczom tworzyć lód (np. zaklęcie Frost Walker)."
   iceform-world:
     name: "Tworzenie lodu przez świat"
-    description: "Pozwala tworzyć mobom śnieg (np. bałwan), pogodzie i innym czynnikom"
+    description: "Pozwala mobom (np. śnieżnym golemom), pogodzie i innym czynnikom tworzyć śnieg lub lód."
   allow-fly:
     name: "Zezwolenie na latanie"
-    description: "Zezwala na latanie w regionie"
+    description: "Zezwala na latanie w regionie."
   teleport:
     name: "Blokowanie teleportacji"
-    description: "Blokuje teleportację przez perły i owoce chorus"
+    description: "Blokuje teleportację przez perły i owoce chorus."
   cant-grow:
     name: "Blokowanie wzrostu roślin"
-    description: "Blokuje wzrost roślin i farm"
+    description: "Blokuje wzrost roślin i farm."
   allow-spawners:
     name: "Zezwolenie na spawnery"
-    description: "Pozwala obcym stawiać i niszczyć spawnery"
+    description: "Pozwala obcym stawiać i niszczyć spawnery."
     not_allowed: "<red>Nie możesz stawiać ani niszczyć spawnerów na tej działce.</red>"
   leaves-decay:
     name: "Blokowanie rozkładu liści"
-    description: "Blokuje rozkładanie się liści"
+    description: "Blokuje rozkładanie się liści."
   effects:
     name: "Blokowanie efektów"
     description: "Blokuje działanie efektów (w tym mikstur)."
   redstone:
     name: "Zezwolenie na użycie redstone"
-    description: "Pozwala obcym korzystać z redstone (nie wliczając dźwigni, przycisków i płytek naciskowych)"
+    description: "Pozwala obcym korzystać z redstone (nie wliczając dźwigni, przycisków i płytek naciskowych)."
     not_allowed: "<red>Nie możesz używać redstone na tej działce.</red>"
   utility:
     name: "Zezwolenie na użycie bloków użytkowych"
-    description: "Pozwala obcym używać bloków użytkowych (np. piecyki, kowadłą, strzały)"
+    description: "Pozwala obcym używać bloków użytkowych (np. pieców i kowadeł)."
     not_allowed: "<red>Nie możesz używać bloków użytkowych na tej działce.</red>"
   block-transform:
     name: "Blokowanie przemian bloków"
-    description: "Blokuje przemiany bloków (np. beton)"
+    description: "Blokuje przemiany bloków (np. beton)."
   fall:
     name: "Blokowanie spadających bloków"
-    description: "Blokuje osiadanie bloków z fizyką grawitacji"
+    description: "Blokuje osiadanie bloków z fizyką grawitacji."
   explosions:
     name: "Ochrona przed eksplozjami"
-    description: "Chroni bloki i byty na działce przed eksplozjami"
+    description: "Chroni bloki i byty na działce przed eksplozjami."
   decorations:
     name: "Interakcje z dekoracjami"
-    description: "Pozwala obcym stawiać, niszczyć i modyfikować obrazy, ramki oraz stojaki na zbroję"
+    description: "Pozwala obcym stawiać, niszczyć i modyfikować obrazy, ramki oraz stojaki na zbroję."
     not_allowed: "<red>Nie możesz modyfikować dekoracji na tej działce.</red>"
   item-transfer:
     name: "Transfer przedmiotów"
-    description: "Pozwala hopperom przenosić przedmioty przez granicę działki"
+    description: "Pozwala lejom przenosić przedmioty przez granicę działki."
   portal-create:
     name: "Tworzenie portali"
-    description: "Pozwala na tworzenie portali na działce"
+    description: "Pozwala na tworzenie portali na działce."
   portal-use:
     name: "Korzystanie z portali"
-    description: "Pozwala obcym korzystać z portali na działce"
+    description: "Pozwala obcym korzystać z portali na działce."
     not_allowed: "<red>Nie możesz korzystać z portali na tej działce.</red>"
   projectiles:
     name: "Pociski"
-    description: "Pozwala obcym trafiać pociskami w obiekty na działce"
+    description: "Pozwala obcym trafiać pociskami w obiekty na działce."
     not_allowed: "<red>Nie możesz używać pocisków na tej działce.</red>"
   item-pickup:
     name: "Podnoszenie przedmiotów"
-    description: "Pozwala obcym podnosić przedmioty na działce"
+    description: "Pozwala obcym podnosić przedmioty na działce."
     not_allowed: "<red>Nie możesz podnosić przedmiotów na tej działce.</red>"
   item-drop:
     name: "Wyrzucanie przedmiotów"
-    description: "Pozwala obcym wyrzucać przedmioty na działce"
+    description: "Pozwala obcym wyrzucać przedmioty na działce."
     not_allowed: "<red>Nie możesz wyrzucać przedmiotów na tej działce.</red>"
   crop-trample:
     name: "Deptanie upraw"
-    description: "Pozwala obcym deptać pola uprawne na działce"
+    description: "Pozwala obcym deptać pola uprawne na działce."
     not_allowed: "<red>Nie możesz deptać upraw na tej działce.</red>"
   animal-interact:
     name: "Interakcje ze zwierzętami"
-    description: "Pozwala obcym prowadzić, rozmnażać i dosiadać zwierzęta"
+    description: "Pozwala obcym prowadzić i rozmnażać zwierzęta oraz ich dosiadać."
     not_allowed: "<red>Nie możesz wykonywać tej czynności ze zwierzęciem na działce.</red>"
   command-use:
     name: "Używanie komend"
-    description: "Pozwala obcym używać komend innych niż komendy PlotsX na działce"
+    description: "Pozwala obcym używać komend innych niż komendy PlotsX na działce."
     not_allowed: "<red>Nie możesz używać tej komendy na tej działce.</red>"
   fishing:
     name: "Łowienie ryb"
-    description: "Pozwala obcym łowić na działce lub zarzucać na nią wędkę"
+    description: "Pozwala obcym łowić na działce lub zarzucać na nią wędkę."
     not_allowed: "<red>Nie możesz łowić na tej działce.</red>"
   elytra:
     name: "Używanie elytry"
-    description: "Pozwala obcym rozpoczynać lot elytrą na działce"
+    description: "Pozwala obcym rozpoczynać lot elytrą na działce."
     not_allowed: "<red>Nie możesz rozpocząć lotu elytrą na tej działce.</red>"
   special-weapons:
     name: "Broń specjalna"
-    description: "Pozwala obcym używać trójzębów i buzdyganów na działce"
+    description: "Pozwala obcym używać trójzębów i buzdyganów na działce."
     not_allowed: "<red>Nie możesz używać tej broni na tej działce.</red>"
   weather:
     name: "Pogoda i pioruny"
-    description: "Pozwala piorunom uderzać i zadawać obrażenia na działce"
+    description: "Pozwala piorunom uderzać i zadawać obrażenia na działce."
   bed-use:
     name: "Używanie łóżek"
-    description: "Pozwala obcym korzystać z łóżek na działce"
+    description: "Pozwala obcym korzystać z łóżek na działce."
     not_allowed: "<red>Nie możesz korzystać z łóżek na tej działce.</red>"
   crafting:
-    name: "Crafting"
-    description: "Pozwala obcym korzystać ze stołów rzemieślniczych i crafterów"
-    not_allowed: "<red>Nie możesz korzystać z craftingu na tej działce.</red>"
+    name: "Wytwarzanie przedmiotów"
+    description: "Pozwala obcym korzystać ze stołów rzemieślniczych i crafterów."
+    not_allowed: "<red>Nie możesz wytwarzać przedmiotów na tej działce.</red>"
   enchanting:
     name: "Zaklinanie"
-    description: "Pozwala obcym korzystać ze stołów do zaklinania"
+    description: "Pozwala obcym korzystać ze stołów do zaklinania."
     not_allowed: "<red>Nie możesz zaklinać przedmiotów na tej działce.</red>"
   respawn-anchor:
     name: "Kotwica odrodzenia"
-    description: "Pozwala obcym korzystać z kotwic odrodzenia"
+    description: "Pozwala obcym korzystać z kotwic odrodzenia."
     not_allowed: "<red>Nie możesz korzystać z kotwicy odrodzenia na tej działce.</red>"
   conduit-effects:
-    name: "Efekty conduit"
-    description: "Pozwala conduit nakładać efekty na graczy na działce"
+    name: "Efekty przewodni"
+    description: "Pozwala przewodniom nakładać efekty na graczy na działce."
   flight:
     name: "Latanie"
-    description: "Pozwala obcym rozpoczynać zwykłe latanie na działce"
+    description: "Pozwala obcym rozpoczynać zwykłe latanie na działce."
     not_allowed: "<red>Nie możesz rozpocząć latania na tej działce.</red>"
   team:
-    name: "Zarządzanie Teamem"
-    description: "Dodaj lub usuń wszystkich członków swojego Teamu z działki"
+    name: "Zarządzanie drużyną"
+    description: "Dodaj lub usuń wszystkich członków swojej drużyny z działki."
 dialogs:
   confirm: "Potwierdź"
   cancel: "Anuluj"
@@ -395,3 +396,34 @@ dialogs:
   unclaim_body: "Usunąć działkę <plot>? Jej ochrona zostanie wyłączona."
   transfer_body: "Przekazać działkę <plot> graczowi <player>? Utracisz uprawnienia właściciela."
   remove_body: "Usunąć gracza <player> z działki <plot>?"
+
+help:
+  header: "<gold><bold>Komendy <plugin></bold></gold>"
+  hint: "<green>Wpisz <gold>/plx help</gold>, aby zobaczyć dostępne komendy.</green>"
+  aliases: "<gray>Aliasy: /plx = /plotsx = /ptx; /pchest = /privatechest.</gray>"
+  page: "<gray>Strona <page>/<pages></gray>"
+  previous: "<white>[Poprzednia]</white>"
+  next: "<white>[Następna]</white>"
+  commands:
+    help: "Wyświetla pomoc i wybraną stronę."
+    version: "Wyświetla informacje o pluginie."
+    reload: "Przeładowuje konfigurację; nie przełącza połączenia z bazą."
+    export: "Eksportuje kopię SQL w wybranym formacie."
+    import: "Przywraca dump/backup.sql, zastępując bieżące dane."
+    claim: "Tworzy działkę w bieżącej lokalizacji po potwierdzeniu."
+    unclaim: "Usuwa działkę, na której stoisz, po potwierdzeniu."
+    plot: "Otwiera panel działki lub listę własnych działek."
+    plot_name: "Otwiera dostępną działkę o podanej nazwie."
+    members: "Otwiera panel członków, rang i ich uprawnień."
+    add: "Dodaje gracza do działki."
+    remove: "Usuwa gracza z działki zgodnie z hierarchią rang."
+    role: "Nadaje członkowi rangę member, builder lub manager."
+    permission: "Ustawia uprawnienie rangi: invite, kick, rename lub flag.[klucz]."
+    transfer: "Przekazuje własność członkowi będącemu online."
+    admin_list: "Wyświetla działki gracza wraz z ich identyfikatorami."
+    admin: "Zarządza członkami dowolnej działki; wymaga plotsx.admin.manage."
+    lock: "Zabezpiecza wskazywaną skrzynię na działce."
+    unlock: "Usuwa ochronę wskazywanej prywatnej skrzyni."
+    trust: "Udostępnia skrzynię wybranemu uczestnikowi działki."
+    untrust: "Cofa udostępnienie skrzyni wybranemu graczowi."
+    info: "Wyświetla właściciela skrzyni i graczy z dostępem."
