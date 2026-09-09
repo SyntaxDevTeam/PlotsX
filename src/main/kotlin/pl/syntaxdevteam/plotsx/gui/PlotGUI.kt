@@ -140,7 +140,7 @@ class PlotGUI(
             }
 
             listIndex -> {
-                val playerPlots = plugin.databaseHandler.getPlotsFromAllUsers().filter { PlotAccess(plugin).canOpen(player, it) }
+                val playerPlots = plugin.databaseHandler.getPlotsByOwner(player.uniqueId)
                 if (playerPlots.isNotEmpty()) {
                     plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, ownerUuid, pd))
                 } else {

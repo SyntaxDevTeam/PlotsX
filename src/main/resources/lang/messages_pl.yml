@@ -39,6 +39,8 @@ error:
   reload: "<red>Wystąpił błąd podczas przełądowania konfiguracji:</red> "
 
 plots:
+  rename_rejected: "<red>Nazwa jest pusta lub zawiera słowa zabronione przez CleanerX. Wybierz inną nazwę.</red>"
+  rename_filter_unavailable: "<red>CleanerX jest niedostępny. Nazwa nie została zmieniona; skontaktuj się z administracją.</red>"
   claim_success: "<green>Działka została pomyślnie ustawiona!</green>"
   unclaim_success: "<green>Działka została pomyślnie usunięta.</green>"
   unclaim_cancelled: "<yellow>Anulowano usuwanie działki.</yellow>"
@@ -79,9 +81,10 @@ private_chest:
 
 
 members:
+  admin_list_header: "Działki gracza <player>: <count> (ID | nazwa | świat i pozycja | promień)"
   usage: "Użycie: /plot members | add/remove <gracz> | role <gracz> <ranga> | permission <ranga> <akcja> <true/false> | transfer <gracz> confirm"
   stand_on_plot: "Nie znaleziono działki. Stań na działce, którą możesz zarządzać."
-  admin_usage: "Użycie: /plot admin <id> [members | add/remove <gracz> | role <gracz> <ranga> | permission <ranga> <akcja> <true/false> | transfer <gracz> confirm]"
+  admin_usage: "Użycie: /plot admin list <gracz/UUID> lub /plot admin <id> [members | add/remove <gracz> | role <gracz> <ranga> | permission <ranga> <akcja> <true/false> | transfer <gracz> confirm]"
   denied: "Nie masz uprawnień do tej operacji na działce."
   updated: "Zapisano ustawienia rangi."
   recipient_offline: "Nowy właściciel musi być online, aby sprawdzić jego limity działek."

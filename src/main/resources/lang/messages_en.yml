@@ -40,6 +40,8 @@ error:
   reload: "<red>An error occurred while reloading the configuration:</red> "
 
 plots:
+  rename_rejected: "<red>The name is empty or contains words banned by CleanerX. Choose another name.</red>"
+  rename_filter_unavailable: "<red>CleanerX is unavailable. The name was not changed; contact an administrator.</red>"
   claim_success: "<green>Plot has been successfully created!</green>"
   unclaim_success: "<green>Plot has been successfully removed.</green>"
   unclaim_cancelled: "<yellow>Plot removal has been cancelled.</yellow>"
@@ -79,9 +81,10 @@ private_chest:
   info: "<gray>Owner: <white><owner></white> | Shared with: <white><trusted></white></gray>"
 
 members:
+  admin_list_header: "Plots owned by <player>: <count> (ID | name | world and position | radius)"
   usage: "Usage: /plot members | add/remove <player> | role <player> <rank> | permission <rank> <action> <true/false> | transfer <player> confirm"
   stand_on_plot: "Plot not found. Stand on a plot you can manage."
-  admin_usage: "Usage: /plot admin <id> [members | add/remove <player> | role <player> <rank> | permission <rank> <action> <true/false> | transfer <player> confirm]"
+  admin_usage: "Usage: /plot admin list <player/UUID> or /plot admin <id> [members | add/remove <player> | role <player> <rank> | permission <rank> <action> <true/false> | transfer <player> confirm]"
   denied: "You do not have permission for this plot operation."
   updated: "Role settings saved."
   recipient_offline: "The new owner must be online so their plot limits can be checked."

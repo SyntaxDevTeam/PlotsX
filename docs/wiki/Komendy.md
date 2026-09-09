@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | `/claim` | Otwiera potwierdzenie założenia działki w twoim miejscu. | `plotsx.cmd.claim` |
 | `/unclaim` | Otwiera potwierdzenie usunięcia własnej działki, na której stoisz. | `plotsx.cmd.unclaim` |
-| `/plot` | Otwiera panel dostępnej działki lub listę dostępnych działek poza zajętym terenem. | `plotsx.cmd.plot` |
+| `/plot` | Otwiera panel dostępnej działki lub listę własnych działek poza zajętym terenem, również dla OP. | `plotsx.cmd.plot` |
 | `/plot <nazwa>` | Otwiera panel dostępnej działki po nazwie; własna ma pierwszeństwo. | `plotsx.cmd.plot` |
 | `/plot add <gracz>` | Dodaje członka do twojej działki. | `plotsx.cmd.plot` |
 | `/plot remove <gracz>` | Usuwa członka z twojej działki. | `plotsx.cmd.plot` |
@@ -28,6 +28,7 @@ Komendy wymagają `plotsx.cmd.plot` i stania na działce, do której gracz ma do
 | `/plot role <gracz> <member\|builder\|manager>` | Zmienia rolę członka; tylko właściciel/administrator. |
 | `/plot permission <rola> <grant> <true\|false>` | Ustawia grant roli dla tej działki; tylko właściciel/administrator. |
 | `/plot transfer <gracz> confirm` | Przekazuje własność obecnemu członkowi, który jest online; tylko właściciel/administrator. Sprawdza limity liczby, promienia i powierzchni odbiorcy oraz konflikt nazwy działki. |
+| `/plot admin list <gracz/UUID>` | Wypisuje wszystkie działki właściciela (także offline): ID, nazwę, świat, pozycję i promień. Działa z konsoli i w grze; wymaga `plotsx.admin.manage`. |
 | `/plot admin <id>` | Otwiera panel członków wskazanej działki; wymaga `plotsx.admin.manage`. |
 | `/plot admin <id> <podkomenda> [argumenty]` | Wykonuje powyższe operacje na wskazanej działce, także z konsoli. Wymaga `plotsx.admin.manage`, bez osobnego wymogu `plotsx.cmd.plot`. `members` wypisuje listę. |
 
@@ -85,3 +86,7 @@ Skrót `/pchest` działa z każdą opcją. Szczegóły dostępu opisuje strona [
 | `/ptx import` | Wczytuje polecenia bazy z `dump/backup.sql`. Nie służy do zwykłego wczytywania configu. |
 
 Do kopii i przywracania danych użyj procedury z [administracji](Administracja.md).
+
+## Nazwy działek i CleanerX
+
+Zmiana nazwy sprawdza `containsBannedWord` z API CleanerX. Wykryte zakazane słowo lub pusta nazwa powoduje odrzucenie zmiany, również dla OP. Gdy zainstalowany CleanerX jest wyłączony, ma niezgodne API lub zgłasza błąd, zapis nazwy jest blokowany. Bez zainstalowanego CleanerX filtr słów nie działa. Obowiązuje słownik i whitelist CleanerX; istniejące nazwy nie są automatycznie zmieniane.

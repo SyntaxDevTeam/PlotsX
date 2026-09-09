@@ -40,13 +40,16 @@ class HookHandler(private val plugin: PlotsX) {
         }
     }
     fun connectCleanerX(): Boolean {
+        cleanerXAPI = null
         val cleanerX = Bukkit.getPluginManager().getPlugin("CleanerX")
             ?.takeIf { it.isEnabled }
             ?: return false
 
         return try {
-            cleanerXAPI = cleanerX.javaClass.getMethod("getApi").invoke(cleanerX)
-            cleanerXAPI != null
+            val api = cleanerX.javaClass.getMethod("getApi").invoke(cleanerX) ?: return false
+            api.javaClass.getMethod("containsBannedWord", String::class.java)
+            cleanerXAPI = api
+            true
         } catch (exception: IllegalStateException) {
             plugin.logger.warning(
                 "CleanerX integration could not be loaded because a dependency classloader is unavailable: " +
@@ -62,14 +65,22 @@ class HookHandler(private val plugin: PlotsX) {
         }
     }
 
-    fun censorWithCleanerX(message: String): String {
-        val api = cleanerXAPI ?: return message
+    /** null means an installed filter is unavailable; never save unverified names then. */
+    fun isPlotNameAllowed(message: String): Boolean? {
+        val cleaner = Bukkit.getPluginManager().getPlugin("CleanerX") ?: return true
+        if (!cleaner.isEnabled) return null
+        if (cleanerXAPI == null && !connectCleanerX()) return null
+        val api = cleanerXAPI ?: return null
         return try {
-            api.javaClass.getMethod("censorMessage", String::class.java, Boolean::class.javaPrimitiveType)
-                .invoke(api, message, true) as? String ?: message
+            CleanerXNameFilter.isAllowed(api, message)
         } catch (exception: ReflectiveOperationException) {
-            plugin.logger.warning("CleanerX failed to censor a plot name: ${exception.message}")
-            message
+            cleanerXAPI = null
+            plugin.logger.warning("CleanerX failed to validate a plot name: ${exception.message}")
+            null
+        } catch (error: LinkageError) {
+            cleanerXAPI = null
+            plugin.logger.warning("CleanerX could not validate a plot name: ${error.message}")
+            null
         }
     }
 

@@ -8,7 +8,7 @@ Lista odpowiada aktualnej implementacji. `[argument]` jest opcjonalny, a `<argum
 | --- | --- | --- |
 | `/claim` | `plotsx.cmd.claim` | Otwiera potwierdzenie utworzenia działki w miejscu gracza. Obowiązują dozwolone światy, limity terenu i kontrola kolizji. |
 | `/unclaim` | `plotsx.cmd.unclaim` | Otwiera potwierdzenie usunięcia własnej działki, na której stoi gracz. |
-| `/plot` | `plotsx.cmd.plot` | Otwiera panel działki pod graczem, jeśli jest jej właścicielem, członkiem lub ma dostęp administracyjny; poza działką pokazuje listę dostępnych działek. |
+| `/plot` | `plotsx.cmd.plot` | Otwiera panel działki pod graczem, jeśli jest jej właścicielem, członkiem lub ma dostęp administracyjny; poza działką pokazuje listę własnych działek, również dla OP. |
 | `/plot <nazwa>` | `plotsx.cmd.plot` | Otwiera panel dostępnej działki wyszukanej po nazwie; własna ma pierwszeństwo. |
 
 Zwykłe komendy działek są dostępne tylko dla graczy; `/plot admin <id> <podkomenda>` działa również z konsoli. `/unclaim` nie obsługuje wyboru działki po nazwie, mimo że podpowiedzi komendy zawierają nazwy działek. Panel `/plot` udostępnia flagi, teleportację, zmianę nazwy, listę działek, wizualizację granic i rozszerzanie; rozszerzanie wymaga dodatkowo `plotsx.plot.expand`.
@@ -25,6 +25,7 @@ Komendy wymagają `plotsx.cmd.plot` i stania na działce, do której gracz ma do
 | `/plot role <gracz> <member\|builder\|manager>` | Zmienia rolę członka; tylko właściciel/administrator. |
 | `/plot permission <rola> <grant> <true\|false>` | Ustawia grant roli dla tej działki; tylko właściciel/administrator. |
 | `/plot transfer <gracz> confirm` | Przekazuje własność obecnemu członkowi, który jest online; tylko właściciel/administrator. Sprawdza limity liczby, promienia i powierzchni odbiorcy oraz konflikt nazwy działki. |
+| `/plot admin list <gracz/UUID>` | Wypisuje wszystkie działki właściciela (także offline): ID, nazwę, świat, pozycję i promień. Działa z konsoli i w grze; wymaga `plotsx.admin.manage`. |
 | `/plot admin <id>` | Otwiera panel członków wskazanej działki; wymaga `plotsx.admin.manage`. |
 | `/plot admin <id> <podkomenda> [argumenty]` | Wykonuje powyższe operacje na wskazanej działce, także z konsoli. Wymaga `plotsx.admin.manage`, bez osobnego wymogu `plotsx.cmd.plot`. `members` wypisuje listę. |
 
@@ -121,3 +122,7 @@ Nowe kontenery właścicieli i członków działki są automatycznie zabezpiecza
 | `/ptx import` | Wykonuje SQL z `dump/backup.sql` w katalogu danych pluginu. Nie odświeża cache działek po imporcie. |
 
 `reload`, `export` i `import` nie mają osobnych kontroli uprawnień administracyjnych — uprawnienie `plotsx.cmd.ptx` pozwala wywołać je wszystkie.
+
+## Nazwy działek i CleanerX
+
+Zmiana nazwy sprawdza `containsBannedWord` z API CleanerX. Wykryte zakazane słowo lub pusta nazwa powoduje odrzucenie zmiany, również dla OP. Gdy zainstalowany CleanerX jest wyłączony, ma niezgodne API lub zgłasza błąd, zapis nazwy jest blokowany. Bez zainstalowanego CleanerX filtr słów nie działa. Obowiązuje słownik i whitelist CleanerX; istniejące nazwy nie są automatycznie zmieniane.

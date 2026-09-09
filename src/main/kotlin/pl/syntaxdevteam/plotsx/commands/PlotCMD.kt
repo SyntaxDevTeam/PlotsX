@@ -19,6 +19,23 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         val members = PlotMembers(plugin)
         if (args.firstOrNull().equals("admin", true)) {
             if (!access.admin(sender)) { members.reply(sender, "denied"); return }
+            if (args.getOrNull(1).equals("list", true)) {
+                if (args.size != 3) { members.reply(sender, "admin_usage"); return }
+                val input = args[2]
+                val uuid = runCatching { java.util.UUID.fromString(input) }.getOrNull()
+                    ?: plugin.server.getPlayerExact(input)?.uniqueId
+                    ?: plugin.server.offlinePlayers.firstOrNull { it.name.equals(input, true) }?.uniqueId
+                if (uuid == null) { members.reply(sender, "unknown_player"); return }
+                val plots = plugin.databaseHandler.getPlotsByOwner(uuid).sortedBy { it.id }
+                members.reply(sender, "admin_list_header", mapOf("player" to members.name(uuid), "count" to plots.size.toString()))
+                plots.forEach { plot ->
+                    // Names are literal text, never MiniMessage markup.
+                    sender.sendMessage(net.kyori.adventure.text.Component.text(
+                        "#${plot.id} | ${plot.name} | ${plot.world}: ${plot.x}, ${plot.z} | r=${plot.radius}"
+                    ))
+                }
+                return
+            }
             val id = args.getOrNull(1)?.toIntOrNull()
             if (id == null) { members.reply(sender, "admin_usage"); return }
             val plot = plugin.databaseHandler.getPlotById(id)
@@ -46,7 +63,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             if (!access.canOpen(player, plot)) { members.reply(player, "denied"); return }
             plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot, plot.ownerUuid))
         } else if (args.isEmpty()) {
-            val plots = plugin.databaseHandler.getPlotsFromAllUsers().filter { access.canOpen(player, it) }
+            val plots = plugin.databaseHandler.getPlotsByOwner(player.uniqueId)
             if (plots.isEmpty()) members.reply(player, "stand_on_plot")
             else plugin.guiHandler.registerGui(player, PlotListGUI(plugin, plots, player.uniqueId))
         } else player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "plot_not_found"))
@@ -57,7 +74,9 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         if (!PermissionChecker.canManagePlot(sender) && !access.admin(sender)) return emptyList()
         val admin = args.firstOrNull().equals("admin", true)
         if (admin && !access.admin(sender)) return emptyList()
-        if (admin && args.size == 2) return plugin.cacheManager.getCachedPlots().map { it.id.toString() }
+        if (admin && args.size == 3 && args[1].equals("list", true)) return plugin.server.offlinePlayers
+            .mapNotNull { it.name }.filter { it.startsWith(args[2], true) }.distinct().sorted()
+        if (admin && args.size == 2) return (listOf("list") + plugin.cacheManager.getCachedPlots().map { it.id.toString() })
             .filter { it.startsWith(args[1]) }
         val words = if (admin) args.drop(2) else args.toList()
         val plot = if (admin) args.getOrNull(1)?.toIntOrNull()?.let { plugin.cacheManager.getPlot(it) }

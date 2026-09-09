@@ -34,7 +34,7 @@ class RenamePlotChatListener(private val plugin: PlotsX) : Listener {
         entry.second.cancel()
         val plotId = entry.first
         val rawName = PlainTextComponentSerializer.plainText().serialize(event.originalMessage()).trim()
-        val newName = plugin.hookHandler.censorWithCleanerX(rawName)
+        val newName = rawName
 
         Bukkit.getScheduler().runTask(plugin, Runnable {
             val plot = plugin.databaseHandler.getPlotById(plotId)
@@ -44,6 +44,13 @@ class RenamePlotChatListener(private val plugin: PlotsX) : Listener {
             }
             if (!pl.syntaxdevteam.plotsx.permissions.PlotAccess(plugin).allowed(player, plot, "rename")) {
                 player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_permission"))
+                return@Runnable
+            }
+            val allowed = if (newName.isBlank()) false else plugin.hookHandler.isPlotNameAllowed(newName)
+            if (allowed != true) {
+                player.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                    "plots", if (allowed == null) "rename_filter_unavailable" else "rename_rejected"
+                ))
                 return@Runnable
             }
             if (plugin.databaseHandler.getPlotByName(newName, plot.ownerUuid) != null) {

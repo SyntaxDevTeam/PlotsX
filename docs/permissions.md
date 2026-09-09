@@ -24,6 +24,8 @@ Uprawnienie do komendy nie zastępuje wymaganej własności działki lub skrzyni
 
 ## Limity liczbowe
 
+`plotsx.admin.manage` pozwala także używać `/plot admin list <gracz/UUID>` do wypisania działek wskazanego właściciela, również offline. OP i dostęp administracyjny nie rozszerzają listy „moich działek” o cudze działki.
+
 | Wzorzec | Przykład | Znaczenie |
 | --- | --- | --- |
 | `plotsx.plot.max-plots.<liczba>` | `plotsx.plot.max-plots.10` | Maksymalna liczba działek we wszystkich światach, również przy odbieraniu własności. |

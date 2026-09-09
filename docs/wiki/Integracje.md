@@ -39,7 +39,9 @@ PlotsX nie udostępnia graczom własnej komendy przywracania działki ani menu h
 
 ## CleanerX — nazwy działek
 
-Gdy CleanerX jest dostępny i połączenie działa, nazwy wpisywane podczas zmiany nazwy przechodzą przez jego filtr. Bez niego zmiana nazwy również działa.
+PlotsX sprawdza nazwy przez `containsBannedWord` z API CleanerX. Wykrycie zakazanego słowa odrzuca zmianę nazwy, także dla OP. Gdy zainstalowany CleanerX jest wyłączony lub jego API nie działa, zapis nazwy zostaje zablokowany z komunikatem dla gracza. Bez zainstalowanego CleanerX zmiana nazwy działa bez filtra słów. Istniejące nazwy nie są automatycznie zmieniane.
+
+Po uruchomieniu sprawdź log: `CleanerX API detected - integration enabled.` potwierdza połączenie. Wpis `CleanerX API not detected - skipping integration.` oznacza, że połączenie nie zostało nawiązane; sprawdź obecność i uruchomienie CleanerX oraz poprzedzające ostrzeżenia o API. Wynik wykrywania słów zależy od słownika i whitelist CleanerX.
 
 ## PlaceholderAPI i MiniPlaceholders
 
