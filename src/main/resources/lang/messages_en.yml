@@ -101,6 +101,30 @@ members:
   transfer_button: "Transfer ownership"
   role_item: "Rank: <role>"
   permission_item: "<action>: <value> (click to toggle)"
+  role_names:
+    member: "Member"
+    builder: "Builder"
+    manager: "Manager"
+  permissions_title: "Rank permissions"
+  edit_role_hint: "<gray>Click to edit this rank's permissions.</gray>"
+  assign_role_hint: "<gray>Click to assign this rank to the player.</gray>"
+  grant_title: "Permission:"
+  grant_true: "Granted"
+  grant_false: "Not granted"
+  flag_permission_hint: "<yellow>Allows this rank to change this plot flag.</yellow>"
+  action_permission_hint: "<yellow>Allows this rank to perform this action.</yellow>"
+  toggle_permission_hint: "<gray>Click to change this permission.</gray>"
+  permission_read_only: "<red>You cannot change this rank's permissions.</red>"
+  actions:
+    invite:
+      name: "Add members"
+      description: "Add players to this plot."
+    kick:
+      name: "Remove members"
+      description: "Remove members from this plot according to the rank hierarchy."
+    rename:
+      name: "Rename plot"
+      description: "Give the plot a new name."
   confirm_remove: "Confirm removal: <player>"
   confirm_transfer: "Confirm ownership transfer: <player>"
   back: "Back / cancel"

@@ -1,13 +1,9 @@
 package pl.syntaxdevteam.plotsx.gui
 
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.format.NamedTextColor
-import net.kyori.adventure.text.format.TextDecoration
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
-import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
@@ -40,64 +36,16 @@ class FlagsGUI(
             val flagData = flags.firstOrNull { it.name == flagMeta.name }
             val current = flagData?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
 
-            val name = flagMeta.customDisplayName?.let { Component.text(it) }
-                ?: message.stringMessageToComponentNoPrefix("flags", flagMeta.displayKey)
-            val desc = flagMeta.customDescription?.let { Component.text(it) }
-                ?: message.stringMessageToComponentNoPrefix("flags", flagMeta.descriptionKey)
-            val descTitle = message.stringMessageToComponentNoPrefix("flags", "desc_title")
-            val valueTitle = message.stringMessageToComponentNoPrefix("flags", "value_title")
-            val valueText = message.stringMessageToComponentNoPrefix(
-                "flags",
-                if (current) "value_true" else "value_false"
-            )
-            val valueComponent = Component.text()
-                .color(if (current) NamedTextColor.GREEN else NamedTextColor.RED)
-                .append(
-                    Component.text(if (current) "✔" else "✘")
-                        .decorate(TextDecoration.BOLD)
-                )
-                .append(Component.space())
-                .append(valueText)
-                .build()
-
-            val item = ItemStack(flagMeta.material)
+            val item = SettingItem.create(flagMeta.material, SettingItem.name(plugin, flagMeta),
+                SettingItem.description(plugin, flagMeta), current,
+                message.stringMessageToComponentNoPrefix("flags", "value_title"),
+                message.stringMessageToComponentNoPrefix("flags", if (current) "value_true" else "value_false"),
+                message.stringMessageToComponentNoPrefix("flags", "desc_title"),
+                if ("flag.${flagMeta.name}" !in allowedActions)
+                    listOf(message.stringMessageToComponentNoPrefix("members", "read_only")) else emptyList())
             val meta = item.itemMeta!!
             meta.persistentDataContainer.set(keyFlag, PersistentDataType.STRING, flagMeta.name)
-            meta.displayName(
-                Component.text()
-                    .color(NamedTextColor.GOLD)
-                    .append(Component.text("=> "))
-                    .append(name.decorate(TextDecoration.BOLD))
-                    .append(Component.text(" <="))
-                    .build()
-            )
-            meta.lore(
-                listOf(
-                    Component.text()
-                        .color(NamedTextColor.AQUA)
-                        .append(Component.text("     "))
-                        .append(valueTitle)
-                        .append(Component.text(": "))
-                        .append(valueComponent)
-                        .build(),
-                    Component.empty(),
-                    Component.text()
-                        .color(NamedTextColor.AQUA)
-                        .append(descTitle)
-                        .append(
-                            Component.text()
-                                .color(NamedTextColor.GRAY)
-                                .append(desc)
-                                .build()
-                        )
-                        .build()
-                )
-            )
-            if ("flag.${flagMeta.name}" !in allowedActions) {
-                meta.lore(meta.lore().orEmpty() + message.stringMessageToComponentNoPrefix("members", "read_only"))
-            }
             item.itemMeta = meta
-
             inventory.setItem(idx, item)
         }
         inventory.setItem(

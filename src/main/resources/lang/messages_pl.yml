@@ -101,6 +101,30 @@ members:
   transfer_button: "Przekaż własność"
   role_item: "Ranga: <role>"
   permission_item: "<action>: <value> (kliknij, aby zmienić)"
+  role_names:
+    member: "Członek"
+    builder: "Budowniczy"
+    manager: "Zarządca"
+  permissions_title: "Uprawnienia rangi"
+  edit_role_hint: "<gray>Kliknij, aby ustawić uprawnienia tej rangi.</gray>"
+  assign_role_hint: "<gray>Kliknij, aby nadać graczowi tę rangę.</gray>"
+  grant_title: "Uprawnienie:"
+  grant_true: "Przyznane"
+  grant_false: "Nieprzyznane"
+  flag_permission_hint: "<yellow>Pozwala randze zmieniać tę flagę działki.</yellow>"
+  action_permission_hint: "<yellow>Pozwala randze wykonywać tę czynność.</yellow>"
+  toggle_permission_hint: "<gray>Kliknij, aby zmienić uprawnienie.</gray>"
+  permission_read_only: "<red>Nie możesz zmieniać uprawnień tej rangi.</red>"
+  actions:
+    invite:
+      name: "Dodawanie członków"
+      description: "Dodawanie graczy do tej działki."
+    kick:
+      name: "Usuwanie członków"
+      description: "Usuwanie członków z tej działki zgodnie z hierarchią rang."
+    rename:
+      name: "Zmiana nazwy działki"
+      description: "Nadawanie działce nowej nazwy."
   confirm_remove: "Potwierdź usunięcie: <player>"
   confirm_transfer: "Potwierdź przekazanie własności: <player>"
   back: "Powrót / anuluj"

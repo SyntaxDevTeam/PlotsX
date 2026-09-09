@@ -3,10 +3,24 @@ package pl.syntaxdevteam.plotsx.gui
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.TextDecoration
+import net.kyori.adventure.text.format.NamedTextColor
+import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.commands.PlotMembers
 import pl.syntaxdevteam.plotsx.permissions.PlotAccess
 import java.util.UUID
+
+private fun styledRoleName(plugin: PlotsX, rank: String): Component =
+    plugin.messageHandler.stringMessageToComponentNoPrefix("members", "role_names.$rank")
+        .color(when (rank) {
+            "builder" -> NamedTextColor.AQUA
+            "manager" -> NamedTextColor.GOLD
+            else -> NamedTextColor.GREEN
+        })
+        .decorate(TextDecoration.BOLD)
+        .decoration(TextDecoration.ITALIC, false)
 
 /** All pages carry only identifiers; click authorization uses the current database state. */
 class MembersGUI(
@@ -16,14 +30,33 @@ class MembersGUI(
     private val target: UUID? = null,
     private val role: String? = null,
     private val page: Int = 0
-) : AbstractGUI(plugin.messageHandler.stringMessageToComponentNoPrefix("members", "title"), 54) {
+) : AbstractGUI(
+    if (screen == "permissions" && role != null)
+        plugin.messageHandler.stringMessageToComponentNoPrefix("members", "permissions_title")
+            .append(Component.text(": "))
+            .append(styledRoleName(plugin, role))
+    else plugin.messageHandler.stringMessageToComponentNoPrefix("members", "title"), 54
+) {
     private val access = PlotAccess(plugin)
     private val operations = PlotMembers(plugin)
     private val clicks = mutableMapOf<Int, (Player) -> Unit>()
 
+    private fun text(key: String) = plugin.messageHandler.stringMessageToComponentNoPrefix("members", key)
+    // Message placeholders accept MiniMessage; plain serialization would discard rank styling.
+    private fun roleName(rank: String): String = net.kyori.adventure.text.minimessage.MiniMessage
+        .miniMessage().serialize(styledRoleName(plugin, rank))
+    private fun roleIcon(rank: String): Material = when (rank) {
+        "builder" -> Material.IRON_PICKAXE
+        "manager" -> Material.GOLDEN_HELMET
+        else -> Material.PLAYER_HEAD
+    }
+
     private fun button(slot: Int, material: Material, key: String, values: Map<String, String> = emptyMap(), action: (Player) -> Unit) {
-        inventory.setItem(slot, plugin.guiHandler.createItem(material,
-            plugin.messageHandler.stringMessageToComponentNoPrefix("members", key, values)))
+        val item = plugin.guiHandler.createItem(material,
+            plugin.messageHandler.stringMessageToComponentNoPrefix("members", key, values)
+                .colorIfAbsent(if (key in listOf("back", "previous", "next")) NamedTextColor.GRAY else NamedTextColor.GOLD)
+                .decoration(TextDecoration.ITALIC, false))
+        inventory.setItem(slot, item)
         clicks[slot] = action
     }
 
@@ -43,7 +76,7 @@ class MembersGUI(
                 val entries = members.sortedBy { operations.name(UUID.fromString(it.memberUuid)).lowercase() }
                 entries.drop(page * 45).take(45).forEachIndexed { slot, member ->
                     val id = UUID.fromString(member.memberUuid)
-                    button(slot, Material.PLAYER_HEAD, "member_item", mapOf("player" to operations.name(id), "role" to member.memberRole)) {
+                    button(slot, Material.PLAYER_HEAD, "member_item", mapOf("player" to operations.name(id), "role" to roleName(member.memberRole))) {
                         show(it, "member", id)
                     }
                 }
@@ -74,10 +107,15 @@ class MembersGUI(
             }
             "rank", "roles" -> {
                 access.roles.forEachIndexed { index, rank ->
-                    button(20 + index * 2, Material.NAME_TAG, "role_item", mapOf("role" to rank)) {
+                    button(20 + index * 2, roleIcon(rank), "role_item", mapOf("role" to roleName(rank))) {
                         if (screen == "roles") show(it, "permissions", role = rank)
                         else run(it, listOf("role", target.toString(), rank))
                     }
+                    val item = inventory.getItem(20 + index * 2)!!
+                    val meta = item.itemMeta!!
+                    meta.lore(listOf(text(if (screen == "roles") "edit_role_hint" else "assign_role_hint")
+                        .decoration(TextDecoration.ITALIC, false)))
+                    item.itemMeta = meta
                 }
             }
             "permissions" -> {
@@ -86,8 +124,21 @@ class MembersGUI(
                 val grants = access.grants(plotId, rank)
                 actions.drop(page * 45).take(45).forEachIndexed { slot, action ->
                     val granted = action in grants
-                    button(slot, if (granted) Material.LIME_DYE else Material.GRAY_DYE, "permission_item",
-                        mapOf("action" to action, "value" to granted.toString())) {
+                    val flag = action.takeIf { it.startsWith("flag.") }
+                        ?.removePrefix("flag.")?.let { PlotFlagRegistry.allFlags[it] }
+                    val material = flag?.material ?: when (action) {
+                        "invite" -> Material.EMERALD
+                        "kick" -> Material.BARRIER
+                        else -> Material.NAME_TAG
+                    }
+                    val name = flag?.let { SettingItem.name(plugin, it) } ?: text("actions.$action.name")
+                    val description = flag?.let { SettingItem.description(plugin, it) } ?: text("actions.$action.description")
+                    inventory.setItem(slot, SettingItem.create(material, name, description, granted,
+                        text("grant_title"), text(if (granted) "grant_true" else "grant_false"),
+                        plugin.messageHandler.stringMessageToComponentNoPrefix("flags", "desc_title"),
+                        listOf(Component.empty(), text(if (flag != null) "flag_permission_hint" else "action_permission_hint"),
+                            text(if (access.owner(player, plot)) "toggle_permission_hint" else "permission_read_only"))))
+                    clicks[slot] = {
                         operations.execute(it, plotId, listOf("permission", rank, action, (!granted).toString()))
                         show(it, "permissions", role = rank, page = page)
                     }
@@ -95,14 +146,19 @@ class MembersGUI(
                 pages(actions.size)
             }
             "remove", "transfer" -> {
-                button(22, Material.LIME_CONCRETE, "confirm_$screen", mapOf("player" to operations.name(target ?: return))) {
+                button(22, Material.EMERALD_BLOCK, "confirm_$screen", mapOf("player" to operations.name(target ?: return))) {
                     run(it, if (screen == "transfer") listOf("transfer", target.toString(), "confirm")
                         else listOf("remove", target.toString()))
                 }
             }
         }
-        button(49, Material.ARROW, "back") {
-            if (screen == "members") plugin.guiHandler.registerGui(it, PlotGUI(plugin, plot, plot.ownerUuid)) else show(it)
+        button(49, Material.BARRIER, "back") {
+            when (screen) {
+                "members" -> plugin.guiHandler.registerGui(it, PlotGUI(plugin, plot, plot.ownerUuid))
+                "permissions" -> show(it, "roles")
+                "rank", "remove", "transfer" -> show(it, "member", target)
+                else -> show(it)
+            }
         }
         if (screen in listOf("remove", "transfer") && target != null &&
             plugin.interactions.confirm(player,
