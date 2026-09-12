@@ -1204,7 +1204,8 @@ fun getPlotsFromAllUsers(): List<PlotData> {
 
     fun importDatabase() {
         (getConnection() ?: error("No database connection.")).use { conn ->
-            SqlBackup.restore(conn, SqlBackup.dialect(dbType), File(plugin.dataFolder, "dump/backup.sql"))
+            // E3 can store chunks; runtime protection will be integrated in E4 before enabling imports.
+            SqlBackup.restore(conn, SqlBackup.dialect(dbType), File(plugin.dataFolder, "dump/backup.sql"), allowChunkPlots = false)
         }
         plugin.cacheManager.reloadAllCachesSync()
     }

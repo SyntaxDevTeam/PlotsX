@@ -2,6 +2,7 @@ package pl.syntaxdevteam.plotsx.databases
 
 /** Shared schema for startup and portable backups. */
 internal object DatabaseSchema {
+    /** Frozen v1 schema: used by the classic runtime and by the legacy backup reader. */
     fun statements(dbType: String): List<String> = buildList {
         val createPlotsTable = when (dbType) {
             "sqlite" -> """
@@ -217,5 +218,40 @@ internal object DatabaseSchema {
         }
         add(createPlotLogsTable)
 
+    }
+
+    /** Staged schema, activated explicitly by DatabaseMigrations, not by the classic runtime. */
+    fun chunkStatements(dbType: String): List<String> {
+        // Canonical world keys must compare exactly, independently of database accent/case collation.
+        val worldKeyType = if (dbType == "mysql" || dbType == "mariadb")
+            "VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin" else "VARCHAR(255)"
+        val columns = """
+            geometry_type VARCHAR(16) NOT NULL DEFAULT 'classic',
+            geometry_revision BIGINT NOT NULL DEFAULT 0
+        """.trimIndent()
+        val classic = statements(dbType)
+        val plots = classic.first()
+            .replace("radius INTEGER NOT NULL", "radius INTEGER")
+            .replace("radius INT NOT NULL", "radius INT")
+            .replace("UNIQUE(x, z, world)", columns)
+            .replace("UNIQUE KEY unique_location (x, z, world)", columns)
+        return listOf(plots) + classic.drop(1) + listOf(
+            """
+                CREATE TABLE IF NOT EXISTS plot_chunks (
+                    plot_id INTEGER NOT NULL,
+                    world_key $worldKeyType NOT NULL,
+                    chunk_x INTEGER NOT NULL,
+                    chunk_z INTEGER NOT NULL,
+                    PRIMARY KEY (world_key, chunk_x, chunk_z),
+                    FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
+                )
+            """.trimIndent(),
+            """
+                CREATE TABLE IF NOT EXISTS schema_migrations (
+                    version INTEGER PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL
+                )
+            """.trimIndent()
+        )
     }
 }

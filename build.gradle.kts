@@ -42,6 +42,7 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.xerial:sqlite-jdbc:3.53.4.0")
     testImplementation("com.h2database:h2:2.4.240")
+    testRuntimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.10")
     compileOnly("io.papermc.paper:paper-api:$paperApiVersion")
     compileOnly("pl.syntaxdevteam:syntaxcore:1.4.0-R0.1-SNAPSHOT")
     compileOnly("pl.syntaxdevteam:messageHandler-paper:1.2.2-R0.4-SNAPSHOT")

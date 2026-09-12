@@ -33,6 +33,11 @@ internal object SqlBackup {
     }
 
     fun export(conn: Connection, dialect: String, directory: File): File {
+        require(conn.autoCommit) { "Export requires a dedicated auto-commit connection" }
+        val isolation = conn.transactionIsolation
+        val chunkSchema = DatabaseMigrations.isChunkSchema(conn)
+        val exportedTables = if (chunkSchema) tables + "plot_chunks" else tables
+        val schema = if (chunkSchema) DatabaseSchema.chunkStatements(dialect) else DatabaseSchema.statements(dialect)
         Files.createDirectories(directory.toPath())
         val destination = File(directory, "backup.sql")
         val temporary = Files.createTempFile(directory.toPath(), "backup-", ".tmp")
@@ -43,11 +48,11 @@ internal object SqlBackup {
             conn.autoCommit = false
             Files.newBufferedWriter(temporary, Charsets.UTF_8).use { writer ->
                 fun line(sql: String) { writer.write(sql); writer.newLine() }
-                line("-- PlotsX SQL backup v1 dialect=$dialect")
-                DatabaseSchema.statements(dialect).forEach { line(it.trim().removeSuffix(";").replace(Regex("\\s+"), " ") + ";") }
+                line("-- PlotsX SQL backup v${if (chunkSchema) 2 else 1} dialect=$dialect")
+                schema.forEach { line(it.trim().removeSuffix(";").replace(Regex("\\s+"), " ") + ";") }
                 line("BEGIN;")
-                tables.asReversed().forEach { line("DELETE FROM $it;") }
-                for (table in tables) {
+                exportedTables.asReversed().forEach { line("DELETE FROM $it;") }
+                for (table in exportedTables) {
                     conn.createStatement().use { statement ->
                         statement.executeQuery("SELECT * FROM $table").use { rows ->
                             val columns = (1..rows.metaData.columnCount).map { rows.metaData.getColumnName(it).lowercase(Locale.ROOT) }
@@ -85,40 +90,56 @@ internal object SqlBackup {
             conn.rollback()
             throw failure
         } finally {
+            conn.autoCommit = true
+            if (conn.transactionIsolation != isolation) conn.transactionIsolation = isolation
             Files.deleteIfExists(temporary)
         }
     }
 
-    fun restore(conn: Connection, dialect: String, file: File) {
+    fun restore(conn: Connection, dialect: String, file: File, allowChunkPlots: Boolean = false) {
         // Validate the entire file before modifying the database. Only our versioned format is supported.
         val lines = file.readLines(Charsets.UTF_8)
-        require(lines.firstOrNull() == "-- PlotsX SQL backup v1 dialect=$dialect") {
+        val chunkBackup = lines.firstOrNull() == "-- PlotsX SQL backup v2 dialect=$dialect"
+        require(chunkBackup || lines.firstOrNull() == "-- PlotsX SQL backup v1 dialect=$dialect") {
             "Not a PlotsX backup for $dialect. Export using the target database dialect."
         }
-        val schema = DatabaseSchema.statements(dialect).map { it.trim().removeSuffix(";").replace(Regex("\\s+"), " ") + ";" }
+        val schema = (if (chunkBackup) DatabaseSchema.chunkStatements(dialect) else DatabaseSchema.statements(dialect))
+            .map { it.trim().removeSuffix(";").replace(Regex("\\s+"), " ") + ";" }
         val legacySchema = schema.filterNot { it.startsWith("CREATE TABLE IF NOT EXISTS plot_segments ") }
-        val sourceSchema = if (lines.drop(1).take(schema.size) == schema) schema else legacySchema
-        val sourceTables = if (sourceSchema == schema) tables else tables.filterNot { it == "plot_segments" }
+        val sourceSchema = if (chunkBackup || lines.drop(1).take(schema.size) == schema) schema else legacySchema
+        val sourceTables = if (chunkBackup) tables + "plot_chunks" else if (sourceSchema == schema) tables else tables.filterNot { it == "plot_segments" }
         require(lines.drop(1).take(sourceSchema.size) == sourceSchema && lines.lastOrNull() == "COMMIT;") { "Incomplete backup or unsupported schema." }
         val body = lines.drop(1 + sourceSchema.size).dropLast(1)
         require(body.firstOrNull() == "BEGIN;") { "Missing transaction." }
         require(body.drop(1).take(sourceTables.size) == sourceTables.asReversed().map { "DELETE FROM $it;" }) { "Incomplete backup." }
+        require(conn.autoCommit) { "Restore requires a dedicated auto-commit connection" }
+        if (chunkBackup) DatabaseMigrations.migrate(conn, dialect)
         conn.createStatement().use { statement ->
             schema.forEach { statement.execute(it) }
         }
+        val chunkTarget = DatabaseMigrations.isChunkSchema(conn)
         conn.autoCommit = false
         try {
             conn.createStatement().use { statement ->
+                if (chunkTarget) statement.execute("DELETE FROM plot_chunks")
                 statement.execute("DELETE FROM plot_segments")
                 // H2 ALTER TABLE commits implicitly: reset identities only after all data has loaded.
                 body.drop(1).filterNot { it.startsWith("ALTER TABLE ") }.forEach { statement.execute(it) }
+            }
+            if (chunkTarget) {
+                val geometries = PlotGeometryRepository.readAll(conn)
+                require(allowChunkPlots || geometries.none { it.geometry is pl.syntaxdevteam.plotsx.geometry.ChunkGeometry }) {
+                    "Chunk plots cannot be imported before chunk protection is available"
+                }
+                PlotGeometryRepository.validateNoOverlaps(geometries)
             }
             conn.commit()
         } catch (failure: Exception) {
             conn.rollback()
             throw failure
+        } finally {
+            conn.autoCommit = true
         }
-        conn.autoCommit = true
         conn.createStatement().use { statement ->
             body.filter { it.startsWith("ALTER TABLE ") }.forEach { statement.execute(it) }
         }

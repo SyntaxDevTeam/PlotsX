@@ -1,5 +1,6 @@
 package pl.syntaxdevteam.plotsx.databases
 
+import pl.syntaxdevteam.plotsx.geometry.ClassicGeometry
 import java.util.*
 
 data class PlotData @JvmOverloads constructor(
@@ -14,25 +15,16 @@ data class PlotData @JvmOverloads constructor(
     val creationTime: Long,
     val extensions: List<PlotSegment> = emptyList()
 ) {
-    val segments: List<PlotSegment> = listOf(PlotSegment(x, z, radius)) + extensions
-    val area: Long get() = segments.fold(0L) { total, segment ->
-        if (Long.MAX_VALUE - total < segment.area) Long.MAX_VALUE else total + segment.area
-    }
-    fun contains(x: Int, z: Int): Boolean = segments.any { it.contains(x, z) }
+    val geometry = ClassicGeometry(PlotSegment(x, z, radius), extensions)
+    val segments: List<PlotSegment> get() = geometry.segments
+    val area: Long get() = geometry.area
+    fun contains(x: Int, z: Int): Boolean = geometry.contains(x, z)
 
-    fun segmentAt(x: Int, z: Int): PlotSegment? = segments.firstOrNull { it.contains(x, z) }
+    fun segmentAt(x: Int, z: Int): PlotSegment? = geometry.segmentAt(x, z)
 
     /** Add the immediate neighbour of an existing segment; never skip occupied land. */
-    fun expansion(direction: ExpansionDirection, source: PlotSegment = segments.first()): PlotSegment? {
-        if (source !in segments) return null
-        val side = radius.toLong() * 2 + 1
-        val nx = source.x.toLong() + direction.dx * side
-        val nz = source.z.toLong() + direction.dz * side
-        if (nx - radius < Int.MIN_VALUE || nx + radius > Int.MAX_VALUE ||
-            nz - radius < Int.MIN_VALUE || nz + radius > Int.MAX_VALUE) return null
-        val candidate = PlotSegment(nx.toInt(), nz.toInt(), radius)
-        return candidate.takeUnless { next -> segments.any { it.overlaps(next) } }
-    }
+    fun expansion(direction: ExpansionDirection, source: PlotSegment = segments.first()): PlotSegment? =
+        geometry.expansion(direction, source)
 
 }
 
