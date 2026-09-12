@@ -166,7 +166,7 @@ class PlotGUI(
                     helpers.visualizePlotBorder3D(
                         player = player,
                         plot = pd,
-                        durationSec = 20,
+                        durationSec = helpers.borderDurationSeconds(),
                         stepXZ = 2,
                         stepY = 4
                     )

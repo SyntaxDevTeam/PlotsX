@@ -460,6 +460,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         ownerUuid: UUID,
         actorUuid: UUID,
         direction: ExpansionDirection,
+        sourceSegment: PlotSegment,
         expectedSegment: PlotSegment,
         maxRadius: Int,
         maxTotalArea: Long,
@@ -497,7 +498,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                     val oldRadius = current[3] as Int
                     val world = current[4] as String
                     val fresh = plot.copy(x = x, z = z, radius = oldRadius, extensions = readSegments(conn, plotId))
-                    val target = fresh.expansion(direction)
+                    val target = fresh.expansion(direction, sourceSegment)
                     if (target == null || target != expectedSegment || fresh.extensions.size != expectedSegmentCount) {
                         conn.rollback()
                         return@withLock ExpandResult.DatabaseError

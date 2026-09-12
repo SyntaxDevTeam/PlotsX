@@ -18,6 +18,9 @@ import java.math.BigDecimal
 class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractGUI(
     plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "expand.title"), 27
 ) {
+    private val bordersIndex = 13
+    private var quotedSource: PlotSegment? = null
+    private val helpers = Helpers(plugin)
     private val confirmIndex = 20
     private val cancelIndex = 24
     private var quotedPrice: BigDecimal? = null
@@ -30,14 +33,18 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         val plot = plugin.databaseHandler.getPlotById(plotId) ?: run {
             player.sendMessage(error("plot_not_found")); return
         }
-        val target = plot.expansion(direction)
+        val source = if (player.world.name == plot.world)
+            plot.segmentAt(player.location.blockX, player.location.blockZ) else null
+        val target = source?.let { plot.expansion(direction, it) }
         quotedPrice = ExpansionEconomy.price(plugin, plot.extensions.size)
         quotedSegment = target
+        quotedSource = source
         val limits = plugin.hookHandler.getPlotLimits(player)
         val currentTotal = plugin.databaseHandler.getPlotsByOwner(plot.ownerUuid).sumOf { it.area }
         val targetTotal = if (target == null || Long.MAX_VALUE - currentTotal < target.area) Long.MAX_VALUE else currentTotal + target.area
         val summary = listOf(
             text("expand.directions.${direction.name.lowercase()}"),
+            if (source == null) text("expand.stand_inside") else text("expand.source", mapOf("x" to source.x.toString(), "z" to source.z.toString())),
             text("expand.segment", mapOf("size" to (plot.radius.toLong() * 2 + 1).toString())),
             text("expand.area", mapOf("used" to targetTotal.toString(), "max" to limit(limits.maxTotalArea))),
             text("expand.max_radius", mapOf("max" to limit(limits.maxRadius.toLong()))),
@@ -46,6 +53,8 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
             inventory.setItem(slot, item(if (value == direction) Material.LIME_CONCRETE else Material.COMPASS,
                 text("expand.directions.${value.name.lowercase()}"), emptyList()))
         }
+        inventory.setItem(bordersIndex, item(Material.ENDER_EYE, text("expand.show_borders"),
+            listOf(text("expand.borders_duration", mapOf("seconds" to helpers.borderDurationSeconds().toString())))))
         inventory.setItem(confirmIndex, item(Material.EMERALD_BLOCK, text("expand.confirm"), summary))
         inventory.setItem(cancelIndex, item(Material.BARRIER, text("expand.cancel"), emptyList()))
         openLegacy(player)
@@ -58,6 +67,16 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         event.isCancelled = true
         val player = event.whoClicked as? Player ?: return
         if (submitted) return
+        if (event.rawSlot == bordersIndex) {
+            player.scheduler.run(plugin, {
+                if (player.openInventory.topInventory !== inventory || submitted) return@run
+                val plot = plugin.databaseHandler.getPlotById(plotId) ?: return@run
+                player.closeInventory()
+                plugin.guiHandler.unregisterGui(player)
+                helpers.visualizePlotBorder3D(player, plot, helpers.borderDurationSeconds(), 2, 4)
+            }, null)
+            return
+        }
         directions[event.rawSlot]?.let {
             direction = it
             player.scheduler.run(plugin, {
@@ -85,13 +104,19 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         if (plot.ownerUuid != ownerUuid) {
             player.sendMessage(error("not_owner")); return
         }
-        val target = plot.expansion(direction)
+        val source = quotedSource ?: run {
+            player.sendMessage(text("expand.stand_inside")); return
+        }
+        if (player.world.name != plot.world || plot.segmentAt(player.location.blockX, player.location.blockZ) != source) {
+            player.sendMessage(error("expand_quote_changed")); return
+        }
+        val target = plot.expansion(direction, source)
         val price = ExpansionEconomy.price(plugin, plot.extensions.size)
         if (price == null || quotedPrice == null) {
             player.sendMessage(error("expand_invalid_price")); return
         }
         if (target == null) {
-            player.sendMessage(error("expand_radius_limit")); return
+            player.sendMessage(text("expand.direction_blocked")); return
         }
         if (price.compareTo(quotedPrice) != 0 || target != quotedSegment) {
             player.sendMessage(error("expand_quote_changed")); return
@@ -120,7 +145,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         }
         val result = try {
             plugin.databaseHandler.expandPlotAtomically(
-                plot.id, ownerUuid, player.uniqueId, direction, target, limits.maxRadius, limits.maxTotalArea, plot.extensions.size
+                plot.id, ownerUuid, player.uniqueId, direction, source, target, limits.maxRadius, limits.maxTotalArea, plot.extensions.size
             )
         } catch (ex: Exception) {
             plugin.logger.err("Expansion failed for plot ${plot.id}: ${ex.message}")
@@ -146,7 +171,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
                 player.sendMessage(plugin.messageHandler.stringMessageToComponent(
                     "plots", "expand_success", mapOf("size" to (result.segment.radius.toLong() * 2 + 1).toString())
                 ))
-                Helpers(plugin).visualizePlotBorder3D(player, oldPlot.copy(extensions = oldPlot.extensions + result.segment), 20, 2, 4)
+                helpers.visualizePlotBorder3D(player, oldPlot.copy(extensions = oldPlot.extensions + result.segment), helpers.borderDurationSeconds(), 2, 4)
                 return
             }
             DatabaseHandler.ExpandResult.PlotNotFound -> "plot_not_found"

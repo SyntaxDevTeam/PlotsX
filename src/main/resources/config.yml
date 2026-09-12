@@ -39,7 +39,10 @@ plots:
   # Allowed loaded worlds, including worlds loaded by Multiverse-Core.
   # A legacy single string is also supported. ["*"] = all worlds; [] = none.
   world: ["world"]
+  # Duration of Show borders in the plot and expansion menus (seconds, minimum 1).
+  borderDisplaySeconds: 30
   expansion:
+    # Stand in the segment from which you want to expand; select an adjacent direction.
     # Each purchase adds one square of the plot's original size in the selected direction.
     # Base price of the first segment in the default economy currency; 0 = free.
     price: 500.0

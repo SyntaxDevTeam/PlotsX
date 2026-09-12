@@ -51,9 +51,11 @@ plots:
 
 GUI pozwala wybrać północ (−Z), wschód (+X), południe (+Z) lub zachód (−X), a następnie potwierdzić zakup. Każdy zakup dodaje jeden segment o rozmiarze pierwotnej działki, za cenę `plots.expansion.price × plots.expansion.priceMultiplier ^ liczba_zakupionych_segmentów`. `0` oznacza darmowe rozszerzenie. Nie ma poziomów ani przyrostu promienia. Dla promienia 16 każdy segment ma 33 × 33 bloki i dodaje 1089 bloków².
 
+Przycisk „Pokaż granice” w GUI rozszerzania zamyka menu i pokazuje obrys istniejącej działki. Czas ustawia `plots.borderDisplaySeconds: 30` (sekundy, minimum 1); obowiązuje również w głównym panelu działki. Podgląd nie kupuje segmentu.
+
 Cena kolejnych rozszerzeń rośnie według `price × priceMultiplier ^ liczba_zakupionych_segmentów`. Domyślny `plots.expansion.priceMultiplier: 1.5` daje ceny 500, 750, 1125, 1687.5. Mnożnik musi wynosić co najmniej 1; wartość 1 wyłącza wzrost. Licznik jest osobny dla każdej działki, uwzględnia istniejące segmenty i pozostaje po restarcie lub przekazaniu działki. Pierwotny teren i nieudane zakupy nie zwiększają licznika. Zmiana ceny bazowej lub mnożnika przelicza cenę następnego zakupu. Nieprawidłowe wartości lub wynik przekraczający zakres obsługiwany przez ekonomię blokują zakup.
 
-Segmenty są dokładane od pierwotnej działki w wybranym kierunku. Powtórzenie kierunku przedłuża ten sam odcinek o kolejny segment. Zakup północy i wschodu daje kształt L; pusty północno-wschodni narożnik pozostaje poza działką. Ochrona obejmuje całą wysokość świata. Segmenty współdzielą właściciela, flagi i członków.
+Stań w wybranym segmencie działki i otwórz rozszerzanie. Nowy kwadrat przylega do tego segmentu w wybranym kierunku. Przejdź do zakupionego segmentu, aby kontynuować lub skręcić jak w grze „wąż”. Zajęty sąsiad blokuje kierunek — nie przeskakujemy nad nim. Zakup północy i wschodu daje kształt L; pusty północno-wschodni narożnik pozostaje poza działką. Ochrona obejmuje całą wysokość świata. Segmenty współdzielą właściciela, flagi i członków.
 
 Sprawdzane są kolizje z rzeczywistymi segmentami innych działek i regionami WorldGuard, łączna powierzchnia oraz maksymalna odległość granicy od pierwotnego środka (`defaultMaxRadius` / `plotsx.plot.size.*`). Segment musi zmieścić się w całości. Nie zwiększa liczby działek właściciela.
 

@@ -173,6 +173,11 @@ GUI:
     title: "<b>Flag Settings</b>"
     back: "<gray>Back to plot settings</gray>"
   expand:
+    show_borders: "<gold>Show borders</gold>"
+    borders_duration: "<gold>Borders visible for <seconds> s. The menu will close.</gold>"
+    stand_inside: "<gold>Stand in the plot segment you want to expand from.</gold>"
+    source: "<gold>Starting segment: X <x>, Z <z></gold>"
+    direction_blocked: "<gold>The adjacent segment is occupied or outside the coordinate range. Choose another direction.</gold>"
     segment: "<gray>New segment: <white><size> × <size></white></gray>"
     directions:
       north: "<gold>North (−Z)</gold>"

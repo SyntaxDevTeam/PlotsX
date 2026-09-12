@@ -173,6 +173,11 @@ GUI:
     title: "<b>Ustawienia flag</b>"
     back: "<gray>Wróć do ustawień działki</gray>"
   expand:
+    show_borders: "<gold>Pokaż granice</gold>"
+    borders_duration: "<gold>Granice widoczne przez <seconds> s. Menu zostanie zamknięte.</gold>"
+    stand_inside: "<gold>Stań w segmencie działki, od którego chcesz ją rozszerzyć.</gold>"
+    source: "<gold>Segment początkowy: X <x>, Z <z></gold>"
+    direction_blocked: "<gold>Sąsiedni segment jest zajęty lub poza zakresem współrzędnych. Wybierz inny kierunek.</gold>"
     segment: "<gray>Nowy segment: <white><size> × <size></white></gray>"
     directions:
       north: "<gold>Północ (−Z)</gold>"

@@ -31,7 +31,7 @@ class PlotGeometryTest {
         ExpansionDirection.entries.forEach { direction ->
             val first = base.expansion(direction)!!
             val expanded = base.copy(extensions = listOf(first))
-            val second = expanded.expansion(direction)!!
+            val second = expanded.expansion(direction, first)!!
             assertEquals(33 * direction.dx, first.x)
             assertEquals(33 * direction.dz, first.z)
             assertEquals(66 * direction.dx, second.x)
@@ -39,6 +39,23 @@ class PlotGeometryTest {
             assertEquals(base.area, second.area)
             assertEquals(2178L, expanded.area)
         }
+    }
+
+    @Test fun `snake can turn repeatedly from selected segments`() {
+        var plot = base
+        var source = plot.segments.first()
+        for (direction in listOf(ExpansionDirection.EAST, ExpansionDirection.NORTH, ExpansionDirection.NORTH, ExpansionDirection.WEST)) {
+            val target = plot.expansion(direction, source)!!
+            plot = plot.copy(extensions = plot.extensions + target)
+            source = plot.segmentAt(target.x, target.z)!!
+        }
+        assertEquals(PlotSegment(0, -66, 16), source)
+        assertEquals(5445L, plot.area)
+        assertTrue(plot.contains(0, -66))
+        assertFalse(plot.contains(0, -33))
+        assertNull(plot.expansion(ExpansionDirection.EAST, base.segments.first()))
+        assertNull(plot.expansion(ExpansionDirection.SOUTH, PlotSegment(33, -33, 16)))
+        assertNull(plot.expansion(ExpansionDirection.EAST, PlotSegment(500, 500, 16)))
     }
 
     @Test fun `coordinate overflow rejects expansion`() {
