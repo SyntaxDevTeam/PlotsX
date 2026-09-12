@@ -462,7 +462,8 @@ class DatabaseHandler(private val plugin: PlotsX) {
         direction: ExpansionDirection,
         expectedSegment: PlotSegment,
         maxRadius: Int,
-        maxTotalArea: Long
+        maxTotalArea: Long,
+        expectedSegmentCount: Int
     ): ExpandResult {
         val plot = getPlotById(plotId) ?: return ExpandResult.PlotNotFound
         val lock = claimLocks.computeIfAbsent(plot.world.lowercase(Locale.ROOT)) { ReentrantLock() }
@@ -497,7 +498,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                     val world = current[4] as String
                     val fresh = plot.copy(x = x, z = z, radius = oldRadius, extensions = readSegments(conn, plotId))
                     val target = fresh.expansion(direction)
-                    if (target == null || target != expectedSegment) {
+                    if (target == null || target != expectedSegment || fresh.extensions.size != expectedSegmentCount) {
                         conn.rollback()
                         return@withLock ExpandResult.DatabaseError
                     }

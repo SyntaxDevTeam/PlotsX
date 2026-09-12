@@ -11,9 +11,11 @@ object ExpansionEconomy {
         fun refund(): Boolean
     }
 
-    fun price(plugin: PlotsX): BigDecimal? = plugin.config
-        .getString("plots.expansion.price", "500.0")?.toBigDecimalOrNull()
-        ?.takeIf { it.signum() >= 0 && it.toDouble().isFinite() }
+    fun price(plugin: PlotsX, purchasedSegments: Int): BigDecimal? = ExpansionPricing.calculate(
+        plugin.config.getString("plots.expansion.price", "500.0"),
+        plugin.config.getString("plots.expansion.priceMultiplier", "1.5"),
+        purchasedSegments
+    )
 
     fun account(plugin: PlotsX, player: Player, amount: BigDecimal): Account? {
         try {

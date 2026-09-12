@@ -16,6 +16,7 @@ plots:
   world: "world"
   expansion:
     price: 500.0
+    priceMultiplier: 1.5
     defaultMaxRadius: 64
     defaultMaxTotalArea: 16641
 
@@ -66,7 +67,9 @@ Zmiana początkowego promienia nie zmienia wielkości już utworzonych działek.
 
 ## Rozszerzanie segmentami
 
-`plots.expansion.price` to stała cena jednego segmentu (`0` = bez opłaty). Segment ma rozmiar pierwotnej działki, np. 33 × 33 bloki dla promienia 16. GUI pozwala wybrać północ, wschód, południe lub zachód. Powtarzanie kierunku przedłuża odcinek. Północ i wschód tworzą kształt L bez zajmowania pustego narożnika.
+`plots.expansion.price` to cena pierwszego segmentu (`0` = bez opłaty). Segment ma rozmiar pierwotnej działki, np. 33 × 33 bloki dla promienia 16. GUI pozwala wybrać północ, wschód, południe lub zachód. Powtarzanie kierunku przedłuża odcinek. Północ i wschód tworzą kształt L bez zajmowania pustego narożnika.
+
+Cena kolejnych rozszerzeń rośnie według `price × priceMultiplier ^ liczba_zakupionych_segmentów`. Domyślny `plots.expansion.priceMultiplier: 1.5` daje ceny 500, 750, 1125, 1687.5. Mnożnik musi wynosić co najmniej 1; wartość 1 wyłącza wzrost. Licznik jest osobny dla każdej działki, uwzględnia istniejące segmenty i pozostaje po restarcie lub przekazaniu działki. Pierwotny teren i nieudane zakupy nie zwiększają licznika. Zmiana ceny bazowej lub mnożnika przelicza cenę następnego zakupu. Nieprawidłowe wartości lub wynik przekraczający zakres obsługiwany przez ekonomię blokują zakup.
 
 Nie używa się już `levels` ani `step`. Przy aktualizacji usuń `levels` i ustaw `price: 500.0` lub własną cenę. Istniejące działki zachowują teren, a ich aktualny rozmiar staje się rozmiarem bazowym. Limity powierzchni liczą sumę segmentów; limit promienia określa najdalszą granicę względem pierwotnego środka. Szczegóły: [rozszerzanie i opłaty](../commands.md#rozszerzanie-działki-i-opłaty).
 

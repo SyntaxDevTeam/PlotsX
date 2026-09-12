@@ -44,11 +44,14 @@ W panelu `/plot` wybierz rozszerzanie i potwierdź zakup. Wymagane są własnoś
 plots:
   expansion:
     price: 500.0
+    priceMultiplier: 1.5
     defaultMaxRadius: 64
     defaultMaxTotalArea: 16641
 ```
 
-GUI pozwala wybrać północ (−Z), wschód (+X), południe (+Z) lub zachód (−X), a następnie potwierdzić zakup. Każdy zakup dodaje jeden segment o rozmiarze pierwotnej działki, za stałą cenę `plots.expansion.price`. `0` oznacza darmowe rozszerzenie. Nie ma poziomów ani przyrostu promienia. Dla promienia 16 każdy segment ma 33 × 33 bloki i dodaje 1089 bloków².
+GUI pozwala wybrać północ (−Z), wschód (+X), południe (+Z) lub zachód (−X), a następnie potwierdzić zakup. Każdy zakup dodaje jeden segment o rozmiarze pierwotnej działki, za cenę `plots.expansion.price × plots.expansion.priceMultiplier ^ liczba_zakupionych_segmentów`. `0` oznacza darmowe rozszerzenie. Nie ma poziomów ani przyrostu promienia. Dla promienia 16 każdy segment ma 33 × 33 bloki i dodaje 1089 bloków².
+
+Cena kolejnych rozszerzeń rośnie według `price × priceMultiplier ^ liczba_zakupionych_segmentów`. Domyślny `plots.expansion.priceMultiplier: 1.5` daje ceny 500, 750, 1125, 1687.5. Mnożnik musi wynosić co najmniej 1; wartość 1 wyłącza wzrost. Licznik jest osobny dla każdej działki, uwzględnia istniejące segmenty i pozostaje po restarcie lub przekazaniu działki. Pierwotny teren i nieudane zakupy nie zwiększają licznika. Zmiana ceny bazowej lub mnożnika przelicza cenę następnego zakupu. Nieprawidłowe wartości lub wynik przekraczający zakres obsługiwany przez ekonomię blokują zakup.
 
 Segmenty są dokładane od pierwotnej działki w wybranym kierunku. Powtórzenie kierunku przedłuża ten sam odcinek o kolejny segment. Zakup północy i wschodu daje kształt L; pusty północno-wschodni narożnik pozostaje poza działką. Ochrona obejmuje całą wysokość świata. Segmenty współdzielą właściciela, flagi i członków.
 

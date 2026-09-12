@@ -31,7 +31,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
             player.sendMessage(error("plot_not_found")); return
         }
         val target = plot.expansion(direction)
-        quotedPrice = ExpansionEconomy.price(plugin)
+        quotedPrice = ExpansionEconomy.price(plugin, plot.extensions.size)
         quotedSegment = target
         val limits = plugin.hookHandler.getPlotLimits(player)
         val currentTotal = plugin.databaseHandler.getPlotsByOwner(plot.ownerUuid).sumOf { it.area }
@@ -86,7 +86,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
             player.sendMessage(error("not_owner")); return
         }
         val target = plot.expansion(direction)
-        val price = ExpansionEconomy.price(plugin)
+        val price = ExpansionEconomy.price(plugin, plot.extensions.size)
         if (price == null || quotedPrice == null) {
             player.sendMessage(error("expand_invalid_price")); return
         }
@@ -120,7 +120,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         }
         val result = try {
             plugin.databaseHandler.expandPlotAtomically(
-                plot.id, ownerUuid, player.uniqueId, direction, target, limits.maxRadius, limits.maxTotalArea
+                plot.id, ownerUuid, player.uniqueId, direction, target, limits.maxRadius, limits.maxTotalArea, plot.extensions.size
             )
         } catch (ex: Exception) {
             plugin.logger.err("Expansion failed for plot ${plot.id}: ${ex.message}")

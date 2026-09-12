@@ -41,8 +41,11 @@ plots:
   world: ["world"]
   expansion:
     # Each purchase adds one square of the plot's original size in the selected direction.
-    # Fixed price per segment in the default economy currency; 0 = free.
+    # Base price of the first segment in the default economy currency; 0 = free.
     price: 500.0
+    # Next price = price * priceMultiplier ^ purchased segment count (per plot).
+    # Must be >= 1; 1 disables growth. Example: 500, 750, 1125, ...
+    priceMultiplier: 1.5
     # Used when the player has no plotsx.plot.size.<radius> permission
     defaultMaxRadius: 64
     # Combined block area of all owned plots; override with plotsx.plot.max-area.<blocks>
