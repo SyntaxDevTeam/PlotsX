@@ -21,13 +21,32 @@ internal object OwnershipTransfer {
                 }
             } ?: return reject()
             if (plot.first != expectedOwner.toString() || plot.second > maxRadius) return reject()
+            val extensionArea = conn.prepareStatement("""
+                SELECT s.radius, s.x, s.z, p.x, p.z, p.plot_id
+                FROM plot_segments s JOIN plots p ON p.plot_id = s.plot_id
+                WHERE p.plot_id = ? OR p.owner_uuid = ?
+            """).use {
+                it.setInt(1, plotId); it.setString(2, recipient.toString())
+                it.executeQuery().use { rs ->
+                    var total = 0L
+                    while (rs.next()) {
+                        val radius = rs.getInt(1)
+                        if (rs.getInt(6) == plotId && maxOf(
+                                kotlin.math.abs(rs.getLong(2) - rs.getLong(4)),
+                                kotlin.math.abs(rs.getLong(3) - rs.getLong(5))) + radius > maxRadius) return reject()
+                        val added = area(radius)
+                        total = if (Long.MAX_VALUE - total < added) Long.MAX_VALUE else total + added
+                    }
+                    total
+                }
+            }
             val member = conn.prepareStatement("SELECT role FROM plot_members WHERE plot_id = ? AND member_uuid = ?").use {
                 it.setInt(1, plotId); it.setString(2, recipient.toString())
                 it.executeQuery().use { rs -> rs.next() }
             }
             if (!member) return reject()
             var count = 0
-            var area = area(plot.second)
+            var area = area(plot.second).let { if (Long.MAX_VALUE - it < extensionArea) Long.MAX_VALUE else it + extensionArea }
             var duplicateName = false
             conn.prepareStatement("SELECT radius, name FROM plots WHERE owner_uuid = ?").use {
                 it.setString(1, recipient.toString())

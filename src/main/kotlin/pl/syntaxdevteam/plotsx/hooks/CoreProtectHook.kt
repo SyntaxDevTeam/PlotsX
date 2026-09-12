@@ -104,6 +104,10 @@ class CoreProtectHook(private val plugin: PlotsX) : Listener {
      * Przywraca działkę do stanu sprzed given czasu (sekundy wstecz)
      */
     fun restorePlot(plot: PlotData, timeSeconds: Long) {
+        if (plot.extensions.isNotEmpty()) {
+            plot.segments.forEach { restorePlot(plot.copy(x = it.x, z = it.z, radius = it.radius, extensions = emptyList()), timeSeconds) }
+            return
+        }
         val api = coreProtectAPI ?: return
         val seconds = timeSeconds.toInt()
         val world = Bukkit.getWorld(plot.world) ?: return
@@ -128,6 +132,10 @@ class CoreProtectHook(private val plugin: PlotsX) : Listener {
      * Zwraca historię zmian na działce (sekundy wstecz)
      */
     fun getPlotHistory(plot: PlotData, timeSeconds: Long): List<Array<String>> {
+        if (plot.extensions.isNotEmpty()) return plot.segments.flatMap {
+            getPlotHistory(plot.copy(x = it.x, z = it.z, radius = it.radius, extensions = emptyList()), timeSeconds)
+        }
+
         val api = coreProtectAPI ?: return emptyList()
         val seconds = timeSeconds.toInt()
         val world = Bukkit.getWorld(plot.world) ?: return emptyList()
@@ -151,6 +159,10 @@ class CoreProtectHook(private val plugin: PlotsX) : Listener {
      * Jeśli podano `player`, cofa tylko akcje tej osoby.
      */
     fun rollbackPlot(plot: PlotData, timeSeconds: Long, player: Player? = null) {
+        if (plot.extensions.isNotEmpty()) {
+            plot.segments.forEach { rollbackPlot(plot.copy(x = it.x, z = it.z, radius = it.radius, extensions = emptyList()), timeSeconds, player) }
+            return
+        }
         val api = coreProtectAPI ?: return
         val seconds = timeSeconds.toInt()
         val world = Bukkit.getWorld(plot.world) ?: return

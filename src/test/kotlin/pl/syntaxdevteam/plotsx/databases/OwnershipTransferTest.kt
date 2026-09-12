@@ -56,6 +56,14 @@ class OwnershipTransferTest {
         assertTrue(OwnershipTransfer.transfer(c, 1, owner, recipient, 1, 16, 1089))
     }
 
+    @Test fun `expanded plot transfer enforces real area and extent`() = databases { c ->
+        c.createStatement().use { it.execute("INSERT INTO plot_segments VALUES (1, 33, 0, 16)") }
+        assertFalse(OwnershipTransfer.transfer(c, 1, owner, recipient, 5, 48, 10000))
+        assertFalse(OwnershipTransfer.transfer(c, 1, owner, recipient, 5, 49, 2177))
+        assertEquals(owner.toString(), owner(c))
+        assertTrue(OwnershipTransfer.transfer(c, 1, owner, recipient, 5, 49, 2178))
+    }
+
     @Test fun `rejects duplicate name belonging to recipient`() = databases { c ->
         c.prepareStatement("INSERT INTO plots (plot_id, owner_uuid, x, z, y, radius, world, name, creation_time) VALUES (2, ?, 200, 0, 64, 16, 'world', 'Home', 0)").use {
             it.setString(1, recipient.toString()); it.executeUpdate()

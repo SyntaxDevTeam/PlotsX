@@ -15,16 +15,7 @@ plots:
   radius: 16
   world: "world"
   expansion:
-    levels:
-      1:
-        step: 8
-        price: 500.0
-      2:
-        step: 8
-        price: 1000.0
-      3:
-        step: 16
-        price: 2000.0
+    price: 500.0
     defaultMaxRadius: 64
     defaultMaxTotalArea: 16641
 
@@ -73,30 +64,11 @@ Rozmiar początkowy musi mieścić się w obu limitach. Limity promienia i powie
 
 Zmiana początkowego promienia nie zmienia wielkości już utworzonych działek. Zmiana dozwolonego świata nie usuwa istniejących terenów.
 
-## Poziomy rozszerzania
+## Rozszerzanie segmentami
 
-Każdy numer w `plots.expansion.levels` to następny poziom:
+`plots.expansion.price` to stała cena jednego segmentu (`0` = bez opłaty). Segment ma rozmiar pierwotnej działki, np. 33 × 33 bloki dla promienia 16. GUI pozwala wybrać północ, wschód, południe lub zachód. Powtarzanie kierunku przedłuża odcinek. Północ i wschód tworzą kształt L bez zajmowania pustego narożnika.
 
-- `step` — o ile bloków przesuwa się każda granica. Musi być dodatnią liczbą całkowitą.
-- `price` — cena tego poziomu. `0` oznacza rozszerzenie za darmo. Cena nie może być ujemna.
-
-Numeruj poziomy kolejno: 1, 2, 3 i dalej. Brak następnego numeru kończy dostępną ścieżkę rozszerzania.
-
-Przykład dwóch darmowych ulepszeń — zastąp nim całą sekcję `levels`:
-
-```yaml
-    levels:
-      1:
-        step: 8
-        price: 0.0
-      2:
-        step: 8
-        price: 0.0
-```
-
-Zmiana ceny lub kroku nie zmienia zakupionego terenu ani osiągniętego poziomu. Po zmianie oferty gracze powinni ponownie otworzyć menu. Starsze ustawienia `plots.expansion.step` i `plots.expansion.price` nie zastępują listy poziomów.
-
-Przy aktualizacji ze starszego systemu istniejące działki zachowują rozmiar, ale zaczynają ścieżkę poziomów od 0. Wcześniejsze rozszerzenia nie są przeliczane.
+Nie używa się już `levels` ani `step`. Przy aktualizacji usuń `levels` i ustaw `price: 500.0` lub własną cenę. Istniejące działki zachowują teren, a ich aktualny rozmiar staje się rozmiarem bazowym. Limity powierzchni liczą sumę segmentów; limit promienia określa najdalszą granicę względem pierwotnego środka. Szczegóły: [rozszerzanie i opłaty](../commands.md#rozszerzanie-działki-i-opłaty).
 
 ## Prywatne pojemniki
 

@@ -9,7 +9,6 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 
 # Error messages
 error:
-  expand_max_level: "<red>Maximum configured plot level reached.</red>"
   expand_invalid_price: "<red>Invalid expansion price in configuration.</red>"
   expand_quote_changed: "<red>The price or size changed. Reopen the expansion menu.</red>"
   expand_no_economy: "<red>Paid expansion requires Vault or VaultUnlocked and an economy provider.</red>"
@@ -57,7 +56,7 @@ plots:
   rename_exists: "<red>A plot with this name already exists!</red>"
   rename_not_found: "<red>Plot not found.</red>"
   rename_fail: "<red>Failed to change the plot name.</red>"
-  expand_success: "<green>Plot expanded to a radius of <white><radius></white> blocks.</green>"
+  expand_success: "<green>Added a <white><size> × <size></white> block plot segment.</green>"
   expand_cancelled: "<yellow>Plot expansion cancelled.</yellow>"
 
 private_chest:
@@ -174,14 +173,18 @@ GUI:
     title: "<b>Flag Settings</b>"
     back: "<gray>Back to plot settings</gray>"
   expand:
-    level: "<gold>Target level: <level></gold>"
+    segment: "<gray>New segment: <white><size> × <size></white></gray>"
+    directions:
+      north: "<gold>North (−Z)</gold>"
+      east: "<gold>East (+X)</gold>"
+      south: "<gold>South (+Z)</gold>"
+      west: "<gold>West (−X)</gold>"
     price: "<gold>Price per expansion: <price></gold>"
     title: "<b>Expand Plot</b>"
     confirm: "<green>Confirm expansion</green>"
     cancel: "<red>Cancel</red>"
-    radius: "<gray>Radius: <white><current></white> → <green><target></green></gray>"
     area: "<gray>Total land after expansion: <white><used></white>/<white><max></white></gray>"
-    max_radius: "<gray>Maximum radius: <white><max></white></gray>"
+    max_radius: "<gray>Maximum boundary distance from center: <white><max></white></gray>"
 
 flags:
   grave-create:

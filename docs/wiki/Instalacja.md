@@ -24,7 +24,7 @@ Domyślna baza SQLite zapisuje dane lokalnie. Nie musisz zakładać osobnej bazy
 
 ## Kopia zapasowa SQL
 
-Komenda `/ptx export [mysql|mariadb|sqlite|postgresql|h2]` zapisuje schemat i wszystkie rekordy pięciu tabel PlotsX (`plots`, `plot_expansion_levels`, `plot_members`, `plot_flags`, `plot_logs`) do `plugins/PlotsX/dump/backup.sql`. Bez argumentu używa składni bieżącej bazy. Na przykład `/ptx export mysql` przygotowuje kopię dla MySQL lub MariaDB, również gdy obecnie korzystasz z SQLite. Kolejny udany eksport zastępuje plik, więc wcześniejsze kopie przenieś w inne miejsce.
+Komenda `/ptx export [mysql|mariadb|sqlite|postgresql|h2]` zapisuje schemat i wszystkie rekordy sześciu tabel PlotsX (`plots`, `plot_segments`, `plot_expansion_levels`, `plot_members`, `plot_flags`, `plot_logs`) do `plugins/PlotsX/dump/backup.sql`. Bez argumentu używa składni bieżącej bazy. Na przykład `/ptx export mysql` przygotowuje kopię dla MySQL lub MariaDB, również gdy obecnie korzystasz z SQLite. Kolejny udany eksport zastępuje plik, więc wcześniejsze kopie przenieś w inne miejsce.
 
 `/ptx import` odtwarza ten plik w aktualnie skonfigurowanej bazie i **zastępuje obecne dane PlotsX**. Składnia kopii musi pasować do docelowego silnika. Przy migracji najpierw wykonaj eksport ze składnią docelową, zmień konfigurację bazy, uruchom serwer ponownie i wykonaj import. Import obsługuje format kopii generowany przez tę wersję PlotsX, nie dowolne pliki SQL. Wgrywaj wyłącznie zaufane kopie.
 

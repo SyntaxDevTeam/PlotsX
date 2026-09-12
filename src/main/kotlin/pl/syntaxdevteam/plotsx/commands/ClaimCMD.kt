@@ -54,7 +54,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             ))
             return
         }
-        val currentArea = ownedPlots.sumOf { plotArea(it.radius) }
+        val currentArea = ownedPlots.sumOf { it.area }
         if (currentArea > limits.maxTotalArea - plotArea(radius)) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent(
                 "error", "claim_area_limit", mapOf("max" to formatLimit(limits.maxTotalArea))

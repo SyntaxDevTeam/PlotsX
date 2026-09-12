@@ -81,8 +81,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         val words = if (admin) args.drop(2) else args.toList()
         val plot = if (admin) args.getOrNull(1)?.toIntOrNull()?.let { plugin.cacheManager.getPlot(it) }
             else (sender as? Player)?.let { p -> plugin.cacheManager.getCachedPlots().firstOrNull {
-                it.world == p.world.name && p.location.blockX in it.x - it.radius..it.x + it.radius &&
-                    p.location.blockZ in it.z - it.radius..it.z + it.radius
+                it.world == p.world.name && it.contains(p.location.blockX, p.location.blockZ)
             } }
         val candidates = when {
             words.size <= 1 -> actions + (if (!admin && access.admin(sender)) listOf("admin") else emptyList())

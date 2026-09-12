@@ -26,7 +26,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
     }
 
     sealed interface ExpandResult {
-        data class Success(val newRadius: Int) : ExpandResult
+        data class Success(val segment: PlotSegment) : ExpandResult
         data object PlotNotFound : ExpandResult
         data object NotOwner : ExpandResult
         data object RadiusLimitReached : ExpandResult
@@ -259,7 +259,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                 }
 
                 val ownedArea = conn.prepareStatement(
-                    "SELECT radius FROM plots WHERE owner_uuid = ?"
+                    "SELECT radius FROM $spatialPlots WHERE owner_uuid = ?"
                 ).use { stmt ->
                     stmt.setString(1, ownerUuid.toString())
                     stmt.executeQuery().use { rs ->
@@ -276,7 +276,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
 
                 val overlap = conn.prepareStatement(
                     """
-                    SELECT 1 FROM plots
+                    SELECT 1 FROM $spatialPlots
                     WHERE world = ?
                       AND (x + radius) >= ?
                       AND (x - radius) <= ?
@@ -442,25 +442,27 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
     }
 
-    fun getExpansionLevel(plotId: Int): Int {
-        val connection = getConnection() ?: throw SQLException("No database connection")
-        return connection.use { conn -> readExpansionLevel(conn, plotId) }
-    }
-
-    private fun readExpansionLevel(conn: Connection, plotId: Int): Int =
-        conn.prepareStatement("SELECT expansion_level FROM plot_expansion_levels WHERE plot_id = ?").use { stmt ->
+    private fun readSegments(conn: Connection, plotId: Int): List<PlotSegment> =
+        conn.prepareStatement("SELECT x, z, radius FROM plot_segments WHERE plot_id = ?").use { stmt ->
             stmt.setInt(1, plotId)
-            stmt.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
+            stmt.executeQuery().use { rs -> buildList {
+                while (rs.next()) add(PlotSegment(rs.getInt(1), rs.getInt(2), rs.getInt(3)))
+            } }
         }
+
+    // A spatial row per segment; the original square remains in plots for compatibility.
+    private val spatialPlots = """(SELECT plot_id, owner_uuid, world, x, z, radius FROM plots
+        UNION ALL SELECT p.plot_id, p.owner_uuid, p.world, s.x, s.z, s.radius
+        FROM plots p JOIN plot_segments s ON p.plot_id = s.plot_id) spatial_plots"""
 
     fun expandPlotAtomically(
         plotId: Int,
         ownerUuid: UUID,
         actorUuid: UUID,
-        requestedRadius: Int,
+        direction: ExpansionDirection,
+        expectedSegment: PlotSegment,
         maxRadius: Int,
-        maxTotalArea: Long,
-        expectedLevel: Int
+        maxTotalArea: Long
     ): ExpandResult {
         val plot = getPlotById(plotId) ?: return ExpandResult.PlotNotFound
         val lock = claimLocks.computeIfAbsent(plot.world.lowercase(Locale.ROOT)) { ReentrantLock() }
@@ -470,10 +472,6 @@ class DatabaseHandler(private val plugin: PlotsX) {
                 try {
                     conn.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
                     conn.autoCommit = false
-                    if (readExpansionLevel(conn, plotId) != expectedLevel) {
-                        conn.rollback()
-                        return@withLock ExpandResult.DatabaseError
-                    }
                     val current = conn.prepareStatement(
                         "SELECT owner_uuid, x, z, radius, world FROM plots WHERE plot_id = ?"
                     ).use { stmt ->
@@ -497,12 +495,21 @@ class DatabaseHandler(private val plugin: PlotsX) {
                     val z = current[2] as Int
                     val oldRadius = current[3] as Int
                     val world = current[4] as String
-                    if (requestedRadius <= oldRadius || requestedRadius > maxRadius) {
+                    val fresh = plot.copy(x = x, z = z, radius = oldRadius, extensions = readSegments(conn, plotId))
+                    val target = fresh.expansion(direction)
+                    if (target == null || target != expectedSegment) {
+                        conn.rollback()
+                        return@withLock ExpandResult.DatabaseError
+                    }
+                    val extent = (fresh.segments + target).maxOf {
+                        maxOf(kotlin.math.abs(it.x.toLong() - x), kotlin.math.abs(it.z.toLong() - z)) + it.radius
+                    }
+                    if (extent > maxRadius) {
                         conn.rollback()
                         return@withLock ExpandResult.RadiusLimitReached
                     }
 
-                    val totalArea = conn.prepareStatement("SELECT radius FROM plots WHERE owner_uuid = ?").use { stmt ->
+                    val totalArea = conn.prepareStatement("SELECT radius FROM $spatialPlots WHERE owner_uuid = ?").use { stmt ->
                         stmt.setString(1, ownerUuid.toString())
                         stmt.executeQuery().use { rs ->
                             var sum = 0L
@@ -510,16 +517,15 @@ class DatabaseHandler(private val plugin: PlotsX) {
                             sum
                         }
                     }
-                    val proposedArea = plotArea(requestedRadius)
-                    val currentArea = plotArea(oldRadius)
-                    if (totalArea - currentArea > maxTotalArea - proposedArea) {
+                    val proposedArea = target.area
+                    if (totalArea > maxTotalArea - proposedArea) {
                         conn.rollback()
                         return@withLock ExpandResult.AreaLimitReached
                     }
 
                     val overlap = conn.prepareStatement(
                         """
-                        SELECT 1 FROM plots
+                        SELECT 1 FROM $spatialPlots
                         WHERE plot_id <> ? AND world = ?
                           AND (x + radius) >= ? AND (x - radius) <= ?
                           AND (z + radius) >= ? AND (z - radius) <= ?
@@ -528,10 +534,10 @@ class DatabaseHandler(private val plugin: PlotsX) {
                     ).use { stmt ->
                         stmt.setInt(1, plotId)
                         stmt.setString(2, world)
-                        stmt.setInt(3, x - requestedRadius)
-                        stmt.setInt(4, x + requestedRadius)
-                        stmt.setInt(5, z - requestedRadius)
-                        stmt.setInt(6, z + requestedRadius)
+                        stmt.setInt(3, target.x - target.radius)
+                        stmt.setInt(4, target.x + target.radius)
+                        stmt.setInt(5, target.z - target.radius)
+                        stmt.setInt(6, target.z + target.radius)
                         stmt.executeQuery().use(ResultSet::next)
                     }
                     if (overlap) {
@@ -539,31 +545,24 @@ class DatabaseHandler(private val plugin: PlotsX) {
                         return@withLock ExpandResult.Overlap
                     }
 
-                    conn.prepareStatement("DELETE FROM plot_expansion_levels WHERE plot_id = ?").use { stmt ->
+                    conn.prepareStatement("INSERT INTO plot_segments (plot_id, x, z, radius) VALUES (?, ?, ?, ?)").use { stmt ->
                         stmt.setInt(1, plotId)
-                        stmt.executeUpdate()
-                    }
-                    conn.prepareStatement("INSERT INTO plot_expansion_levels (plot_id, expansion_level) VALUES (?, ?)").use { stmt ->
-                        stmt.setInt(1, plotId)
-                        stmt.setInt(2, expectedLevel + 1)
-                        stmt.executeUpdate()
-                    }
-                    conn.prepareStatement("UPDATE plots SET radius = ? WHERE plot_id = ?").use { stmt ->
-                        stmt.setInt(1, requestedRadius)
-                        stmt.setInt(2, plotId)
+                        stmt.setInt(2, target.x)
+                        stmt.setInt(3, target.z)
+                        stmt.setInt(4, target.radius)
                         stmt.executeUpdate()
                     }
                     conn.prepareStatement(
                         "INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp) VALUES (?, ?, ?, ?)"
                     ).use { stmt ->
                         stmt.setInt(1, plotId)
-                        stmt.setString(2, "EXPAND:$oldRadius->$requestedRadius")
+                        stmt.setString(2, "EXPAND:${direction.name}:${target.x},${target.z},${target.radius}")
                         stmt.setString(3, actorUuid.toString())
                         stmt.setLong(4, System.currentTimeMillis())
                         stmt.executeUpdate()
                     }
                     conn.commit()
-                    ExpandResult.Success(requestedRadius)
+                    ExpandResult.Success(target)
                 } catch (exception: SQLException) {
                     try { conn.rollback() } catch (_: SQLException) { }
                     logger.err("Błąd podczas rozszerzania działki $plotId: ${exception.message}")
@@ -876,7 +875,8 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time")
+                            creationTime = rs.getLong("creation_time"),
+                            extensions = readSegments(conn, rs.getInt("plot_id"))
                         )
                     )
                 }
@@ -919,14 +919,16 @@ fun getPlotsFromAllUsers(): List<PlotData> {
     fun getPlotAtLocation(world: String, x: Int, z: Int): PlotData? {
         val query = when (dbType) {
             "sqlite", "postgresql", "h2" -> """
-            SELECT * FROM plots WHERE world = ? AND
-            (? BETWEEN x - radius AND x + radius) AND
-            (? BETWEEN z - radius AND z + radius)
+            SELECT * FROM plots WHERE plot_id IN (
+                SELECT plot_id FROM $spatialPlots WHERE world = ? AND
+                (? BETWEEN x - radius AND x + radius) AND
+                (? BETWEEN z - radius AND z + radius))
         """
             else -> """
-            SELECT * FROM plots WHERE world = ? AND
-            (? BETWEEN x - radius AND x + radius) AND
-            (? BETWEEN z - radius AND z + radius)
+            SELECT * FROM plots WHERE plot_id IN (
+                SELECT plot_id FROM $spatialPlots WHERE world = ? AND
+                (? BETWEEN x - radius AND x + radius) AND
+                (? BETWEEN z - radius AND z + radius))
         """
         }
 
@@ -947,7 +949,8 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time")
+                            creationTime = rs.getLong("creation_time"),
+                            extensions = readSegments(conn, rs.getInt("plot_id"))
                         )
                     } else null
                 }
@@ -982,7 +985,8 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time")
+                            creationTime = rs.getLong("creation_time"),
+                            extensions = readSegments(conn, rs.getInt("plot_id"))
                         )
                     } else null
                 }
@@ -1028,7 +1032,8 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time")
+                            creationTime = rs.getLong("creation_time"),
+                            extensions = readSegments(conn, rs.getInt("plot_id"))
                         )
                     }
                 }
@@ -1055,7 +1060,8 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time")
+                            creationTime = rs.getLong("creation_time"),
+                            extensions = readSegments(conn, rs.getInt("plot_id"))
                         )
                     }
                 }
@@ -1082,7 +1088,8 @@ fun getPlotsFromAllUsers(): List<PlotData> {
                             radius = rs.getInt("radius"),
                             world = rs.getString("world"),
                             name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time")
+                            creationTime = rs.getLong("creation_time"),
+                            extensions = readSegments(conn, rs.getInt("plot_id"))
                         )
                     } else null
                 }
@@ -1105,7 +1112,7 @@ fun getPlotsFromAllUsers(): List<PlotData> {
         getConnection()?.use { conn ->
             val query = when (dbType) {
                 "sqlite", "h2" -> """
-                SELECT 1 FROM plots
+                SELECT 1 FROM $spatialPlots
                 WHERE world = ?
                   AND (x + radius) >= ?
                   AND (x - radius) <= ?
@@ -1115,7 +1122,7 @@ fun getPlotsFromAllUsers(): List<PlotData> {
             """.trimIndent()
 
                 "postgresql" -> """
-                SELECT 1 FROM plots
+                SELECT 1 FROM $spatialPlots
                 WHERE world = ?
                   AND (x + radius) >= ?
                   AND (x - radius) <= ?
@@ -1125,7 +1132,7 @@ fun getPlotsFromAllUsers(): List<PlotData> {
             """.trimIndent()
 
                 else -> """ -- MySQL / MariaDB
-                SELECT 1 FROM plots
+                SELECT 1 FROM $spatialPlots
                 WHERE world = ?
                   AND (x + radius) >= ?
                   AND (x - radius) <= ?

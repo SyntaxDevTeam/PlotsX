@@ -32,8 +32,7 @@ class PrivateChestCMD(private val plugin: PlotsX) : BasicCommand {
         }
         val plot = plugin.cacheManager.getCachedPlots().firstOrNull {
             it.world.equals(block.world.name, true) &&
-                block.x in (it.x - it.radius..it.x + it.radius) &&
-                block.z in (it.z - it.radius..it.z + it.radius)
+                it.contains(block.x, block.z)
         } ?: run {
             send(player, "plot_required")
             return
@@ -160,8 +159,7 @@ class PrivateChestCMD(private val plugin: PlotsX) : BasicCommand {
             2 -> if (args[0].equals("trust", true) || args[0].equals("untrust", true)) {
                 plugin.cacheManager.getCachedPlots().firstOrNull {
                     it.world.equals(player.world.name, true) &&
-                        player.location.blockX in (it.x - it.radius..it.x + it.radius) &&
-                        player.location.blockZ in (it.z - it.radius..it.z + it.radius)
+                        it.contains(player.location.blockX, player.location.blockZ)
                 }?.let { plot ->
                     buildList {
                         add(plot.ownerUuid)

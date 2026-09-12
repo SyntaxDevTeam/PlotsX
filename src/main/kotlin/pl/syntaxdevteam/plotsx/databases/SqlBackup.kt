@@ -9,7 +9,7 @@ import java.util.Locale
 /** Versioned, one-statement-per-line SQL. Text is UTF-8 hex so delimiters are unambiguous. */
 internal object SqlBackup {
     val dialects = listOf("mysql", "mariadb", "sqlite", "postgresql", "h2")
-    private val tables = listOf("plots", "plot_expansion_levels", "plot_members", "plot_flags", "plot_logs")
+    private val tables = listOf("plots", "plot_segments", "plot_expansion_levels", "plot_members", "plot_flags", "plot_logs")
 
     fun dialect(value: String): String {
         val normalized = value.lowercase(Locale.ROOT)
@@ -96,16 +96,20 @@ internal object SqlBackup {
             "Not a PlotsX backup for $dialect. Export using the target database dialect."
         }
         val schema = DatabaseSchema.statements(dialect).map { it.trim().removeSuffix(";").replace(Regex("\\s+"), " ") + ";" }
-        require(lines.drop(1).take(schema.size) == schema && lines.lastOrNull() == "COMMIT;") { "Incomplete backup or unsupported schema." }
-        val body = lines.drop(1 + schema.size).dropLast(1)
+        val legacySchema = schema.filterNot { it.startsWith("CREATE TABLE IF NOT EXISTS plot_segments ") }
+        val sourceSchema = if (lines.drop(1).take(schema.size) == schema) schema else legacySchema
+        val sourceTables = if (sourceSchema == schema) tables else tables.filterNot { it == "plot_segments" }
+        require(lines.drop(1).take(sourceSchema.size) == sourceSchema && lines.lastOrNull() == "COMMIT;") { "Incomplete backup or unsupported schema." }
+        val body = lines.drop(1 + sourceSchema.size).dropLast(1)
         require(body.firstOrNull() == "BEGIN;") { "Missing transaction." }
-        require(body.drop(1).take(tables.size) == tables.asReversed().map { "DELETE FROM $it;" }) { "Incomplete backup." }
+        require(body.drop(1).take(sourceTables.size) == sourceTables.asReversed().map { "DELETE FROM $it;" }) { "Incomplete backup." }
         conn.createStatement().use { statement ->
             schema.forEach { statement.execute(it) }
         }
         conn.autoCommit = false
         try {
             conn.createStatement().use { statement ->
+                statement.execute("DELETE FROM plot_segments")
                 // H2 ALTER TABLE commits implicitly: reset identities only after all data has loaded.
                 body.drop(1).filterNot { it.startsWith("ALTER TABLE ") }.forEach { statement.execute(it) }
             }

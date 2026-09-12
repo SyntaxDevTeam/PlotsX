@@ -45,11 +45,12 @@ interface PlotsXApi {
     fun unregisterFlag(provider: Plugin, key: String): Boolean
 }
 
-data class PlotSnapshot(val id: Int, val owner: UUID, val world: String, val x: Int, val y: Int,
-                        val z: Int, val radius: Int, val name: String, val createdAt: Long) {
+data class PlotSnapshot @JvmOverloads constructor(val id: Int, val owner: UUID, val world: String, val x: Int, val y: Int,
+                        val z: Int, val radius: Int, val name: String, val createdAt: Long,
+                        val extensions: List<PlotRegionSnapshot> = emptyList()) {
     fun contains(world: String, x: Int, z: Int): Boolean = this.world.equals(world, true) &&
-        kotlin.math.abs(x.toLong() - this.x) <= radius.toLong() &&
-        kotlin.math.abs(z.toLong() - this.z) <= radius.toLong()
+        ((kotlin.math.abs(x.toLong() - this.x) <= radius.toLong() &&
+        kotlin.math.abs(z.toLong() - this.z) <= radius.toLong()) || extensions.any { it.contains(x, z) })
 }
 
 data class MemberSnapshot(val player: UUID, val role: String)
@@ -67,4 +68,10 @@ enum class FlagUpdateResult { UPDATED, UNCHANGED, PLOT_NOT_FOUND, UNKNOWN_FLAG, 
 enum class MemberUpdateResult {
     UPDATED, PLOT_NOT_FOUND, DENIED, OWNER, ALREADY_MEMBER, NOT_MEMBER, UNKNOWN_ROLE,
     UNKNOWN_ACTION, RECIPIENT_OFFLINE, TRANSFER_REJECTED, DATABASE_ERROR
+}
+
+/** One purchased region; radius on PlotSnapshot describes only the original square. */
+data class PlotRegionSnapshot(val x: Int, val z: Int, val radius: Int) {
+    fun contains(x: Int, z: Int): Boolean = kotlin.math.abs(x.toLong() - this.x) <= radius &&
+        kotlin.math.abs(z.toLong() - this.z) <= radius
 }

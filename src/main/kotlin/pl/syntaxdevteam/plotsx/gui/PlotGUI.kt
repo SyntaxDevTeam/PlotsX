@@ -165,9 +165,7 @@ class PlotGUI(
                 plugin.server.scheduler.runTask(plugin, Runnable {
                     helpers.visualizePlotBorder3D(
                         player = player,
-                        centerX = pd.x,
-                        centerZ = pd.z,
-                        radius = pd.radius,
+                        plot = pd,
                         durationSec = 20,
                         stepXZ = 2,
                         stepY = 4

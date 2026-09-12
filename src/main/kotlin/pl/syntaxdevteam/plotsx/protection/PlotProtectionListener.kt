@@ -122,8 +122,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     private fun getPlotAtLocation(world: String, x: Int, z: Int): PlotData? {
         return plugin.cacheManager.getCachedPlots().firstOrNull { plot ->
             plot.world.equals(world, ignoreCase = true) &&
-                    x in (plot.x - plot.radius..plot.x + plot.radius) &&
-                    z in (plot.z - plot.radius..plot.z + plot.radius)
+                    plot.contains(x, z)
         }
     }
 

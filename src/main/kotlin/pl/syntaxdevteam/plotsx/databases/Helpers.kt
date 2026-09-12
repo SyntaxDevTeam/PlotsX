@@ -5,6 +5,11 @@ import org.bukkit.entity.Player
 import pl.syntaxdevteam.plotsx.PlotsX
 
 class Helpers(private var plugin: PlotsX) {
+    fun visualizePlotBorder3D(player: Player, plot: PlotData, durationSec: Int = 10, stepXZ: Int = 1, stepY: Int = 4) {
+        if (player.world.name != plot.world) return
+        plot.segments.forEach { visualizePlotBorder3D(player, it.x, it.z, it.radius, durationSec, stepXZ, stepY, plot) }
+    }
+
     /**
      * Pokazuje granice działki w postaci cząsteczek END_ROD
      * tylko dla danego gracza i tylko przez określony czas.
@@ -15,7 +20,8 @@ class Helpers(private var plugin: PlotsX) {
         radius: Int,
         durationSec: Int = 10,
         stepXZ: Int = 1,
-        stepY: Int = 4
+        stepY: Int = 4,
+        shape: PlotData? = null
     ) {
         val world = player.world
         val minX = centerX - radius
@@ -29,7 +35,7 @@ class Helpers(private var plugin: PlotsX) {
             fun drawHorizontalAt(y: Int) {
                 for (x in minX..maxX step stepXZ) {
                     listOf(minZ, maxZ).forEach { z ->
-                        player.spawnParticle(
+                        if (shape == null || (if (z == minZ) !shape.contains(x, z - 1) else !shape.contains(x, z + 1))) player.spawnParticle(
                             Particle.END_ROD,
                             x + .5, y + .5, z + .5,
                             1, 0.0, 0.0, 0.0, 0.0, null, true
@@ -38,7 +44,7 @@ class Helpers(private var plugin: PlotsX) {
                 }
                 for (z in minZ..maxZ step stepXZ) {
                     listOf(minX, maxX).forEach { x ->
-                        player.spawnParticle(
+                        if (shape == null || (if (x == minX) !shape.contains(x - 1, z) else !shape.contains(x + 1, z))) player.spawnParticle(
                             Particle.END_ROD,
                             x + .5, y + .5, z + .5,
                             1, 0.0, 0.0, 0.0, 0.0, null, true
@@ -52,18 +58,7 @@ class Helpers(private var plugin: PlotsX) {
 
             for (y in minY..maxY step stepY) {
                 drawHorizontalAt(y)
-                listOf(
-                    Pair(minX, minZ),
-                    Pair(minX, maxZ),
-                    Pair(maxX, minZ),
-                    Pair(maxX, maxZ)
-                ).forEach { (x, z) ->
-                    player.spawnParticle(
-                        Particle.END_ROD,
-                        x + .5, y + .5, z + .5,
-                        1, 0.0, 0.0, 0.0, 0.0, null, true
-                    )
-                }
+
             }
         }, 0L, 2L)
 

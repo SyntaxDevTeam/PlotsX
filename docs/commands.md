@@ -43,35 +43,20 @@ W panelu `/plot` wybierz rozszerzanie i potwierdź zakup. Wymagane są własnoś
 ```yaml
 plots:
   expansion:
-    levels:
-      1:
-        step: 8
-        price: 500.0
-      2:
-        step: 8
-        price: 1000.0
-      3:
-        step: 16
-        price: 2000.0
+    price: 500.0
     defaultMaxRadius: 64
     defaultMaxTotalArea: 16641
 ```
 
-Każda działka zaczyna od poziomu 0. Kupuje się kolejno poziomy 1, 2, 3 itd.; brak następnego poziomu kończy rozszerzanie. Każdy poziom określa własne `step` (dodatni przyrost promienia) oraz `price` (opłata za ten poziom w domyślnej walucie). Zero oznacza brak opłaty i nie wymaga ekonomii. Nieprawidłowa cena lub niedodatni krok blokują zakup. GUI pokazuje docelowy poziom, promień i cenę. Zmiana oferty po otwarciu GUI wymaga ponownego otwarcia panelu. OP i bypass nie zwalniają z opłaty.
+GUI pozwala wybrać północ (−Z), wschód (+X), południe (+Z) lub zachód (−X), a następnie potwierdzić zakup. Każdy zakup dodaje jeden segment o rozmiarze pierwotnej działki, za stałą cenę `plots.expansion.price`. `0` oznacza darmowe rozszerzenie. Nie ma poziomów ani przyrostu promienia. Dla promienia 16 każdy segment ma 33 × 33 bloki i dodaje 1089 bloków².
 
-Poziom jest zapisywany w tabeli `plot_expansion_levels` w tej samej transakcji co promień. Błąd lub kolizja nie zwiększa poziomu. Istniejące działki zachowują rozmiar i zaczynają nowy system od poziomu 0 — wcześniejsze rozszerzenia nie są przeliczane na poziomy. Dawne `plots.expansion.step` i `plots.expansion.price` nie są już używane. Zmiana konfiguracji poziomów nie zmienia zakupionego terenu ani zapisanego poziomu.
+Segmenty są dokładane od pierwotnej działki w wybranym kierunku. Powtórzenie kierunku przedłuża ten sam odcinek o kolejny segment. Zakup północy i wschodu daje kształt L; pusty północno-wschodni narożnik pozostaje poza działką. Ochrona obejmuje całą wysokość świata. Segmenty współdzielą właściciela, flagi i członków.
 
-Plugin wybiera usługę Economy VaultUnlocked (API v2), a gdy jest niedostępna — klasyczne Vault. Potrzebny jest również plugin ekonomii rejestrujący tę usługę. Sam Vault nie zapewnia kont ani sald. Brak usługi lub odrzucona płatność blokuje płatne rozszerzenie.
+Sprawdzane są kolizje z rzeczywistymi segmentami innych działek i regionami WorldGuard, łączna powierzchnia oraz maksymalna odległość granicy od pierwotnego środka (`defaultMaxRadius` / `plotsx.plot.size.*`). Segment musi zmieścić się w całości. Nie zwiększa liczby działek właściciela.
 
-Środek `(x, z)` pozostaje bez zmian. Promień rośnie o `step` kupowanego poziomu, więc każda z czterech granic przesuwa się na zewnątrz o tę liczbę bloków: zachód `−X`, wschód `+X`, północ `−Z`, południe `+Z`. Nie wybiera się kierunku na podstawie pozycji lub spojrzenia gracza. Ochrona nadal obejmuje całą wysokość świata.
+Istniejące działki zachowują cały teren; ich aktualny rozmiar staje się stałym rozmiarem bazowym, ponieważ dawny system nie zapisywał pierwotnego promienia. Nowe segmenty są zapisywane w `plot_segments`. Historyczna tabela `plot_expansion_levels` pozostaje w kopiach zapasowych, ale nie steruje rozszerzaniem. Usuń `levels` z konfiguracji i ustaw `price` (domyślnie 500.0). Zmiana `plots.radius` nie zmienia wielkości segmentów istniejącej działki.
 
-| Parametr | Przed | Po jednym domyślnym kroku |
-| --- | --- | --- |
-| Promień | 16 | 24 |
-| Bok (`2r + 1`) | 33 | 49 |
-| Powierzchnia | 1089 | 2401 |
-
-Przyrost wynosi 1312 bloków². Sprawdzane są limit promienia, łączna powierzchnia działek właściciela, kolizje z innymi działkami i regionami WorldGuard. Gdy pełny krok nie mieści się w limicie, operacja jest odrzucana, a nie przycinana do limitu.
+Plugin korzysta z VaultUnlocked lub Vault oraz dostawcy ekonomii. Zmiana ceny lub docelowego segmentu po otwarciu oferty wymaga ponownego otwarcia menu. OP i bypass nie zwalniają z opłaty.
 
 Płatność jest pobierana przed transakcją rozszerzenia. Odrzucenie rozszerzenia powoduje próbę zwrotu przez tego samego dostawcę. Nieudany zwrot jest zgłaszany graczowi i zapisany w logu jako `REFUND REQUIRED` z UUID, ID działki i kwotą. Ekonomia i SQL nie są wspólną transakcją: awaria procesu lub niejednoznaczny błąd dostawcy/połączenia może wymagać ręcznego rozliczenia. Obsługa płatności i SQL odbywa się synchronicznie; wolna baza może opóźnić wątek obsługujący zakup.
 

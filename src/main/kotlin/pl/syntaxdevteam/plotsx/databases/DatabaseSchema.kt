@@ -71,6 +71,16 @@ internal object DatabaseSchema {
         }
         add(createPlotsTable)
         add("""
+            CREATE TABLE IF NOT EXISTS plot_segments (
+                plot_id INTEGER NOT NULL,
+                x INTEGER NOT NULL,
+                z INTEGER NOT NULL,
+                radius INTEGER NOT NULL,
+                PRIMARY KEY (plot_id, x, z),
+                FOREIGN KEY (plot_id) REFERENCES plots(plot_id) ON DELETE CASCADE
+            )
+        """.trimIndent())
+        add("""
             CREATE TABLE IF NOT EXISTS plot_expansion_levels (
                 plot_id INTEGER PRIMARY KEY,
                 expansion_level INTEGER NOT NULL,

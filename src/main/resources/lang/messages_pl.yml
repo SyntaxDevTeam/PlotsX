@@ -9,7 +9,6 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 
 # Wiadomości obsługi błędów
 error:
-  expand_max_level: "<red>Osiągnięto maksymalny skonfigurowany poziom działki.</red>"
   expand_invalid_price: "<red>Nieprawidłowa cena rozszerzenia w konfiguracji.</red>"
   expand_quote_changed: "<red>Cena lub rozmiar zmieniły się. Otwórz ponownie panel rozszerzania.</red>"
   expand_no_economy: "<red>Płatne rozszerzanie wymaga Vault lub VaultUnlocked i dostawcy ekonomii.</red>"
@@ -56,7 +55,7 @@ plots:
   rename_exists: "<red>Działka o tej nazwie już istnieje!</red>"
   rename_not_found: "<red>Działka nie istnieje.</red>"
   rename_fail: "<red>Nie udało się zmienić nazwy działki.</red>"
-  expand_success: "<green>Rozszerzono działkę do promienia <white><radius></white> bloków.</green>"
+  expand_success: "<green>Dodano segment działki o wymiarach <white><size> × <size></white> bloków.</green>"
   expand_cancelled: "<yellow>Anulowano rozszerzanie działki.</yellow>"
 
 private_chest:
@@ -174,14 +173,18 @@ GUI:
     title: "<b>Ustawienia flag</b>"
     back: "<gray>Wróć do ustawień działki</gray>"
   expand:
-    level: "<gold>Docelowy poziom: <level></gold>"
-    price: "<gold>Cena za jeden krok: <price></gold>"
+    segment: "<gray>Nowy segment: <white><size> × <size></white></gray>"
+    directions:
+      north: "<gold>Północ (−Z)</gold>"
+      east: "<gold>Wschód (+X)</gold>"
+      south: "<gold>Południe (+Z)</gold>"
+      west: "<gold>Zachód (−X)</gold>"
+    price: "<gold>Cena za segment: <price></gold>"
     title: "<b>Rozszerzanie działki</b>"
     confirm: "<green>Potwierdź rozszerzenie</green>"
     cancel: "<red>Anuluj</red>"
-    radius: "<gray>Promień: <white><current></white> → <green><target></green></gray>"
     area: "<gray>Łączny teren po zmianie: <white><used></white>/<white><max></white></gray>"
-    max_radius: "<gray>Maksymalny promień: <white><max></white></gray>"
+    max_radius: "<gray>Maksymalna odległość granicy od środka: <white><max></white></gray>"
 
 
 flags:

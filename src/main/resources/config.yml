@@ -40,19 +40,9 @@ plots:
   # A legacy single string is also supported. ["*"] = all worlds; [] = none.
   world: ["world"]
   expansion:
-    # Sequential upgrades from level 0. step adds blocks to EACH border.
-    # price is per upgrade in the default economy currency; 0 = free.
-    # Missing next level means maximum level reached.
-    levels:
-      1:
-        step: 8
-        price: 500.0
-      2:
-        step: 8
-        price: 1000.0
-      3:
-        step: 16
-        price: 2000.0
+    # Each purchase adds one square of the plot's original size in the selected direction.
+    # Fixed price per segment in the default economy currency; 0 = free.
+    price: 500.0
     # Used when the player has no plotsx.plot.size.<radius> permission
     defaultMaxRadius: 64
     # Combined block area of all owned plots; override with plotsx.plot.max-area.<blocks>

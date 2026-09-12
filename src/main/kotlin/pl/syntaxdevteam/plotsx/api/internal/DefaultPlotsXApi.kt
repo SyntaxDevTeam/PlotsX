@@ -26,7 +26,8 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     private val providers = mutableMapOf<String, Plugin>()
     private fun ready() = check(active) { "PlotsX API is disabled; obtain a new provider from ServicesManager" }
     private fun serverThread() { ready(); check(Bukkit.isPrimaryThread()) { "This API operation requires the Paper server thread" } }
-    private fun PlotData.snapshot() = PlotSnapshot(id, ownerUuid, world, x, y, z, radius, name, creationTime)
+    private fun PlotData.snapshot() = PlotSnapshot(id, ownerUuid, world, x, y, z, radius, name, creationTime,
+        immutable(extensions.map { PlotRegionSnapshot(it.x, it.z, it.radius) }))
     private fun <T> immutable(values: Collection<T>): List<T> = Collections.unmodifiableList(values.toList())
 
     override fun getPlot(id: Int): PlotSnapshot? { ready(); return plugin.cacheManager.getPlot(id)?.snapshot() }
