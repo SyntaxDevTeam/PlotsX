@@ -20,6 +20,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
     sealed interface ClaimResult {
         data class Success(val plotId: Int) : ClaimResult
         data object LimitReached : ClaimResult
+        data object ChunkLimitReached : ClaimResult
         data object AreaLimitReached : ClaimResult
         data object Overlap : ClaimResult
         data object DatabaseError : ClaimResult
@@ -193,170 +194,55 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
     }
 
+    private fun <T> protectedMutation(action: () -> T): T =
+        plugin.protectionCoordinator.mutate({ plugin.cacheManager.reloadAllCachesSync() }, action)
+
     fun createTables() {
         getConnection()?.use { conn ->
             conn.createStatement().use { statement ->
                 DatabaseSchema.statements(dbType).forEach { statement.executeUpdate(it) }
             }
+            DatabaseMigrations.migrate(conn, dbType)
+            OperationJournal.migrate(conn)
+            reportInterruptedOperations(conn)
         } ?: error("No database connection.")
     }
 
-    fun claimPlotAtomically(
-        ownerUuid: UUID,
-        actorUuid: UUID,
-        world: String,
-        x: Int,
-        z: Int,
-        y: Int,
-        radius: Int,
-        maxPlots: Int,
-        maxTotalArea: Long,
-        namePrefix: String
-    ): ClaimResult {
-        val claimLock = claimLocks.computeIfAbsent(world.lowercase(Locale.ROOT)) { ReentrantLock() }
-        return claimLock.withLock {
-            claimPlotInTransaction(
-                ownerUuid, actorUuid, world, x, z, y, radius, maxPlots, maxTotalArea, namePrefix
-            )
-        }
+    private fun reportInterruptedOperations(conn: Connection) {
+        for (operation in OperationJournal.recoverInterrupted(conn, System.currentTimeMillis())) logger.err(
+            "PAYMENT RECONCILIATION REQUIRED: operation=${operation.id} plot=${operation.plotId} " +
+                "owner=${operation.owner} provider=${operation.provider} amount=${operation.amount} currency=${operation.currency} state=${operation.state}"
+        )
     }
 
-    private fun claimPlotInTransaction(
-        ownerUuid: UUID,
-        actorUuid: UUID,
-        world: String,
-        x: Int,
-        z: Int,
-        y: Int,
-        radius: Int,
-        maxPlots: Int,
-        maxTotalArea: Long,
-        namePrefix: String
-    ): ClaimResult {
-        val connection = getConnection() ?: run {
-            logger.err("Brak połączenia z bazą danych.")
-            return ClaimResult.DatabaseError
-        }
-        val defaultFlags = PlotFlagRegistry.allFlags.values.associate { it.name to it.defaultValue }
+    internal fun loadPlotCacheData(plotId: Int? = null): PlotCacheData =
+        (getConnection() ?: error("No database connection for protection cache.")).use { PlotCacheLoader.load(it, plotId) }
 
-        connection.use { conn ->
+    fun claimPlotAtomically(ownerUuid: UUID, actorUuid: UUID, world: String, x: Int, z: Int, y: Int,
+                            radius: Int, maxPlots: Int, maxTotalArea: Long, namePrefix: String,
+                            maxChunksPerPlot: Int = Int.MAX_VALUE, maxChunksOwned: Int = Int.MAX_VALUE): ClaimResult = protectedMutation {
+        (getConnection() ?: return@protectedMutation ClaimResult.DatabaseError).use { conn ->
             try {
-                conn.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
-                conn.autoCommit = false
-
-                val ownerPlotCount = conn.prepareStatement(
-                    "SELECT COUNT(*) FROM plots WHERE owner_uuid = ?"
-                ).use { stmt ->
-                    stmt.setString(1, ownerUuid.toString())
-                    stmt.executeQuery().use { rs ->
-                        if (rs.next()) rs.getInt(1) else 0
-                    }
+                val shape = pl.syntaxdevteam.plotsx.claiming.ClaimGeometryFactory.create(plugin.claimMode, x, z, radius)
+                when (val result = ClaimTransaction.create(conn, ownerUuid, actorUuid, world, x, y, z, shape,
+                    maxPlots, maxTotalArea, maxChunksPerPlot, maxChunksOwned, namePrefix,
+                    PlotFlagRegistry.allFlags.values.associate { it.name to it.defaultValue })) {
+                    is ClaimTransaction.Result.Success -> ClaimResult.Success(result.id)
+                    ClaimTransaction.Result.PlotLimit -> ClaimResult.LimitReached
+                    ClaimTransaction.Result.AreaLimit -> ClaimResult.AreaLimitReached
+                    ClaimTransaction.Result.ChunkLimit -> ClaimResult.ChunkLimitReached
+                    ClaimTransaction.Result.Overlap -> ClaimResult.Overlap
                 }
-
-                if (maxPlots >= 0 && ownerPlotCount >= maxPlots) {
-                    conn.rollback()
-                    return ClaimResult.LimitReached
-                }
-
-                val ownedArea = conn.prepareStatement(
-                    "SELECT radius FROM $spatialPlots WHERE owner_uuid = ?"
-                ).use { stmt ->
-                    stmt.setString(1, ownerUuid.toString())
-                    stmt.executeQuery().use { rs ->
-                        var sum = 0L
-                        while (rs.next()) sum = saturatingAreaSum(sum, rs.getInt(1))
-                        sum
-                    }
-                }
-                val claimedArea = plotArea(radius)
-                if (ownedArea > maxTotalArea - claimedArea) {
-                    conn.rollback()
-                    return ClaimResult.AreaLimitReached
-                }
-
-                val overlap = conn.prepareStatement(
-                    """
-                    SELECT 1 FROM $spatialPlots
-                    WHERE world = ?
-                      AND (x + radius) >= ?
-                      AND (x - radius) <= ?
-                      AND (z + radius) >= ?
-                      AND (z - radius) <= ?
-                    LIMIT 1
-                    """.trimIndent()
-                ).use { stmt ->
-                    stmt.setString(1, world)
-                    stmt.setInt(2, x - radius)
-                    stmt.setInt(3, x + radius)
-                    stmt.setInt(4, z - radius)
-                    stmt.setInt(5, z + radius)
-                    stmt.executeQuery().use(ResultSet::next)
-                }
-
-                if (overlap) {
-                    conn.rollback()
-                    return ClaimResult.Overlap
-                }
-
-                val plotId = conn.prepareStatement(
-                    """
-                    INSERT INTO plots (owner_uuid, x, z, y, radius, world, name, creation_time)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """.trimIndent(),
-                    Statement.RETURN_GENERATED_KEYS
-                ).use { stmt ->
-                    stmt.setString(1, ownerUuid.toString())
-                    stmt.setInt(2, x)
-                    stmt.setInt(3, z)
-                    stmt.setInt(4, y)
-                    stmt.setInt(5, radius)
-                    stmt.setString(6, world)
-                    stmt.setString(7, "$namePrefix ${ownerPlotCount + 1}")
-                    stmt.setLong(8, System.currentTimeMillis())
-                    stmt.executeUpdate()
-                    stmt.generatedKeys.use { keys ->
-                        if (keys.next()) keys.getInt(1) else throw SQLException("Nie udało się pobrać ID nowej działki.")
-                    }
-                }
-
-                conn.prepareStatement(
-                    "INSERT INTO plot_flags (plot_id, flag_name, flag_value) VALUES (?, ?, ?)"
-                ).use { flagStmt ->
-                    for ((flag, value) in defaultFlags) {
-                        flagStmt.setInt(1, plotId)
-                        flagStmt.setString(2, flag)
-                        flagStmt.setString(3, value.toString())
-                        flagStmt.addBatch()
-                    }
-                    flagStmt.executeBatch()
-                }
-
-                conn.prepareStatement(
-                    "INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp) VALUES (?, ?, ?, ?)"
-                ).use { logStmt ->
-                    logStmt.setInt(1, plotId)
-                    logStmt.setString(2, "CREATE")
-                    logStmt.setString(3, actorUuid.toString())
-                    logStmt.setLong(4, System.currentTimeMillis())
-                    logStmt.executeUpdate()
-                }
-
-                conn.commit()
-                logger.debug("Utworzono działkę z domyślnymi flagami: plot_id=$plotId")
-                return ClaimResult.Success(plotId)
-            } catch (ex: SQLException) {
-                try {
-                    conn.rollback()
-                } catch (rollbackException: SQLException) {
-                    logger.err("Nie udało się wycofać tworzenia działki: ${rollbackException.message}")
-                }
-                logger.err("Błąd podczas atomowego tworzenia działki: ${ex.message}")
-                return ClaimResult.DatabaseError
+            } catch (failure: Exception) {
+                logger.err("Claim transaction failed: ${failure.message}")
+                ClaimResult.DatabaseError
             }
         }
     }
 
-    fun deletePlot(plotId: Int): Boolean {
+    fun deletePlot(plotId: Int): Boolean = protectedMutation { performDeletePlot(plotId) }
+
+    private fun performDeletePlot(plotId: Int): Boolean {
         val connection = getConnection() ?: run {
             logger.err("Brak połączenia z bazą danych.")
             return false
@@ -389,7 +275,15 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
     }
 
-    fun updatePlotDetails(plotId: Int, newName: String? = null, newRadius: Int? = null): Boolean {
+    fun updatePlotDetails(plotId: Int, newName: String? = null, newRadius: Int? = null): Boolean = protectedMutation { performUpdatePlotDetails(plotId, newName, newRadius) }
+
+    private fun performUpdatePlotDetails(plotId: Int, newName: String? = null, newRadius: Int? = null): Boolean {
+        if (newRadius != null) {
+            val plot = getPlotById(plotId) ?: return false
+            if (plot.radius == null || newRadius < 1) return false
+            val candidate = plot.copy(radius = newRadius).geometry
+            if (getPlotsFromAllUsers().any { it.id != plotId && it.world.equals(plot.world, true) && it.geometry.intersects(candidate) }) return false
+        }
         val connection = getConnection() ?: run {
             logger.err("Brak połączenia z bazą danych.")
             return false
@@ -410,6 +304,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
 
         newRadius?.let {
             updates.add("radius = ?")
+            updates.add("geometry_revision = geometry_revision + 1")
             params.add(it)
         }
 
@@ -450,10 +345,15 @@ class DatabaseHandler(private val plugin: PlotsX) {
             } }
         }
 
-    // A spatial row per segment; the original square remains in plots for compatibility.
-    private val spatialPlots = """(SELECT plot_id, owner_uuid, world, x, z, radius FROM plots
-        UNION ALL SELECT p.plot_id, p.owner_uuid, p.world, s.x, s.z, s.radius
-        FROM plots p JOIN plot_segments s ON p.plot_id = s.plot_id) spatial_plots"""
+    /** Internal persistence entry point. Do not expose as a paid purchase before journal integration. */
+    internal fun expandChunkAtomically(
+        request: ChunkExpansionTransaction.Request,
+        limits: ChunkExpansionTransaction.Limits
+    ): ChunkExpansionTransaction.Result = protectedMutation {
+        (getConnection() ?: error("No database connection for chunk expansion")).use {
+            ChunkExpansionTransaction.expand(it, request, limits)
+        }
+    }
 
     fun expandPlotAtomically(
         plotId: Int,
@@ -465,8 +365,21 @@ class DatabaseHandler(private val plugin: PlotsX) {
         maxRadius: Int,
         maxTotalArea: Long,
         expectedSegmentCount: Int
+    ): ExpandResult = protectedMutation { performExpandPlotAtomically(plotId, ownerUuid, actorUuid, direction, sourceSegment, expectedSegment, maxRadius, maxTotalArea, expectedSegmentCount) }
+
+    private fun performExpandPlotAtomically(
+        plotId: Int,
+        ownerUuid: UUID,
+        actorUuid: UUID,
+        direction: ExpansionDirection,
+        sourceSegment: PlotSegment,
+        expectedSegment: PlotSegment,
+        maxRadius: Int,
+        maxTotalArea: Long,
+        expectedSegmentCount: Int
     ): ExpandResult {
         val plot = getPlotById(plotId) ?: return ExpandResult.PlotNotFound
+        if (plot.radius == null) return ExpandResult.DatabaseError
         val lock = claimLocks.computeIfAbsent(plot.world.lowercase(Locale.ROOT)) { ReentrantLock() }
         return lock.withLock {
             val connection = getConnection() ?: return@withLock ExpandResult.DatabaseError
@@ -511,37 +424,16 @@ class DatabaseHandler(private val plugin: PlotsX) {
                         return@withLock ExpandResult.RadiusLimitReached
                     }
 
-                    val totalArea = conn.prepareStatement("SELECT radius FROM $spatialPlots WHERE owner_uuid = ?").use { stmt ->
-                        stmt.setString(1, ownerUuid.toString())
-                        stmt.executeQuery().use { rs ->
-                            var sum = 0L
-                            while (rs.next()) sum = saturatingAreaSum(sum, rs.getInt(1))
-                            sum
-                        }
-                    }
+                    val allPlots = PlotRepository.readAll(conn)
+                    val totalArea = allPlots.filter { it.ownerUuid == ownerUuid }.fold(0L) { total, p -> ClaimTransaction.saturatedAdd(total, p.geometry.area) }
                     val proposedArea = target.area
                     if (totalArea > maxTotalArea - proposedArea) {
                         conn.rollback()
                         return@withLock ExpandResult.AreaLimitReached
                     }
 
-                    val overlap = conn.prepareStatement(
-                        """
-                        SELECT 1 FROM $spatialPlots
-                        WHERE plot_id <> ? AND world = ?
-                          AND (x + radius) >= ? AND (x - radius) <= ?
-                          AND (z + radius) >= ? AND (z - radius) <= ?
-                        LIMIT 1
-                        """.trimIndent()
-                    ).use { stmt ->
-                        stmt.setInt(1, plotId)
-                        stmt.setString(2, world)
-                        stmt.setInt(3, target.x - target.radius)
-                        stmt.setInt(4, target.x + target.radius)
-                        stmt.setInt(5, target.z - target.radius)
-                        stmt.setInt(6, target.z + target.radius)
-                        stmt.executeQuery().use(ResultSet::next)
-                    }
+                    val candidateShape = pl.syntaxdevteam.plotsx.geometry.ClassicGeometry(target)
+                    val overlap = allPlots.any { it.id != plotId && it.world.equals(world, true) && it.geometry.intersects(candidateShape) }
                     if (overlap) {
                         conn.rollback()
                         return@withLock ExpandResult.Overlap
@@ -562,6 +454,9 @@ class DatabaseHandler(private val plugin: PlotsX) {
                         stmt.setString(3, actorUuid.toString())
                         stmt.setLong(4, System.currentTimeMillis())
                         stmt.executeUpdate()
+                    }
+                    conn.prepareStatement("UPDATE plots SET geometry_revision = geometry_revision + 1 WHERE plot_id = ?").use {
+                        it.setInt(1, plotId); it.executeUpdate()
                     }
                     conn.commit()
                     ExpandResult.Success(target)
@@ -591,7 +486,9 @@ class DatabaseHandler(private val plugin: PlotsX) {
      *
      * `updatePlotFlag(plotId = 42, flagName = "pvp", flagValue = true)`
      **/
-    fun updatePlotFlag(plotId: Int, flagName: String, flagValue: Boolean): Boolean {
+    fun updatePlotFlag(plotId: Int, flagName: String, flagValue: Boolean): Boolean = protectedMutation { performUpdatePlotFlag(plotId, flagName, flagValue) }
+
+    private fun performUpdatePlotFlag(plotId: Int, flagName: String, flagValue: Boolean): Boolean {
         val connection = getConnection() ?: run {
             logger.err("Brak połączenia z bazą danych.")
             return false
@@ -707,7 +604,9 @@ class DatabaseHandler(private val plugin: PlotsX) {
      * @param role
      * @return `Boolean`
      */
-    fun addPlotMember(plotId: Int, memberUuid: UUID, role: String = "member"): Boolean {
+    fun addPlotMember(plotId: Int, memberUuid: UUID, role: String = "member"): Boolean = protectedMutation { performAddPlotMember(plotId, memberUuid, role) }
+
+    private fun performAddPlotMember(plotId: Int, memberUuid: UUID, role: String = "member"): Boolean {
         val connection = getConnection() ?: run {
             logger.err("Brak połączenia z bazą danych.")
             return false
@@ -751,7 +650,9 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
     }
 
-    fun removePlotMember(plotId: Int, memberUuid: UUID): Boolean {
+    fun removePlotMember(plotId: Int, memberUuid: UUID): Boolean = protectedMutation { performRemovePlotMember(plotId, memberUuid) }
+
+    private fun performRemovePlotMember(plotId: Int, memberUuid: UUID): Boolean {
         val connection = getConnection() ?: run {
             logger.err("Brak połączenia z bazą danych.")
             return false
@@ -780,11 +681,14 @@ class DatabaseHandler(private val plugin: PlotsX) {
     }
 
     fun transferPlotOwnership(plotId: Int, expectedOwner: UUID, recipient: UUID,
-                              maxPlots: Int, maxRadius: Int, maxArea: Long): Boolean {
+                              maxPlots: Int, maxRadius: Int, maxArea: Long, maxChunksPerPlot: Int = Int.MAX_VALUE, maxChunksOwned: Int = Int.MAX_VALUE): Boolean = protectedMutation { performTransferPlotOwnership(plotId, expectedOwner, recipient, maxPlots, maxRadius, maxArea, maxChunksPerPlot, maxChunksOwned) }
+
+    private fun performTransferPlotOwnership(plotId: Int, expectedOwner: UUID, recipient: UUID,
+                              maxPlots: Int, maxRadius: Int, maxArea: Long, maxChunksPerPlot: Int, maxChunksOwned: Int): Boolean {
         val plot = getPlotById(plotId) ?: return false
         return claimLocks.computeIfAbsent(plot.world.lowercase(Locale.ROOT)) { ReentrantLock() }.withLock {
             (getConnection() ?: return@withLock false).use {
-                OwnershipTransfer.transfer(it, plotId, expectedOwner, recipient, maxPlots, maxRadius, maxArea)
+                OwnershipTransfer.transfer(it, plotId, expectedOwner, recipient, maxPlots, maxRadius, maxArea, maxChunksPerPlot, maxChunksOwned)
             }
         }
     }
@@ -797,7 +701,9 @@ class DatabaseHandler(private val plugin: PlotsX) {
      * @param newRole
      * @return `Boolean`
      */
-    fun updatePlotMemberRole(plotId: Int, memberUuid: UUID, newRole: String): Boolean {
+    fun updatePlotMemberRole(plotId: Int, memberUuid: UUID, newRole: String): Boolean = protectedMutation { performUpdatePlotMemberRole(plotId, memberUuid, newRole) }
+
+    private fun performUpdatePlotMemberRole(plotId: Int, memberUuid: UUID, newRole: String): Boolean {
         val connection = getConnection() ?: run {
             logger.err("Brak połączenia z bazą danych.")
             return false
@@ -858,36 +764,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         return result
     }
 
-fun getPlotsFromAllUsers(): List<PlotData> {
-    val query = "SELECT * FROM plots"
-    val plots = mutableListOf<PlotData>()
-
-    logger.debug("Próba nawiązania połączenia z getPlotsFromAllUsers()")
-    getConnection()?.use { conn ->
-        conn.prepareStatement(query).use { stmt ->
-            stmt.executeQuery().use { rs ->
-                while (rs.next()) {
-                    plots.add(
-                        PlotData(
-                            id = rs.getInt("plot_id"),
-                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
-                            x = rs.getInt("x"),
-                            z = rs.getInt("z"),
-                            y = rs.getInt("y"),
-                            radius = rs.getInt("radius"),
-                            world = rs.getString("world"),
-                            name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time"),
-                            extensions = readSegments(conn, rs.getInt("plot_id"))
-                        )
-                    )
-                }
-            }
-        }
-    } ?: logger.err("Brak połączenia z bazą danych w getPlotsFromAllUsers().")
-
-    return plots
-}
+    fun getPlotsFromAllUsers(): List<PlotData> = loadPlotCacheData().plots
 
     /**
      * Sprawdzenie, czy gracz posiada już działkę
@@ -918,48 +795,8 @@ fun getPlotsFromAllUsers(): List<PlotData> {
      * @param z
      * @return `Boolean`
      */
-    fun getPlotAtLocation(world: String, x: Int, z: Int): PlotData? {
-        val query = when (dbType) {
-            "sqlite", "postgresql", "h2" -> """
-            SELECT * FROM plots WHERE plot_id IN (
-                SELECT plot_id FROM $spatialPlots WHERE world = ? AND
-                (? BETWEEN x - radius AND x + radius) AND
-                (? BETWEEN z - radius AND z + radius))
-        """
-            else -> """
-            SELECT * FROM plots WHERE plot_id IN (
-                SELECT plot_id FROM $spatialPlots WHERE world = ? AND
-                (? BETWEEN x - radius AND x + radius) AND
-                (? BETWEEN z - radius AND z + radius))
-        """
-        }
-
-        logger.debug("Próba nawiązania połączenie z getPlotAtLocation()")
-        getConnection()?.use { conn ->
-            conn.prepareStatement(query).use { stmt ->
-                stmt.setString(1, world)
-                stmt.setInt(2, x)
-                stmt.setInt(3, z)
-                stmt.executeQuery().use { rs ->
-                    return if (rs.next()) {
-                        PlotData(
-                            id = rs.getInt("plot_id"),
-                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
-                            x = rs.getInt("x"),
-                            z = rs.getInt("z"),
-                            y = rs.getInt("y"),
-                            radius = rs.getInt("radius"),
-                            world = rs.getString("world"),
-                            name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time"),
-                            extensions = readSegments(conn, rs.getInt("plot_id"))
-                        )
-                    } else null
-                }
-            }
-        }
-        return null
-    }
+    fun getPlotAtLocation(world: String, x: Int, z: Int): PlotData? =
+        loadPlotCacheData().plots.firstOrNull { it.world.equals(world, true) && it.contains(x, z) }
 
     /**
      * Pobranie działki po nazwie
@@ -968,34 +805,8 @@ fun getPlotsFromAllUsers(): List<PlotData> {
      * @param ownerUuid
      * @return `PlotData?`
      */
-    fun getPlotByName(name: String, ownerUuid: UUID): PlotData? {
-        val query = "SELECT * FROM plots WHERE name = ? AND owner_uuid = ?"
-
-        logger.debug("Próba nawiązania połączenie z getPlotByName()")
-        getConnection()?.use { conn ->
-            conn.prepareStatement(query).use { stmt ->
-                stmt.setString(1, name)
-                stmt.setString(2, ownerUuid.toString())
-                stmt.executeQuery().use { rs ->
-                    return if (rs.next()) {
-                        PlotData(
-                            id = rs.getInt("plot_id"),
-                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
-                            x = rs.getInt("x"),
-                            z = rs.getInt("z"),
-                            y = rs.getInt("y"),
-                            radius = rs.getInt("radius"),
-                            world = rs.getString("world"),
-                            name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time"),
-                            extensions = readSegments(conn, rs.getInt("plot_id"))
-                        )
-                    } else null
-                }
-            }
-        }
-        return null
-    }
+    fun getPlotByName(name: String, ownerUuid: UUID): PlotData? =
+        loadPlotCacheData().plots.firstOrNull { it.ownerUuid == ownerUuid && it.name.equals(name, true) }
 
     /**
      * Pobranie wszystkich działek gracza (których jest właścicielem lub członkiem)
@@ -1004,102 +815,13 @@ fun getPlotsFromAllUsers(): List<PlotData> {
      * @return `List<PlotData>`
      */
     fun getPlayerPlots(uuid: UUID): List<PlotData> {
-        val query = when (dbType) {
-            "sqlite", "postgresql", "h2" -> """
-            SELECT DISTINCT p.* FROM plots p
-            LEFT JOIN plot_members m ON p.plot_id = m.plot_id
-            WHERE p.owner_uuid = ? OR m.member_uuid = ?
-        """
-            else -> """
-            SELECT DISTINCT p.* FROM plots p
-            LEFT JOIN plot_members m ON p.plot_id = m.plot_id
-            WHERE p.owner_uuid = ? OR m.member_uuid = ?
-        """
-        }
-
-        val plots = mutableListOf<PlotData>()
-        logger.debug("Próba nawiązania połączenie z getPlayerPlots()")
-        getConnection()?.use { conn ->
-            conn.prepareStatement(query).use { stmt ->
-                stmt.setString(1, uuid.toString())
-                stmt.setString(2, uuid.toString())
-                stmt.executeQuery().use { rs ->
-                    while (rs.next()) {
-                        plots += PlotData(
-                            id = rs.getInt("plot_id"),
-                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
-                            x = rs.getInt("x"),
-                            z = rs.getInt("z"),
-                            y = rs.getInt("y"),
-                            radius = rs.getInt("radius"),
-                            world = rs.getString("world"),
-                            name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time"),
-                            extensions = readSegments(conn, rs.getInt("plot_id"))
-                        )
-                    }
-                }
-            }
-        }
-        return plots
+        val loaded = loadPlotCacheData()
+        return loaded.plots.filter { it.ownerUuid == uuid || loaded.members[it.id].orEmpty().any { member -> member.memberUuid == uuid.toString() } }
     }
 
-    fun getPlotsByOwner(owner: UUID): List<PlotData> {
-        val query = "SELECT * FROM plots WHERE owner_uuid = ?"
-        val plots = mutableListOf<PlotData>()
-        logger.debug("Próba nawiązania połączenie z getPlotsByOwner()")
-        getConnection()?.use { conn ->
-            conn.prepareStatement(query).use { stmt ->
-                stmt.setString(1, owner.toString())
-                stmt.executeQuery().use { rs ->
-                    while (rs.next()) {
-                        plots += PlotData(
-                            id = rs.getInt("plot_id"),
-                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
-                            x = rs.getInt("x"),
-                            z = rs.getInt("z"),
-                            y = rs.getInt("y"),
-                            radius = rs.getInt("radius"),
-                            world = rs.getString("world"),
-                            name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time"),
-                            extensions = readSegments(conn, rs.getInt("plot_id"))
-                        )
-                    }
-                }
-            }
-        }
-        return plots
-    }
+    fun getPlotsByOwner(owner: UUID): List<PlotData> = loadPlotCacheData().plots.filter { it.ownerUuid == owner }
 
-    fun getPlotById(plotId: Int): PlotData? {
-        val query = "SELECT * FROM plots WHERE plot_id = ?"
-
-        logger.debug("Próba nawiązania połączenia z getPlotById()")
-        getConnection()?.use { conn ->
-            conn.prepareStatement(query).use { stmt ->
-                stmt.setInt(1, plotId)
-                stmt.executeQuery().use { rs ->
-                    return if (rs.next()) {
-                        PlotData(
-                            id = rs.getInt("plot_id"),
-                            ownerUuid = UUID.fromString(rs.getString("owner_uuid")),
-                            x = rs.getInt("x"),
-                            z = rs.getInt("z"),
-                            y = rs.getInt("y"),
-                            radius = rs.getInt("radius"),
-                            world = rs.getString("world"),
-                            name = rs.getString("name"),
-                            creationTime = rs.getLong("creation_time"),
-                            extensions = readSegments(conn, rs.getInt("plot_id"))
-                        )
-                    } else null
-                }
-            }
-        }
-        logger.warning("Nie znaleziono działki o plot_id=$plotId")
-        return null
-    }
+    fun getPlotById(plotId: Int): PlotData? = loadPlotCacheData(plotId).plots.singleOrNull()
 
     /**
      * Sprawdzenie, czy działka nie koliduje z innymi działkami w danym świecie
@@ -1111,53 +833,8 @@ fun getPlotsFromAllUsers(): List<PlotData> {
      * @return `Boolean`
      */
     fun doesPlotOverlap(x: Int, z: Int, radius: Int, world: String): Boolean {
-        getConnection()?.use { conn ->
-            val query = when (dbType) {
-                "sqlite", "h2" -> """
-                SELECT 1 FROM $spatialPlots
-                WHERE world = ?
-                  AND (x + radius) >= ?
-                  AND (x - radius) <= ?
-                  AND (z + radius) >= ?
-                  AND (z - radius) <= ?
-                LIMIT 1;
-            """.trimIndent()
-
-                "postgresql" -> """
-                SELECT 1 FROM $spatialPlots
-                WHERE world = ?
-                  AND (x + radius) >= ?
-                  AND (x - radius) <= ?
-                  AND (z + radius) >= ?
-                  AND (z - radius) <= ?
-                LIMIT 1;
-            """.trimIndent()
-
-                else -> """ -- MySQL / MariaDB
-                SELECT 1 FROM $spatialPlots
-                WHERE world = ?
-                  AND (x + radius) >= ?
-                  AND (x - radius) <= ?
-                  AND (z + radius) >= ?
-                  AND (z - radius) <= ?
-                LIMIT 1;
-            """.trimIndent()
-            }
-
-            logger.debug("Próba nawiązania połączenie z doesPlotOverlap()")
-            conn.prepareStatement(query).use { stmt ->
-                stmt.setString(1, world)
-                stmt.setInt(2, x - radius)
-                stmt.setInt(3, x + radius)
-                stmt.setInt(4, z - radius)
-                stmt.setInt(5, z + radius)
-
-                stmt.executeQuery().use { rs ->
-                    return rs.next() // Jeśli istnieje przynajmniej 1 wynik — kolizja
-                }
-            }
-        }
-        return false
+        val candidate = pl.syntaxdevteam.plotsx.geometry.ClassicGeometry(PlotSegment(x, z, radius))
+        return loadPlotCacheData().plots.any { it.world.equals(world, true) && it.geometry.intersects(candidate) }
     }
 
     /**
@@ -1202,10 +879,12 @@ fun getPlotsFromAllUsers(): List<PlotData> {
         }
     }
 
-    fun importDatabase() {
+    fun importDatabase() = protectedMutation { performImportDatabase() }
+
+    private fun performImportDatabase() {
         (getConnection() ?: error("No database connection.")).use { conn ->
-            // E3 can store chunks; runtime protection will be integrated in E4 before enabling imports.
-            SqlBackup.restore(conn, SqlBackup.dialect(dbType), File(plugin.dataFolder, "dump/backup.sql"), allowChunkPlots = false)
+            SqlBackup.restore(conn, SqlBackup.dialect(dbType), File(plugin.dataFolder, "dump/backup.sql"), allowChunkPlots = true)
+            if (OperationJournal.exists(conn)) reportInterruptedOperations(conn)
         }
         plugin.cacheManager.reloadAllCachesSync()
     }

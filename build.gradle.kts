@@ -43,6 +43,7 @@ dependencies {
     testImplementation("org.xerial:sqlite-jdbc:3.53.4.0")
     testImplementation("com.h2database:h2:2.4.240")
     testRuntimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.10")
+    testRuntimeOnly("org.postgresql:postgresql:42.7.13")
     compileOnly("io.papermc.paper:paper-api:$paperApiVersion")
     compileOnly("pl.syntaxdevteam:syntaxcore:1.4.0-R0.1-SNAPSHOT")
     compileOnly("pl.syntaxdevteam:messageHandler-paper:1.2.2-R0.4-SNAPSHOT")
@@ -120,4 +121,18 @@ tasks.named("assemble") { dependsOn(apiJar) }
 plugindeployer {
     paper { dir = "/home/debian/poligon/Paper/26.2/plugins" } //ostatnia wersja dla Paper
     folia { dir = "/home/debian/poligon/Folia/26.2/plugins" } //ostatnia wersja dla Folia
+}
+
+// Isolated Paper acceptance harness; never included in the distributed plugin.
+val compileLiveTest = tasks.register<JavaCompile>("compileLiveTest") {
+    source(fileTree("src/liveTest/java") { include("**/*.java") })
+    classpath = sourceSets.main.get().compileClasspath + sourceSets.main.get().output
+    destinationDirectory.set(layout.buildDirectory.dir("classes/liveTest"))
+    options.release.set(21)
+}
+tasks.register<Jar>("liveTestJar") {
+    dependsOn(compileLiveTest)
+    archiveClassifier.set("live-test")
+    from(compileLiveTest.flatMap { it.destinationDirectory })
+    from("src/liveTest/resources")
 }

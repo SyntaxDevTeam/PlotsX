@@ -31,7 +31,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
                 plots.forEach { plot ->
                     // Names are literal text, never MiniMessage markup.
                     sender.sendMessage(net.kyori.adventure.text.Component.text(
-                        "#${plot.id} | ${plot.name} | ${plot.world}: ${plot.x}, ${plot.z} | r=${plot.radius}"
+                        "#${plot.id} | ${plot.name} | ${plot.world}: ${plot.x}, ${plot.z} | ${plot.radius?.let { "r=$it" } ?: "chunks=${plot.chunks.size}"}"
                     ))
                 }
                 return

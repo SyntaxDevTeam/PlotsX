@@ -21,20 +21,20 @@ import java.util.UUID
 
 internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listener {
     @Volatile private var active = true
-    override val apiVersion = 1
+    override val apiVersion = 2
     private val access = PlotAccess(plugin)
     private val providers = mutableMapOf<String, Plugin>()
     private fun ready() = check(active) { "PlotsX API is disabled; obtain a new provider from ServicesManager" }
     private fun serverThread() { ready(); check(Bukkit.isPrimaryThread()) { "This API operation requires the Paper server thread" } }
     private fun PlotData.snapshot() = PlotSnapshot(id, ownerUuid, world, x, y, z, radius, name, creationTime,
-        immutable(extensions.map { PlotRegionSnapshot(it.x, it.z, it.radius) }))
+        immutable(extensions.map { PlotRegionSnapshot(it.x, it.z, it.radius) }),
+        immutable(chunks.map { ChunkSnapshot(it.x, it.z) }), geometryRevision)
     private fun <T> immutable(values: Collection<T>): List<T> = Collections.unmodifiableList(values.toList())
 
     override fun getPlot(id: Int): PlotSnapshot? { ready(); return plugin.cacheManager.getPlot(id)?.snapshot() }
     override fun getPlotAt(world: String, blockX: Int, blockZ: Int): PlotSnapshot? {
         ready()
-        return plugin.cacheManager.getCachedPlots().asSequence().map { it.snapshot() }
-            .firstOrNull { it.contains(world, blockX, blockZ) }
+        return plugin.cacheManager.getPlotAt(world, blockX, blockZ)?.snapshot()
     }
     override fun getPlots(): List<PlotSnapshot> { ready(); return immutable(plugin.cacheManager.getCachedPlots().map { it.snapshot() }) }
     override fun getOwnedPlots(owner: UUID) = immutable(getPlots().filter { it.owner == owner })
@@ -61,12 +61,18 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     override fun evaluateFlag(world: String, blockX: Int, blockZ: Int, flag: String, subject: UUID?): FlagDecision {
         ready()
         val definition = PlotFlagRegistry.allFlags[flag] ?: return FlagDecision.UNKNOWN_FLAG
-        val plot = getPlotAt(world, blockX, blockZ) ?: return FlagDecision.ALLOW
-        val value = getFlagValue(plot.id, flag) ?: return FlagDecision.DENY
-        val member = subject != null && (plot.owner == subject || isMember(plot.id, subject))
-        return if (FlagRules.allowed(value, definition.type == FlagType.WHITELIST, definition.memberBypass, member))
+        return plugin.protectionCoordinator.decision({ FlagDecision.DENY }) {
+        val snapshot = plugin.cacheManager.readSnapshot()
+        val plot = snapshot.at(world, blockX, blockZ) ?: return@decision FlagDecision.ALLOW
+        val value = snapshot.flags[plot.id]?.firstOrNull { it.name == flag }?.value?.toBooleanStrictOrNull()
+            ?: definition.defaultValue
+        val member = subject != null && (plot.ownerUuid == subject ||
+            snapshot.members[plot.id].orEmpty().any { it.memberUuid == subject.toString() })
+        if (FlagRules.allowed(value, definition.type == FlagType.WHITELIST, definition.memberBypass, member))
             FlagDecision.ALLOW else FlagDecision.DENY
+        }
     }
+
     override fun canManage(actor: CommandSender, plotId: Int, action: String): Boolean {
         serverThread()
         if (action !in access.actions) return false
@@ -112,7 +118,8 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
                     val recipient = plugin.server.getPlayer(target) ?: return MemberUpdateResult.RECIPIENT_OFFLINE
                     val limits = plugin.hookHandler.getPlotLimits(recipient)
                     plugin.databaseHandler.transferPlotOwnership(plotId, plot.ownerUuid, target,
-                        plugin.hookHandler.getMaxPlots(recipient), limits.maxRadius, limits.maxTotalArea)
+                        plugin.hookHandler.getMaxPlots(recipient), limits.maxRadius, limits.maxTotalArea,
+                        plugin.hookHandler.getMaxChunksPerPlot(recipient), plugin.hookHandler.getMaxOwnedChunks(recipient))
                 }
             }
             if (!success) return if (action == "transfer") MemberUpdateResult.TRANSFER_REJECTED else MemberUpdateResult.DATABASE_ERROR

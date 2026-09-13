@@ -32,7 +32,8 @@ internal object DatabaseMigrations {
         if (tableExists(conn, "schema_migrations")) {
             conn.createStatement().use { stmt ->
                 stmt.executeQuery("SELECT version, name FROM schema_migrations").use { rows ->
-                    while (rows.next()) require(rows.getInt(1) == VERSION && rows.getString(2) == NAME) {
+                    while (rows.next()) require((rows.getInt(1) == VERSION && rows.getString(2) == NAME) ||
+                        (rows.getInt(1) == 2 && rows.getString(2) == "operation_journal")) {
                         "Unsupported database migration version"
                     }
                 }

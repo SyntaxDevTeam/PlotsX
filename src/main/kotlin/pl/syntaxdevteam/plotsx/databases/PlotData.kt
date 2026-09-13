@@ -1,6 +1,9 @@
 package pl.syntaxdevteam.plotsx.databases
 
 import pl.syntaxdevteam.plotsx.geometry.ClassicGeometry
+import pl.syntaxdevteam.plotsx.geometry.ChunkGeometry
+import pl.syntaxdevteam.plotsx.geometry.ChunkPosition
+import pl.syntaxdevteam.plotsx.geometry.PlotGeometry
 import java.util.*
 
 data class PlotData @JvmOverloads constructor(
@@ -9,22 +12,30 @@ data class PlotData @JvmOverloads constructor(
     val x: Int,
     val z: Int,
     val y: Int,
-    val radius: Int,
+    val radius: Int?,
     val world: String,
     val name: String,
     val creationTime: Long,
-    val extensions: List<PlotSegment> = emptyList()
+    val extensions: List<PlotSegment> = emptyList(),
+    val chunks: Set<ChunkPosition> = emptySet(),
+    val geometryRevision: Long = 0
 ) {
-    val geometry = ClassicGeometry(PlotSegment(x, z, radius), extensions)
-    val segments: List<PlotSegment> get() = geometry.segments
+    val geometry: PlotGeometry = if (radius != null) {
+        require(chunks.isEmpty()) { "Classic plots cannot have chunks" }
+        ClassicGeometry(PlotSegment(x, z, radius), extensions)
+    } else {
+        require(extensions.isEmpty()) { "Chunk plots cannot have classic extensions" }
+        ChunkGeometry(chunks)
+    }
+    val segments: List<PlotSegment> get() = (geometry as? ClassicGeometry)?.segments.orEmpty()
     val area: Long get() = geometry.area
     fun contains(x: Int, z: Int): Boolean = geometry.contains(x, z)
 
-    fun segmentAt(x: Int, z: Int): PlotSegment? = geometry.segmentAt(x, z)
+    fun segmentAt(x: Int, z: Int): PlotSegment? = (geometry as? ClassicGeometry)?.segmentAt(x, z)
 
     /** Add the immediate neighbour of an existing segment; never skip occupied land. */
-    fun expansion(direction: ExpansionDirection, source: PlotSegment = segments.first()): PlotSegment? =
-        geometry.expansion(direction, source)
+    fun expansion(direction: ExpansionDirection, source: PlotSegment? = segments.firstOrNull()): PlotSegment? =
+        source?.let { (geometry as? ClassicGeometry)?.expansion(direction, it) }
 
 }
 

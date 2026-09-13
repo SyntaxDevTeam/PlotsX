@@ -12,7 +12,14 @@ internal data class StoredPlot(
     val id: Int, val ownerUuid: UUID, val world: String, val name: String,
     val x: Int, val y: Int, val z: Int, val creationTime: Long,
     val geometry: PlotGeometry, val geometryRevision: Long
-)
+) {
+    fun toPlotData(): PlotData = when (val shape = geometry) {
+        is ClassicGeometry -> PlotData(id, ownerUuid, x, z, y, shape.base.radius, world, name, creationTime,
+            shape.segments.drop(1), geometryRevision = geometryRevision)
+        is ChunkGeometry -> PlotData(id, ownerUuid, x, z, y, null, world, name, creationTime,
+            chunks = shape.chunks, geometryRevision = geometryRevision)
+    }
+}
 
 /** Persistence only. The caller owns the transaction and enforces claim authorization and limits. */
 internal object PlotRepository {

@@ -1,0 +1,10 @@
+name: PlotsXAcceptance
+version: '1.0'
+main: pl.syntaxdevteam.plotsx.testing.PaperAcceptance
+api-version: '1.21.11'
+dependencies:
+  server:
+    PlotsX:
+      load: BEFORE
+      required: true
+      join-classpath: true

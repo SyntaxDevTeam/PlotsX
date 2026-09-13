@@ -122,7 +122,7 @@ class CoreProtectHook(private val plugin: PlotsX) : Listener {
                 null,
                 null,
                 null,
-                plot.radius,
+                requireNotNull(plot.radius) { "CoreProtect radius operations require classic geometry" },
                 center
             )
         })
@@ -149,7 +149,7 @@ class CoreProtectHook(private val plugin: PlotsX) : Listener {
             null,
             null,
             null,
-            plot.radius,
+            requireNotNull(plot.radius) { "CoreProtect radius operations require classic geometry" },
             center
         ) ?: emptyList()
     }
@@ -177,7 +177,7 @@ class CoreProtectHook(private val plugin: PlotsX) : Listener {
                 null,
                 null,
                 null,
-                plot.radius,
+                requireNotNull(plot.radius) { "CoreProtect radius operations require classic geometry" },
                 center
             )
         })

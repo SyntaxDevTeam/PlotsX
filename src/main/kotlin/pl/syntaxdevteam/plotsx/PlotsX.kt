@@ -25,6 +25,20 @@ import pl.syntaxdevteam.plotsx.protection.PrivateChestManager
 import java.io.File
 
 class PlotsX : JavaPlugin() {
+    val protectionCoordinator = pl.syntaxdevteam.plotsx.protection.ProtectionCoordinator()
+    var claimMode = pl.syntaxdevteam.plotsx.claiming.ClaimMode.CLASSIC
+        private set
+
+    fun initializeClaimMode() { claimMode = validateClaimConfig(config) }
+
+    private fun validateClaimConfig(candidate: org.bukkit.configuration.ConfigurationSection): pl.syntaxdevteam.plotsx.claiming.ClaimMode {
+        require(!candidate.contains("plots.claiming") || candidate.isConfigurationSection("plots.claiming")) { "plots.claiming must be a section" }
+        for ((key, fallback) in mapOf("maxPerPlot" to 32, "maxTotalOwned" to 64)) {
+            val value = candidate.get("plots.chunks.$key", fallback)
+            require(value is Int && value >= 0) { "plots.chunks.$key must be a nonnegative integer" }
+        }
+        return pl.syntaxdevteam.plotsx.claiming.ClaimMode.fromSection(candidate.getConfigurationSection("plots.claiming")?.getValues(false).orEmpty())
+    }
     lateinit var api: pl.syntaxdevteam.plotsx.api.PlotsXApi
         private set
     private var apiImplementation: pl.syntaxdevteam.plotsx.api.internal.DefaultPlotsXApi? = null
@@ -78,7 +92,10 @@ class PlotsX : JavaPlugin() {
         pluginInitializer.onDisable()
     }
     fun onReload() {
+        val candidate = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(dataFolder, "config.yml"))
+        require(validateClaimConfig(candidate) == claimMode) { "Changing plots.claiming.mode requires a server restart" }
         super.reloadConfig()
+        protectionCoordinator.recover { cacheManager.reloadAllCachesSync() }
         logger.success("Config reloaded.")
     }
 }

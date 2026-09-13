@@ -33,6 +33,9 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         val plot = plugin.databaseHandler.getPlotById(plotId) ?: run {
             player.sendMessage(error("plot_not_found")); return
         }
+        if (plot.radius == null) {
+            player.sendMessage(error("chunk_expansion_pending")); return
+        }
         val source = if (player.world.name == plot.world)
             plot.segmentAt(player.location.blockX, player.location.blockZ) else null
         val target = source?.let { plot.expansion(direction, it) }

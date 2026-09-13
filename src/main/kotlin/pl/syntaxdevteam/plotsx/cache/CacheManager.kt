@@ -4,125 +4,75 @@ import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.databases.PlotFlagData
 import pl.syntaxdevteam.plotsx.databases.PlotMemberData
-import java.util.concurrent.ConcurrentHashMap
 
 class CacheManager(private val plugin: PlotsX) {
-
     private val databaseHandler = plugin.databaseHandler
+    private val snapshots = SnapshotStore(PlotCacheSnapshot.create())
+    private val decisionSnapshot = ThreadLocal<PlotCacheSnapshot>()
 
-    @Volatile private var plotCache = ConcurrentHashMap<Int, PlotData>()
-    @Volatile private var flagCache = ConcurrentHashMap<Int, List<PlotFlagData>>()
-    @Volatile private var memberCache = ConcurrentHashMap<Int, List<PlotMemberData>>()
+    internal fun <T> withDecisionSnapshot(action: () -> T): T {
+        val previous = decisionSnapshot.get()
+        decisionSnapshot.set(previous ?: snapshots.read())
+        try { return action() }
+        finally { if (previous == null) decisionSnapshot.remove() else decisionSnapshot.set(previous) }
+    }
 
-    /** Public API - dostęp do cache */
+    fun getPlot(plotId: Int): PlotData? = readSnapshot().plots[plotId]
+    fun getPlotAt(world: String, x: Int, z: Int): PlotData? = readSnapshot().at(world, x, z)
+    fun getFlags(plotId: Int): List<PlotFlagData>? = readSnapshot().flags[plotId]
+    fun getMembers(plotId: Int): List<PlotMemberData>? = readSnapshot().members[plotId]
+    fun getCachedPlots(): Collection<PlotData> = readSnapshot().plots.values
+    internal fun readSnapshot(): PlotCacheSnapshot = decisionSnapshot.get() ?: snapshots.read()
 
-    fun getPlot(plotId: Int): PlotData? = plotCache[plotId]
     fun reloadPlotSync(plotId: Int) {
-        val plot = databaseHandler.getPlotById(plotId)
-        if (plot == null) invalidatePlot(plotId) else plotCache[plotId] = plot
+        snapshots.reload { current ->
+            val loaded = databaseHandler.loadPlotCacheData(plotId)
+            val plot = loaded.plots.singleOrNull()
+            val plots = current.plots.toMutableMap()
+            if (plot == null) plots.remove(plotId) else plots[plotId] = plot
+            val flags = if (plot == null) current.flags - plotId
+                else current.flags + (plotId to loaded.flags[plotId].orEmpty())
+            val members = if (plot == null) current.members - plotId
+                else current.members + (plotId to loaded.members[plotId].orEmpty())
+            if (plot != null && current.plots[plotId] == plot) current.withMetadata(flags, members)
+            else PlotCacheSnapshot.create(plots.values, flags, members)
+        }
     }
-    fun getFlags(plotId: Int): List<PlotFlagData>? = flagCache[plotId]
+
     fun reloadFlagsSync(plotId: Int) {
-        flagCache[plotId] = databaseHandler.getPlotFlags(plotId)
+        reloadPlotSync(plotId)
     }
-    fun getMembers(plotId: Int): List<PlotMemberData>? = memberCache[plotId]
     fun reloadMembersSync(plotId: Int) {
-        memberCache[plotId] = databaseHandler.getPlotMembers(plotId)
+        reloadPlotSync(plotId)
     }
-
-    fun getCachedPlots(): Collection<PlotData> = plotCache.values
-
-    /** Public API - inicjowanie asynchronicznego odświeżania cache */
-
-    fun refreshAllCachesAsync() {
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            refreshPlotCacheSync()
-            refreshFlagCacheSync()
-            refreshMemberCacheSync()
-            plugin.logger.debug("[Cache] Cache odświeżony (działki, flagi, członkowie).")
-        })
-    }
-
-    fun refreshPlotCacheAsync() {
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            refreshPlotCacheSync()
-            plugin.logger.debug("[Cache] Plot cache odświeżony.")
-        })
-    }
-
+    private fun async(task: () -> Unit) = plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable(task))
+    fun refreshAllCachesAsync() { async { reloadAllCachesSync() } }
+    // A new plot must not become visible before its flags and membership are available.
+    fun refreshPlotCacheAsync() { async { reloadAllCachesSync() } }
     fun refreshFlagCacheAsync() {
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            refreshFlagCacheSync()
-            plugin.logger.debug("[Cache] Flag cache odświeżony.")
-        })
+        async { reloadAllCachesSync() }
     }
-
     fun refreshMemberCacheAsync() {
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            refreshMemberCacheSync()
-            plugin.logger.debug("[Cache] Member cache odświeżony.")
-        })
+        async { reloadAllCachesSync() }
     }
-
-    /** Private sync logic wykonywana asynchronicznie z zewnątrz */
-
-    private fun refreshPlotCacheSync() {
-        val allPlots = databaseHandler.getPlotsFromAllUsers()
-        // Publish a complete replacement so asynchronous API reads never see a half-filled map.
-        plotCache = ConcurrentHashMap(allPlots.associateBy { it.id })
-    }
-
-    private fun refreshFlagCacheSync() {
-        flagCache = ConcurrentHashMap(plotCache.keys.associateWith { databaseHandler.getPlotFlags(it) })
-    }
-
-    private fun refreshMemberCacheSync() {
-        memberCache = ConcurrentHashMap(plotCache.keys.associateWith { databaseHandler.getPlotMembers(it) })
-    }
-
-    /** Możliwość dodania lub zaktualizowania pojedynczego wpisu */
-
-    fun updatePlotCacheAsync(plotId: Int) {
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            val plot = databaseHandler.getPlotById(plotId)
-            if (plot != null) plotCache[plotId] = plot
-        })
-    }
-
+    fun updatePlotCacheAsync(plotId: Int) { async { reloadPlotSync(plotId) } }
     fun updateFlagCacheAsync(plotId: Int, onComplete: () -> Unit = {}) {
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            val flags = databaseHandler.getPlotFlags(plotId)
-            flagCache[plotId] = flags
+        async {
+            reloadFlagsSync(plotId)
             plugin.server.scheduler.runTask(plugin, onComplete)
-        })
+        }
     }
-
-    fun updateMemberCacheAsync(plotId: Int) {
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-            val members = databaseHandler.getPlotMembers(plotId)
-            memberCache[plotId] = members
-        })
-    }
-
+    fun updateMemberCacheAsync(plotId: Int) { async { reloadMembersSync(plotId) } }
     fun invalidatePlot(plotId: Int) {
-        plotCache.remove(plotId)
-        flagCache.remove(plotId)
-        memberCache.remove(plotId)
+        snapshots.reload { current ->
+            PlotCacheSnapshot.create((current.plots - plotId).values, current.flags - plotId, current.members - plotId)
+        }
     }
-
-    /** Synchronous clear **/
-    fun clearAllCaches() {
-        plotCache.clear()
-        flagCache.clear()
-        memberCache.clear()
-        //plugin.logger.debug("Cache został wyczyszczony synchronicznie (działki, flagi, członkowie).")
-    }
-
-    /** Synchronous reload of all caches **/
+    fun clearAllCaches() { snapshots.clear(PlotCacheSnapshot.create()) }
     fun reloadAllCachesSync() {
-        refreshPlotCacheSync()
-        refreshFlagCacheSync()
-        refreshMemberCacheSync()
-        //plugin.logger.debug("Cache odświeżony synchronicznie (działki, flagi, członkowie).")
+        snapshots.reload {
+            val loaded = databaseHandler.loadPlotCacheData()
+            PlotCacheSnapshot.create(loaded.plots, loaded.flags, loaded.members)
+        }
     }
 }

@@ -22,6 +22,7 @@ class OwnershipTransferTest {
                 c.prepareStatement("INSERT INTO plot_members VALUES (1, ?, 'manager')").use {
                     it.setString(1, recipient.toString()); it.executeUpdate()
                 }
+                DatabaseMigrations.migrate(c, if (url.contains("sqlite")) "sqlite" else "h2")
                 test(c)
             }
         }

@@ -15,7 +15,10 @@ class WorldGuardHook(private val plugin: PlotsX) : RegionProtectionHook {
         centerX: Int,
         centerZ: Int,
         radius: Int
-    ): Boolean = try {
+    ): Boolean = overlapsBounds(world, pl.syntaxdevteam.plotsx.geometry.BlockBounds(
+        centerX.toLong() - radius, centerZ.toLong() - radius, centerX.toLong() + radius, centerZ.toLong() + radius))
+
+    override fun overlapsBounds(world: World, bounds: pl.syntaxdevteam.plotsx.geometry.BlockBounds): Boolean = try {
         val regionManager = WorldGuard.getInstance().platform.regionContainer.get(BukkitAdapter.adapt(world))
         if (regionManager == null) {
             plugin.logger.warning(
@@ -27,15 +30,15 @@ class WorldGuardHook(private val plugin: PlotsX) : RegionProtectionHook {
         val candidate = ProtectedCuboidRegion(
             "__plotsx_claim_check__",
             true,
-            BlockVector3.at(centerX - radius, world.minHeight, centerZ - radius),
-            BlockVector3.at(centerX + radius, world.maxHeight - 1, centerZ + radius)
+            BlockVector3.at(Math.toIntExact(bounds.minX), world.minHeight, Math.toIntExact(bounds.minZ)),
+            BlockVector3.at(Math.toIntExact(bounds.maxX), world.maxHeight - 1, Math.toIntExact(bounds.maxZ))
         )
 
         val intersections = candidate.getIntersectingRegions(regionManager.regions.values)
         val overlap = intersections.any { it.id != "__global__" }
         if (overlap) {
             plugin.logger.debug(
-                "WorldGuard blocked claim in ${world.name} at $centerX,$centerZ radius=$radius; " +
+                "WorldGuard blocked claim in ${world.name} at $bounds; " +
                     "regions=${intersections.joinToString { it.id }}"
             )
         }

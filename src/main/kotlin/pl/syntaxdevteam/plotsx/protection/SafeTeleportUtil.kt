@@ -66,7 +66,8 @@ object SafeTeleportUtil {
     fun findSafeLocation(
         world: World,
         centerX: Int, centerZ: Int, radius: Int,
-        baseY: Int
+        baseY: Int,
+        contains: (Int, Int) -> Boolean = { _, _ -> true }
     ): Location? {
         val yMax = world.maxHeight - 2
         val yMin = world.minHeight + 1
@@ -78,7 +79,7 @@ object SafeTeleportUtil {
                 for (dz in -radius..radius) {
                     val x = centerX + dx
                     val z = centerZ + dz
-                    if (isSafeBlock(world, x, y, z)) {
+                    if (contains(x, z) && isSafeBlock(world, x, y, z)) {
                         return Location(world, x + 0.5, y.toDouble(), z + 0.5)
                     }
                 }
@@ -91,7 +92,7 @@ object SafeTeleportUtil {
                 for (dz in -radius..radius) {
                     val x = centerX + dx
                     val z = centerZ + dz
-                    if (isSafeBlock(world, x, y, z)) {
+                    if (contains(x, z) && isSafeBlock(world, x, y, z)) {
                         return Location(world, x + 0.5, y.toDouble(), z + 0.5)
                     }
                 }
@@ -106,7 +107,7 @@ object SafeTeleportUtil {
      */
     fun safeTeleport(player: Player, plot: PlotData): Boolean {
         val world = Bukkit.getWorld(plot.world) ?: return false
-        val loc = findSafeLocation(world, plot.x, plot.z, plot.radius, plot.y)
+        val loc = findSafeLocation(world, plot.x, plot.z, plot.radius ?: 16, plot.y, plot::contains)
         return loc?.let {
             player.teleport(it)
             true

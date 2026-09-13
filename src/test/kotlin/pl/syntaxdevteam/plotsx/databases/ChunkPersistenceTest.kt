@@ -12,26 +12,35 @@ import java.util.UUID
 
 class ChunkPersistenceTest {
     private val owner = UUID.randomUUID()
-    // Optional, disposable MariaDB instance. Creates/drops only uniquely named test databases.
-    private val mariaUrl = System.getenv("PLOTSX_TEST_MARIADB_URL")
-    private val dialects = listOf("sqlite", "h2") + if (mariaUrl.isNullOrBlank()) emptyList() else listOf("mysql")
+    private val servers = mapOf(
+        "mariadb" to System.getenv("PLOTSX_TEST_MARIADB_URL"),
+        "mysql" to System.getenv("PLOTSX_TEST_MYSQL_URL"),
+        "postgresql" to System.getenv("PLOTSX_TEST_POSTGRESQL_URL")
+    ).filterValues { !it.isNullOrBlank() }
+    private val dialects = listOf("sqlite", "h2") + servers.keys
     private fun connect(type: String): Connection {
-        if (type == "mysql") {
-            val database = "plotsx_test_" + UUID.randomUUID().toString().replace("-", "")
-            val control = DriverManager.getConnection(mariaUrl, "root", "")
-            control.createStatement().use { it.execute("CREATE DATABASE $database") }
-            val actual = DriverManager.getConnection(mariaUrl, "root", "")
-            actual.catalog = database
+        if (type in servers) {
+            val namespace = "plotsx_test_" + UUID.randomUUID().toString().replace("-", "")
+            val url = servers.getValue(type)
+            fun connection() = if (type == "postgresql") DriverManager.getConnection(url)
+                else DriverManager.getConnection(url, "root", "")
+            val control = connection()
+            val objectType = if (type == "postgresql") "SCHEMA" else "DATABASE"
+            control.createStatement().use { it.execute("CREATE $objectType $namespace") }
+            val actual = connection()
+            if (type == "postgresql") actual.schema = namespace else actual.catalog = namespace
             return object : Connection by actual {
                 override fun close() {
                     try { actual.close() } finally {
-                        control.use { it.createStatement().use { stmt -> stmt.execute("DROP DATABASE $database") } }
+                        control.use { it.createStatement().use { stmt ->
+                            stmt.execute("DROP $objectType $namespace" + if (type == "postgresql") " CASCADE" else "")
+                        } }
                     }
                 }
             }
         }
         return DriverManager.getConnection(
-        if (type == "sqlite") "jdbc:sqlite::memory:" else "jdbc:h2:mem:${UUID.randomUUID()}"
+            if (type == "sqlite") "jdbc:sqlite::memory:" else "jdbc:h2:mem:${UUID.randomUUID()}"
         ).also { if (type == "sqlite") it.createStatement().use { stmt -> stmt.execute("PRAGMA foreign_keys=ON") } }
     }
 
@@ -201,17 +210,17 @@ class ChunkPersistenceTest {
                     c.autoCommit = false
                     insertChunk(c, -10, -10)
                     c.commit(); c.autoCommit = true
-                    val file = SqlBackup.export(c, target, directory)
-                    assertTrue(file.readLines().first().contains("v2 dialect=$target"))
+                    val file = SqlBackup.export(c, SqlBackup.dialect(target), directory)
+                    assertTrue(file.readLines().first().contains("v2 dialect=${SqlBackup.dialect(target)}"))
                     assertTrue(c.autoCommit)
                     connect(target).use { restored ->
-                        repeat(2) { SqlBackup.restore(restored, target, file, allowChunkPlots = true) }
+                        repeat(2) { SqlBackup.restore(restored, SqlBackup.dialect(target), file, allowChunkPlots = true) }
                         assertEquals(2, PlotRepository.readAll(restored).size)
                         assertEquals(1, count(restored, "plot_chunks"))
                         assertEquals(1, count(restored, "plot_segments"))
                         assertEquals(1, count(restored, "plot_members"))
                         assertEquals(1, count(restored, "schema_migrations"))
-                        assertThrows(IllegalArgumentException::class.java) { SqlBackup.restore(restored, target, file, allowChunkPlots = false) }
+                        assertThrows(IllegalArgumentException::class.java) { SqlBackup.restore(restored, SqlBackup.dialect(target), file, allowChunkPlots = false) }
                         assertEquals(2, PlotRepository.readAll(restored).size)
                         assertTrue(restored.autoCommit)
                         restored.autoCommit = false
@@ -228,12 +237,12 @@ class ChunkPersistenceTest {
         val directory = Files.createTempDirectory("plotsx-chunks-legacy").toFile()
         try {
             legacy(c, dialect)
-            val file = SqlBackup.export(c, dialect, directory)
+            val file = SqlBackup.export(c, SqlBackup.dialect(dialect), directory)
             DatabaseMigrations.migrate(c, dialect)
             c.autoCommit = false
             insertChunk(c, -10, -10)
             c.commit(); c.autoCommit = true
-            SqlBackup.restore(c, dialect, file)
+            SqlBackup.restore(c, SqlBackup.dialect(dialect), file)
             val plot = PlotRepository.readAll(c).single()
             assertTrue(plot.geometry is ClassicGeometry)
             assertEquals(0L, plot.geometryRevision)
@@ -248,7 +257,7 @@ class ChunkPersistenceTest {
             c.autoCommit = false
             insertChunk(c)
             c.commit(); c.autoCommit = true
-            val file = SqlBackup.export(c, dialect, directory)
+            val file = SqlBackup.export(c, SqlBackup.dialect(dialect), directory)
             val original = file.readText()
             for (invalid in listOf(
                 original.lineSequence().filterNot { it.startsWith("INSERT INTO plot_chunks ") }.joinToString("\n"),
@@ -256,7 +265,7 @@ class ChunkPersistenceTest {
                 original.replace("COMMIT;", "INSERT INTO missing_table VALUES (1);\nCOMMIT;")
             )) {
                 file.writeText(invalid)
-                assertThrows(Exception::class.java) { SqlBackup.restore(c, dialect, file, allowChunkPlots = true) }
+                assertThrows(Exception::class.java) { SqlBackup.restore(c, SqlBackup.dialect(dialect), file, allowChunkPlots = true) }
                 assertTrue(c.autoCommit)
                 assertEquals(256L, PlotRepository.readAll(c).single().geometry.area)
             }

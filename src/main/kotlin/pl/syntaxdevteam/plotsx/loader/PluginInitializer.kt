@@ -43,6 +43,7 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.saveDefaultConfig()
         plugin.configHandler = ConfigHandler(plugin)
         plugin.configHandler.verifyAndUpdateConfig()
+        plugin.initializeClaimMode()
     }
 
     private fun setupUUID() {
@@ -79,10 +80,15 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.versionChecker = VersionChecker(plugin)
         plugin.cacheManager.clearAllCaches()
         plugin.cacheManager.reloadAllCachesSync()
-        plugin.server.pluginManager.registerEvents(PlotProtectionListener(plugin), plugin)
+        pl.syntaxdevteam.plotsx.protection.ProtectionEventRegistration.register(plugin, PlotProtectionListener(plugin))
         plugin.server.pluginManager.registerEvents(plugin.renamePlotChatListener, plugin)
         plugin.coreProtectHook = CoreProtectHook(plugin)
-        plugin.server.pluginManager.registerEvents(plugin.coreProtectHook, plugin)
+        plugin.server.pluginManager.registerEvents(object : org.bukkit.event.Listener {
+            @org.bukkit.event.EventHandler
+            fun onPluginEnable(event: org.bukkit.event.server.PluginEnableEvent) {
+                plugin.coreProtectHook.onPluginEnable(event)
+            }
+        }, plugin)
         if (plugin.server.pluginManager.isPluginEnabled("WorldGuard")) {
             plugin.regionProtectionHook = WorldGuardHook(plugin)
             plugin.logger.success("WorldGuard detected - claims cannot overlap WorldGuard regions.")

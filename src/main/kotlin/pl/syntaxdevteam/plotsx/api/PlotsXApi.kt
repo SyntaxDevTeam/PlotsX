@@ -46,12 +46,30 @@ interface PlotsXApi {
 }
 
 data class PlotSnapshot @JvmOverloads constructor(val id: Int, val owner: UUID, val world: String, val x: Int, val y: Int,
-                        val z: Int, val radius: Int, val name: String, val createdAt: Long,
-                        val extensions: List<PlotRegionSnapshot> = emptyList()) {
+                        val z: Int, val radius: Int?, val name: String, val createdAt: Long,
+                        val extensions: List<PlotRegionSnapshot> = emptyList(),
+                        val chunks: List<ChunkSnapshot> = emptyList(), val geometryRevision: Long = 0) {
+    /** Claimed block columns; classic segment areas are summed as in the storage contract. */
+    val area: Long get() {
+        if (radius == null) return chunks.distinct().size.toLong() * 256
+        fun square(r: Int): Long {
+            val side = r.toLong() * 2 + 1
+            return if (side > 3037000499L) Long.MAX_VALUE else side * side
+        }
+        return extensions.fold(square(radius)) { sum, region ->
+            val added = square(region.radius)
+            if (sum > Long.MAX_VALUE - added) Long.MAX_VALUE else sum + added
+        }
+    }
+    val geometryType: String get() = if (radius == null) "chunks" else "classic"
     fun contains(world: String, x: Int, z: Int): Boolean = this.world.equals(world, true) &&
-        ((kotlin.math.abs(x.toLong() - this.x) <= radius.toLong() &&
+        (if (radius == null) chunks.any { it.x == Math.floorDiv(x, 16) && it.z == Math.floorDiv(z, 16) }
+        else (kotlin.math.abs(x.toLong() - this.x) <= radius.toLong() &&
         kotlin.math.abs(z.toLong() - this.z) <= radius.toLong()) || extensions.any { it.contains(x, z) })
 }
+
+/** API v2: complete 16 x 16 block columns; radius is null for chunk plots. */
+data class ChunkSnapshot(val x: Int, val z: Int)
 
 data class MemberSnapshot(val player: UUID, val role: String)
 

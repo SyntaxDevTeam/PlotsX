@@ -30,6 +30,13 @@ database:
 
 # Plots settings
 plots:
+  # Selects NEW claims only. Existing plots keep their geometry and protection.
+  # Changes require a server restart. Supported values: classic | chunks.
+  claiming:
+    mode: classic
+  chunks:
+    maxPerPlot: 32
+    maxTotalOwned: 64
   # Maximum plots across ALL worlds; override with plotsx.plot.max-plots.<number>.
   # Highest granted numeric permission wins; without one, this value is used.
   maxPlots: 5

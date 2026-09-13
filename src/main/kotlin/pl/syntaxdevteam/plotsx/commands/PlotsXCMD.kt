@@ -48,8 +48,12 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
 
                 args[0].equals("reload", ignoreCase = true) -> {
 
-                    plugin.onReload()
-                    stack.sender.sendMessage(mH.miniMessageFormat("<green>The configuration file has been reloaded.</green>"))
+                    try {
+                        plugin.onReload()
+                        stack.sender.sendMessage(mH.miniMessageFormat("<green>The configuration file has been reloaded.</green>"))
+                    } catch (failure: IllegalArgumentException) {
+                        stack.sender.sendMessage("Reload rejected: ${failure.message}")
+                    }
 
                 }
 

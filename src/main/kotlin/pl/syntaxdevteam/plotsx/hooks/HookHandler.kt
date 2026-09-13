@@ -277,6 +277,12 @@ class HookHandler(private val plugin: PlotsX) {
     fun getClaimRadius(player: Player): Int = numericPlayerSetting(player, "plotsx.plot.radius.",
         plugin.config.getInt("plots.radius", 16).coerceAtLeast(1)).coerceAtLeast(1)
 
+    fun getMaxChunksPerPlot(player: Player): Int = numericPlayerSetting(player, "plotsx.plot.max-chunks-per-plot.",
+        plugin.config.getInt("plots.chunks.maxPerPlot", 32))
+
+    fun getMaxOwnedChunks(player: Player): Int = numericPlayerSetting(player, "plotsx.plot.max-chunks.",
+        plugin.config.getInt("plots.chunks.maxTotalOwned", 64))
+
     private fun numericPlayerSetting(player: Player, prefix: String, fallback: Int): Int =
         player.effectivePermissions.asSequence()
             .filter { it.value }

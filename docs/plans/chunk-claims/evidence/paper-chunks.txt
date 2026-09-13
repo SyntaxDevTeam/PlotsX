@@ -1,0 +1,33 @@
+PASS plugin startup and migration
+PASS API v2 service
+PASS persisted mixed plots survive mode restart
+PASS chunk runtime has no artificial radius
+PASS negative boundary and exact area
+PASS concave corner remains unclaimed
+PASS classic coexists
+PASS visitor break denied [-16, -16]
+PASS owner break allowed [-16, -16]
+PASS API agrees with event
+PASS visitor break denied [-1, -1]
+PASS owner break allowed [-1, -1]
+PASS API agrees with event
+PASS visitor break denied [40, 40]
+PASS owner break allowed [40, 40]
+PASS API agrees with event
+PASS unclaimed hole permits breaking
+PASS piston crossing exact chunk edge denied
+PASS flow flag stored
+PASS fluid entering chunk denied
+PASS mutation enters publication barrier
+PASS real event denied during publication gap
+PASS API denied during publication gap
+PASS configured claim transaction succeeds
+PASS configured strategy and immediate cache publication
+PASS delete configured plot
+PASS delete publishes before returning
+PASS mode change rejected during reload
+PASS reload preserves chunk protection
+PASS reload preserves classic protection
+SERVER 1.21.11-132-c5eb079 (MC: 1.21.11)
+MODE CHUNKS
+RESULT PASS

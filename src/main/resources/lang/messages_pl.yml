@@ -9,6 +9,8 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 
 # Wiadomości obsługi błędów
 error:
+  chunk_expansion_pending: "Rozszerzanie działek chunkowych nie jest jeszcze dostępne na tym etapie wdrożenia."
+  claim_chunk_limit: "Osiągnięto limit chunków działki lub właściciela."
   expand_invalid_price: "<red>Nieprawidłowa cena rozszerzenia w konfiguracji.</red>"
   expand_quote_changed: "<red>Cena lub rozmiar zmieniły się. Otwórz ponownie panel rozszerzania.</red>"
   expand_no_economy: "<red>Płatne rozszerzanie wymaga Vault lub VaultUnlocked i dostawcy ekonomii.</red>"
@@ -400,6 +402,7 @@ dialogs:
   expired: "Formularz wygasł. Otwórz go ponownie, aby kontynuować."
   plot: "Działka: <plot>"
   claim_body: "Utworzyć działkę w <world>, X: <x>, Z: <z>, o promieniu <radius>?"
+  claim_chunk_body: "Zająć chunk <chunkX>, <chunkZ> w świecie <world>? Powierzchnia: 256 bloków."
   claim_changed: "Pozycja lub promień działki uległy zmianie. Użyj ponownie /claim."
   unclaim_body: "Usunąć działkę <plot>? Jej ochrona zostanie wyłączona."
   transfer_body: "Przekazać działkę <plot> graczowi <player>? Utracisz uprawnienia właściciela."

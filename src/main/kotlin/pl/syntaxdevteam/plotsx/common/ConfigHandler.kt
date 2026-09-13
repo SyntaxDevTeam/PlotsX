@@ -27,6 +27,7 @@ class ConfigHandler(private val plugin: PlotsX) {
                     currentSection[key] = defaultSection[key]
                     updated = true
                 } else if (defaultSection.isConfigurationSection(key)) {
+                    require(currentSection.isConfigurationSection(key)) { "${currentSection.currentPath}.$key must be a configuration section" }
                     synchronizeSections(
                         defaultSection.getConfigurationSection(key)!!,
                         currentSection.getConfigurationSection(key)!!

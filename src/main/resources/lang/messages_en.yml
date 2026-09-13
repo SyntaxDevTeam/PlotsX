@@ -9,6 +9,8 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 
 # Error messages
 error:
+  chunk_expansion_pending: "Chunk expansion is not available in this implementation stage."
+  claim_chunk_limit: "The per-plot or owner chunk limit has been reached."
   expand_invalid_price: "<red>Invalid expansion price in configuration.</red>"
   expand_quote_changed: "<red>The price or size changed. Reopen the expansion menu.</red>"
   expand_no_economy: "<red>Paid expansion requires Vault or VaultUnlocked and an economy provider.</red>"
@@ -399,6 +401,7 @@ dialogs:
   expired: "This form has expired. Open it again to continue."
   plot: "Plot: <plot>"
   claim_body: "Create a plot in <world>, at X: <x>, Z: <z>, radius: <radius>?"
+  claim_chunk_body: "Claim chunk <chunkX>, <chunkZ> in <world>? Area: 256 blocks."
   claim_changed: "Your position or claim radius changed. Run /claim again."
   unclaim_body: "Delete plot <plot>? Its protection will be removed."
   transfer_body: "Transfer ownership of <plot> to <player>? You will lose owner privileges."

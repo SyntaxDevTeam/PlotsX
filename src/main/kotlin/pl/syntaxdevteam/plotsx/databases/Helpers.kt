@@ -9,7 +9,7 @@ class Helpers(private var plugin: PlotsX) {
 
     fun visualizePlotBorder3D(player: Player, plot: PlotData, durationSec: Int = 10, stepXZ: Int = 1, stepY: Int = 4) {
         if (player.world.name != plot.world) return
-        plot.segments.forEach { visualizePlotBorder3D(player, it.x, it.z, it.radius, durationSec, stepXZ, stepY, plot) }
+        plot.geometry.regions().forEach { drawBounds(player, it, durationSec, stepXZ, stepY, plot) }
     }
 
     /**
@@ -25,11 +25,21 @@ class Helpers(private var plugin: PlotsX) {
         stepY: Int = 4,
         shape: PlotData? = null
     ) {
+        drawBounds(player, pl.syntaxdevteam.plotsx.geometry.BlockBounds(
+            centerX.toLong() - radius, centerZ.toLong() - radius,
+            centerX.toLong() + radius, centerZ.toLong() + radius), durationSec, stepXZ, stepY, shape)
+    }
+
+    private fun drawBounds(player: Player, bounds: pl.syntaxdevteam.plotsx.geometry.BlockBounds,
+                           durationSec: Int, stepXZ: Int, stepY: Int, shape: PlotData?) {
+        require(stepXZ > 0 && stepY > 0)
         val world = player.world
-        val minX = centerX - radius
-        val maxX = centerX + radius
-        val minZ = centerZ - radius
-        val maxZ = centerZ + radius
+        val minX = Math.toIntExact(bounds.minX)
+        val maxX = Math.toIntExact(bounds.maxX)
+        val minZ = Math.toIntExact(bounds.minZ)
+        val maxZ = Math.toIntExact(bounds.maxZ)
+        val centerX = ((bounds.minX + bounds.maxX) / 2).toInt()
+        val centerZ = ((bounds.minZ + bounds.maxZ) / 2).toInt()
         val minY = world.minHeight
         val maxY = world.maxHeight - 1
 

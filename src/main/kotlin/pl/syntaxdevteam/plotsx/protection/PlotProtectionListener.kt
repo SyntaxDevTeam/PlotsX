@@ -120,10 +120,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
      * @return Obiekt PlotData, jeśli blok znajduje się w obrębie działki, lub null, jeśli nie.
      */
     private fun getPlotAtLocation(world: String, x: Int, z: Int): PlotData? {
-        return plugin.cacheManager.getCachedPlots().firstOrNull { plot ->
-            plot.world.equals(world, ignoreCase = true) &&
-                    plot.contains(x, z)
-        }
+        return plugin.cacheManager.getPlotAt(world, x, z)
     }
 
     /**
@@ -855,18 +852,12 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onLiquidFlow(event: BlockFromToEvent) {
-        val plot = getPlotAtLocation(
-            event.block.world.name, event.block.x, event.block.z
-        ) ?: getPlotAtLocation(
-            event.toBlock.world.name, event.toBlock.x, event.toBlock.z
-        ) ?: return
-
-        if (!isFlagAllowed(plot.id, "flow")) {
-            event.isCancelled = true
-            return
-        }
-
-        if (!isFlagAllowed(plot.id, "flow-damage") && event.toBlock.type in damageableByFlow) {
+        val plots = listOfNotNull(
+            getPlotAtLocation(event.block.world.name, event.block.x, event.block.z),
+            getPlotAtLocation(event.toBlock.world.name, event.toBlock.x, event.toBlock.z)
+        ).distinctBy { it.id }
+        if (plots.any { !isFlagAllowed(it.id, "flow") ||
+                (!isFlagAllowed(it.id, "flow-damage") && event.toBlock.type in damageableByFlow) }) {
             event.isCancelled = true
         }
     }
