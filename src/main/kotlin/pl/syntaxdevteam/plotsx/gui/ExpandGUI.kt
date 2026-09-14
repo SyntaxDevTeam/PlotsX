@@ -30,11 +30,11 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
     private var submitted = false
 
     override fun open(player: Player) {
-        val plot = plugin.databaseHandler.getPlotById(plotId) ?: run {
+        val plot = plugin.cacheManager.getPlot(plotId) ?: run {
             player.sendMessage(error("plot_not_found")); return
         }
         if (plot.radius == null) {
-            player.sendMessage(error("chunk_expansion_pending")); return
+            plugin.guiHandler.registerGui(player, ChunkExpandGUI(plugin, plotId)); return
         }
         val source = if (player.world.name == plot.world)
             plot.segmentAt(player.location.blockX, player.location.blockZ) else null
@@ -93,7 +93,14 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         plugin.guiHandler.unregisterGui(player)
         if (event.slot == cancelIndex) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "expand_cancelled"))
-        } else expand(player)
+        } else {
+            try {
+                plugin.protectionCoordinator.mutate({ plugin.cacheManager.reloadAllCachesSync() }) { expand(player) }
+            } catch (failure: IllegalStateException) {
+                plugin.logger.err("Expansion unavailable: ${failure.message}")
+                player.sendMessage(error("chunk_purchase_busy"))
+            }
+        }
     }
 
     private fun expand(player: Player) {

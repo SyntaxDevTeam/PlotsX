@@ -1,5 +1,7 @@
 # 07 — API v2 i uruchomienie trybu chunkowego
 
+> Aktualizacja 14.09.2026: zakup chunków z ekonomią i GUI ekwipunkowym jest podłączony — [iteracja 7 i aktualny zakres](11-zakup-chunka-i-gui.md). Poniższy opis ograniczeń odzwierciedla etap powstania tego dokumentu.
+
 [Spis planu](README.md) · [Postęp](06-postep-implementacji.md)
 
 ## Konfiguracja dostępna w kodzie

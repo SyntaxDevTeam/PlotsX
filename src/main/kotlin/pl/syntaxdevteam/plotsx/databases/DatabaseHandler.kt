@@ -345,6 +345,28 @@ class DatabaseHandler(private val plugin: PlotsX) {
             } }
         }
 
+    /** Worker-thread purchase entry point; Bukkit and economy calls return to the server thread. */
+    internal fun purchaseChunk(operation: OperationJournal.Operation, level: Int,
+                               limits: ChunkExpansionTransaction.Limits,
+                               account: pl.syntaxdevteam.plotsx.hooks.ExpansionEconomy.Account?,
+                               validate: () -> Boolean): ChunkPurchaseService.Result {
+        check(!org.bukkit.Bukkit.isPrimaryThread()) { "Chunk purchases must run off the server thread" }
+        val calls = object : ChunkPurchaseService.ServerCalls {
+            override fun <T> call(action: () -> T): T {
+                val future = java.util.concurrent.CompletableFuture<T>()
+                plugin.server.scheduler.runTask(plugin, Runnable {
+                    if (!future.isDone) try { future.complete(action()) }
+                    catch (failure: Throwable) { future.completeExceptionally(failure) }
+                })
+                try { return future.get(30, java.util.concurrent.TimeUnit.SECONDS) }
+                catch (failure: Exception) { future.cancel(false); throw failure }
+            }
+        }
+        return ChunkPurchaseService({ getConnection() ?: error("No purchase database connection") },
+            plugin.protectionCoordinator, { plugin.cacheManager.reloadAllCachesSync() }, calls,
+            { logger.err(it) }).purchase(operation, level, limits, account, validate)
+    }
+
     /** Internal persistence entry point. Do not expose as a paid purchase before journal integration. */
     internal fun expandChunkAtomically(
         request: ChunkExpansionTransaction.Request,

@@ -37,6 +37,10 @@ plots:
   chunks:
     maxPerPlot: 32
     maxTotalOwned: 64
+    expansion:
+      # Price per additional chunk; the first claimed chunk remains free.
+      price: 500.0
+      priceMultiplier: 1.5
   # Maximum plots across ALL worlds; override with plotsx.plot.max-plots.<number>.
   # Highest granted numeric permission wins; without one, this value is used.
   maxPlots: 5

@@ -6,7 +6,6 @@ import org.jetbrains.annotations.NotNull
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.SqlBackup
 
-@Suppress("UnstableApiUsage")
 class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
     private val mH = plugin.messageHandler
     private val website = plugin.pluginMeta.website
@@ -53,6 +52,8 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
                         stack.sender.sendMessage(mH.miniMessageFormat("<green>The configuration file has been reloaded.</green>"))
                     } catch (failure: IllegalArgumentException) {
                         stack.sender.sendMessage("Reload rejected: ${failure.message}")
+                    } catch (failure: IllegalStateException) {
+                        stack.sender.sendMessage("Reload unavailable: ${failure.message}")
                     }
 
                 }

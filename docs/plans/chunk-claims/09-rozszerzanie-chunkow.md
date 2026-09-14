@@ -1,5 +1,7 @@
 # 09 — Rozszerzanie chunków: transakcja geometrii
 
+> Aktualizacja 14.09.2026: zakup chunków z ekonomią i GUI ekwipunkowym jest podłączony — [iteracja 7 i aktualny zakres](11-zakup-chunka-i-gui.md). Poniższy opis ograniczeń odzwierciedla etap powstania tego dokumentu.
+
 [Postęp](06-postep-implementacji.md) · [Plan danych i płatności](03-dane-transakcje-migracja.md)
 
 ## Wykonany zakres E6 A

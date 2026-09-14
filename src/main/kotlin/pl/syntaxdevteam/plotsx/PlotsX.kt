@@ -94,8 +94,10 @@ class PlotsX : JavaPlugin() {
     fun onReload() {
         val candidate = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(dataFolder, "config.yml"))
         require(validateClaimConfig(candidate) == claimMode) { "Changing plots.claiming.mode requires a server restart" }
-        super.reloadConfig()
-        protectionCoordinator.recover { cacheManager.reloadAllCachesSync() }
+        protectionCoordinator.recover {
+            super.reloadConfig()
+            cacheManager.reloadAllCachesSync()
+        }
         logger.success("Config reloaded.")
     }
 }

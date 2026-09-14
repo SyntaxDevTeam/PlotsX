@@ -1,6 +1,6 @@
 # Plan dodania chunkowego systemu działek
 
-Status: **E3/E4 zintegrowane, E5 podłączony, transakcja i dziennik E6 wykonane**. Kod zawiera wybór trybu i zajmowanie jednego chunka; pełny cykl życia oraz wydanie pozostają w kolejnych etapach. Data opracowania: 12 września 2026 r. Dokumentacja powstała na podstawie kodu PlotsX w tym repozytorium. Bieżący zakres wykonanych i pozostałych prac opisuje [rejestr postępu](06-postep-implementacji.md). Nazwy nowych klas, kluczy konfiguracji i uprawnień pozostają propozycją, dopóki rejestr nie potwierdza ich implementacji.
+Status: **E3/E4 zintegrowane, E5 podłączony, zakup chunków z dziennikiem i GUI podłączony**. Kod zawiera wybór trybu i zajmowanie jednego chunka; pełny cykl życia oraz wydanie pozostają w kolejnych etapach. Data opracowania: 12 września 2026 r. Dokumentacja powstała na podstawie kodu PlotsX w tym repozytorium. Bieżący zakres wykonanych i pozostałych prac opisuje [rejestr postępu](06-postep-implementacji.md). Nazwy nowych klas, kluczy konfiguracji i uprawnień pozostają propozycją, dopóki rejestr nie potwierdza ich implementacji.
 
 ## Cel i zasada nadrzędna
 
@@ -22,6 +22,7 @@ Dodać drugą metodę zajmowania terenu: działki zbudowane z całych chunków. 
 | [08 — Raport weryfikacji](08-raport-weryfikacji.md) | Macierz SQL, scenariusze Paper, benchmark i odtwarzanie testów. |
 | [09 — Rozszerzanie chunków](09-rozszerzanie-chunkow.md) | Transakcja E6 A, rewizje, liczniki, testy i dalsza integracja płatności. |
 | [10 — Dziennik operacji](10-dziennik-operacji.md) | Stany płatności, migracja, recovery, backup v3 i pozostała integracja. |
+| [11 — Zakup i GUI](11-zakup-chunka-i-gui.md) | Usługa zakupu, wątki, kompensacja, cennik i podłączone GUI chunków. |
 
 ## Najważniejsze decyzje projektowe
 

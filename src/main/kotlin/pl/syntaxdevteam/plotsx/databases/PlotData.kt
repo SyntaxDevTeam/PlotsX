@@ -18,7 +18,8 @@ data class PlotData @JvmOverloads constructor(
     val creationTime: Long,
     val extensions: List<PlotSegment> = emptyList(),
     val chunks: Set<ChunkPosition> = emptySet(),
-    val geometryRevision: Long = 0
+    val geometryRevision: Long = 0,
+    val expansionLevel: Int = if (radius == null) chunks.size - 1 else extensions.size
 ) {
     val geometry: PlotGeometry = if (radius != null) {
         require(chunks.isEmpty()) { "Classic plots cannot have chunks" }

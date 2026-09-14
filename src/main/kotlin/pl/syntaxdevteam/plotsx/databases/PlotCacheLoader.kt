@@ -52,8 +52,16 @@ internal object PlotCacheLoader {
                 val id = rows.getInt("plot_id")
                 members.getOrPut(id) { mutableListOf() }.add(PlotMemberData(id, rows.getString("member_uuid"), rows.getString("role")))
             } }
+            val levels = mutableMapOf<Int, Int>()
+            query("plot_expansion_levels") { rows -> while (rows.next()) {
+                val level = rows.getInt("expansion_level")
+                require(level >= 0) { "Invalid expansion level" }
+                levels[rows.getInt("plot_id")] = level
+            } }
             conn.commit()
-            return PlotCacheData(plots, flags, members)
+            return PlotCacheData(plots.map { plot ->
+                if (plot.radius == null) plot.copy(expansionLevel = levels[plot.id] ?: (plot.chunks.size - 1)) else plot
+            }, flags, members)
         } catch (failure: Exception) {
             conn.rollback()
             throw failure

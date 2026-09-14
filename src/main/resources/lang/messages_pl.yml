@@ -9,6 +9,8 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 
 # Wiadomości obsługi błędów
 error:
+  chunk_purchase_busy: "Trwa inna operacja działki. Spróbuj ponownie za chwilę."
+  chunk_purchase_review: "Płatność wymaga wyjaśnienia. Operacja: <operation>"
   chunk_expansion_pending: "Rozszerzanie działek chunkowych nie jest jeszcze dostępne na tym etapie wdrożenia."
   claim_chunk_limit: "Osiągnięto limit chunków działki lub właściciela."
   expand_invalid_price: "<red>Nieprawidłowa cena rozszerzenia w konfiguracji.</red>"
@@ -175,6 +177,10 @@ GUI:
     title: "<b>Ustawienia flag</b>"
     back: "<gray>Wróć do ustawień działki</gray>"
   expand:
+    chunk_target: "Docelowy chunk: <x>, <z> (256 kolumn)"
+    chunk_count: "Chunki: <count>/<max>"
+    chunk_processing: "Przetwarzanie zakupu chunka..."
+    chunk_success: "Dodano sąsiedni chunk do działki."
     show_borders: "<gold>Pokaż granice</gold>"
     borders_duration: "<gold>Granice widoczne przez <seconds> s. Menu zostanie zamknięte.</gold>"
     stand_inside: "<gold>Stań w segmencie działki, od którego chcesz ją rozszerzyć.</gold>"

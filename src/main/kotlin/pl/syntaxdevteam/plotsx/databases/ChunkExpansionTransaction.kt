@@ -58,7 +58,7 @@ internal object ChunkExpansionTransaction {
     /** Leaves commit/rollback to the caller, allowing a future payment journal to commit with land.
      * On rejection or exception the caller MUST roll back the transaction.
      */
-    fun applyInTransaction(conn: Connection, request: Request, limits: Limits): Result {
+    fun applyInTransaction(conn: Connection, request: Request, limits: Limits, validateOnly: Boolean = false): Result {
         require(!conn.autoCommit) { "An existing transaction is required" }
         val all = PlotRepository.readAll(conn)
         val plot = all.singleOrNull { it.id == request.plotId } ?: return Result.PlotNotFound
@@ -87,6 +87,7 @@ internal object ChunkExpansionTransaction {
         require(level >= 0 && level < Int.MAX_VALUE) { "Invalid chunk expansion level for plot ${plot.id}" }
         val nextLevel = level + 1
         val nextRevision = plot.geometryRevision + 1
+        if (validateOnly) return Result.Success(target, nextRevision, nextLevel)
         conn.prepareStatement("""
             UPDATE plots SET geometry_revision = ?
             WHERE plot_id = ? AND owner_uuid = ? AND geometry_type = 'chunks' AND geometry_revision = ?

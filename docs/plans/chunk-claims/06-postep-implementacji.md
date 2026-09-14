@@ -2,7 +2,7 @@
 
 [Spis planu](README.md) · [Etapy i kryteria odbioru](05-realizacja-testy-wdrozenie.md) · [API i uruchomienie](07-api-v2-i-uruchomienie.md) · [Raport testów](08-raport-weryfikacji.md)
 
-Aktualizacja: **13 września 2026 r.** `[x]` oznacza wykonany zakres, `[ ]` pracę pozostałą. **Domknięto brakujące prace iteracji 2 i 3; podłączono zajmowanie jednego chunka w E5 oraz wykonano warstwę transakcyjną rozszerzania w E6 A.** Nie oznacza to zakończenia całego wydania: rozszerzanie chunków z rozliczeniami, pełne interfejsy i staging pozostają w E6–E8.
+Aktualizacja: **14 września 2026 r.** `[x]` oznacza wykonany zakres, `[ ]` pracę pozostałą. **Domknięto brakujące prace iteracji 2 i 3; podłączono zajmowanie jednego chunka w E5 oraz wykonano warstwę transakcyjną rozszerzania w E6 A.** Nie oznacza to zakończenia całego wydania: rozszerzanie chunków z rozliczeniami, pełne interfejsy i staging pozostają w E6–E8.
 
 ## Iteracja 1 — Fundament geometrii i kontrakt wyboru trybu
 
@@ -118,15 +118,17 @@ Stan: **warstwa transakcyjna zaimplementowana i przetestowana; E6 jako całość
 - [x] Testy granic, limitów, kolizji, błędów zapisu, rollbacku zewnętrznego i inicjalizacji licznika na SQLite/H2.
 - [x] Wymuszona konkurencja dwóch ofert tej samej rewizji: jeden sukces, jedna nieaktualna oferta, jeden przyrost powierzchni/poziomu i zgodny cache.
 - [x] Dziennik `plot_operations`, migracja i backup v3 — wykonane w iteracji 6 poniżej.
-- [ ] Osobny cennik chunków, dostawca zachowany w operacji, obciążenia, zwroty i ręczne uzgadnianie wyników niepewnych.
-- [ ] Podłączenie zakupu w GUI/dialogach z ponowną kontrolą uprawnień, położenia gracza, WorldGuard i ceny.
+- [x] Osobny cennik, zachowany dostawca, obciążenia i zwroty — podłączone w iteracji 7.
+- [ ] Ręczne uzgadnianie wyników niepewnych z audytem administratora.
+- [x] Podłączenie zakupu w GUI ekwipunkowym z ponowną kontrolą uprawnień, położenia gracza, WorldGuard i ceny — iteracja 7.
+- [ ] Natywne dialogi oraz akceptacja UI z klientem.
 - [ ] Testy nowego rozszerzania na pozostałych silnikach i działającym Paper po integracji usługi zakupu.
 
-Nie wystawiono tej metody jako publicznego zakupu ani nie usunięto blokady chunkowego GUI. Warstwa zapisu nie pobiera pieniędzy i nie zastępuje autoryzacji ani zewnętrznych regionów; udostępnienie płatnego przycisku przed dziennikiem przeczyłoby kontraktowi E6.
+Na koniec iteracji 5 nie wystawiono tej metody jako zakupu ani nie usunięto blokady chunkowego GUI. Iteracja 7 poniżej podłącza usługę zakupu. Warstwa zapisu nie pobiera pieniędzy i nie zastępuje autoryzacji ani zewnętrznych regionów; udostępnienie płatnego przycisku przed dziennikiem przeczyłoby kontraktowi E6.
 
 ## Iteracja 6 — E6 B: trwały dziennik i odzyskiwanie stanów
 
-Stan: **model i persystencja dziennika wykonane; połączenie z dostawcą ekonomii i GUI nadal pozostaje otwarte**. Szczegóły: [10 — Dziennik operacji](10-dziennik-operacji.md).
+Stan na koniec iteracji 6: **model i persystencja dziennika wykonane**. Podłączenie dostawcy i GUI opisuje iteracja 7. Szczegóły: [10 — Dziennik operacji](10-dziennik-operacji.md).
 
 - [x] `plot_operations`: tożsamość oferty, aktor/właściciel, dokładna kwota, dostawca/waluta, stan i znaczniki czasu.
 - [x] Migracja `2 / operation_journal`, uruchamiana przy starcie po migracji geometrii; kontrola utraconej tabeli dziennika.
@@ -138,10 +140,33 @@ Stan: **model i persystencja dziennika wykonane; połączenie z dostawcą ekonom
 - [x] Backup v3 zachowuje dziennik; import waliduje dane i kieruje nierozliczone wpisy do `UNCERTAIN`.
 - [x] Import nie nadpisuje bieżących nierozliczonych płatności; zachowana obsługa v1/v2.
 - [x] 15 nowych testów na SQLite/H2; pełny lokalny zestaw **122 testów bez błędów**; `shadowJar` zbudowany.
-- [ ] Usługa zakupu z rzeczywistym dostawcą ekonomii, cennikiem i rezerwacją całego przebiegu.
+- [x] Usługa zakupu, adaptery ekonomii, cennik i rezerwacja całego przebiegu — kod podłączony w iteracji 7.
+- [ ] Weryfikacja z rzeczywistym dostawcą ekonomii.
 - [ ] Komendy uzgadniania wyników niepewnych z audytem administratora.
-- [ ] Podłączenie GUI/dialogów i testy awarii z dostawcą.
+- [x] Podłączenie GUI ekwipunkowego — iteracja 7.
+- [ ] Natywne dialogi i testy awarii z rzeczywistym dostawcą.
 - [ ] Weryfikacja nowej migracji i backupu v3 na MySQL/MariaDB/PostgreSQL oraz integracja na Paper.
+
+## Iteracja 7 — E6 C: zakup w tle i GUI chunków
+
+Stan: **usługa zakupu i GUI podłączone; testy kontrolowanych awarii przechodzą**. [Kontrakt, cennik i wyniki](11-zakup-chunka-i-gui.md).
+
+- [x] `ChunkPurchaseService` łączy walidację, dziennik, obciążenie, zapis, ewentualny zwrot i publikację.
+- [x] JDBC pracuje w tle; Bukkit i dostawca ekonomii na wątku serwera.
+- [x] Rezerwacja między wątkami nie trzyma blokady JVM podczas oczekiwania na callback.
+- [x] Po niejednoznacznym commit następuje kontrola dziennika na nowym połączeniu przed decyzją o zwrocie.
+- [x] Wyjątki płatności/zwrotu i awaria publikacji nie powodują automatycznego ponownego obciążenia.
+- [x] Dostawca pozostaje zachowany; zakup chunkowy kontroluje walutę i przypina świat/walutę VaultUnlocked.
+- [x] Osobny cennik `plots.chunks.expansion.price/priceMultiplier`, cena 0 bez dostawcy.
+- [x] `PlotCacheLoader` ładuje poziom cenowy; wskazany test rozszerzono o poziom zapisany w SQL i błędny licznik.
+- [x] `ChunkExpandGUI`: kierunek, cel, cena, limit, granice, jednorazowe potwierdzenie oraz ponowna walidacja.
+- [x] Usunięto blokadę otwierania chunkowego rozszerzania; aktywny tryb zajmowania nie zmienia typu istniejącej działki.
+- [x] Komunikaty PL/EN dla przetwarzania, limitów, kolizji, zajętej rezerwacji i operacji wymagającej wyjaśnienia.
+- [x] Klasyczne GUI nie obciąża konta przed odmową rezerwacji; reload odrzuca próbę przed podmianą configu.
+- [x] 12 testów zakupu i 2 testy loadera; pełny zestaw **136 testów bez błędów**, `shadowJar` zbudowany.
+- [ ] Komendy uzgadniania nierozliczonych operacji z audytem administratora.
+- [ ] Akceptacja zakupu na Paper z prawdziwym dostawcą i klientem oraz natywne dialogi.
+- [ ] Pozostałe silniki, platformy, testy obciążenia i staging.
 
 ## Etapy całościowe i dalsze prace
 
@@ -152,8 +177,8 @@ Stan: **model i persystencja dziennika wykonane; połączenie z dostawcą ekonom
 | E3 — Persystencja | Wykonano | Następna migracja dziennika płatności należy do E6. |
 | E4 — Ochrona | Wykonano w opisanym modelu pojedynczego serwera | Optymalizacje bariery i budżety produkcyjne w E8. |
 | E5 — Zajmowanie | Kod i transakcje podłączone; akceptacja częściowo otwarta | Testy klienta/dialogów i WorldGuard wymienione powyżej. |
-| E6 — Cykl życia | Transakcja chunków oraz trwały dziennik, recovery stanów i backup v3 wykonane | Dostawca ekonomii, usługa zakupu, ceny, narzędzia uzgadniania i GUI. |
+| E6 — Cykl życia | Zakup chunków z dziennikiem, ekonomią, kompensacją i GUI podłączony | Narzędzia uzgadniania i akceptacja z rzeczywistymi dostawcami/platformami. |
 | E7 — Interfejsy | Podstawowe opisy, granice i komunikaty PL/EN | Pełna akceptacja GUI/dialogów, pozostałe języki, dokładne operacje CoreProtect. |
 | E8 — Wydanie | Macierz SQL, pierwszy test Paper i benchmark wykonane | Pozostałe wersje/platformy, staging, testy obciążenia oraz próba wycofania całego wydania. |
 
-**Kolejny zakres E6:** usługa zakupu łącząca gotowy dziennik i transakcję geometrii z dostawcą ekonomii, następnie narzędzie uzgadniania oraz GUI/dialogi. Równolegle pozostają wcześniej wymienione testy akceptacyjne E5. GUI rozszerzania chunków nadal jawnie informuje o niedostępności. Nie należy interpretować ukończenia iteracji 2/3 ani części A E6 jako ukończenia całego planu wydania.
+**Kolejny zakres E6:** narzędzia uzgadniania nierozliczonych operacji z audytem, następnie test zakupu na Paper z rzeczywistym dostawcą i klientem. GUI ekwipunkowe rozszerzania chunków jest już podłączone; natywne dialogi i pełna akceptacja E5/E7/E8 pozostają otwarte. Wyniki testów kontrolowanych dostawców nie są deklaracją gotowości całego wydania.

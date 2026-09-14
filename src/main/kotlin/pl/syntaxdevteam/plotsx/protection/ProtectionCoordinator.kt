@@ -7,10 +7,23 @@ import kotlin.concurrent.withLock
 class ProtectionCoordinator {
     private val lock = ReentrantReadWriteLock(true)
     @Volatile private var recoveryRequired = false
+    @Volatile private var purchase: Any? = null
+
+    /** Cross-thread reservation; no JVM lock is held while waiting for the server/economy thread. */
+    fun reservePurchase(): Any? = lock.writeLock().withLock {
+        if (recoveryRequired || purchase != null) null else Any().also { purchase = it }
+    }
+
+    fun finishPurchase(token: Any, publish: () -> Unit) = lock.writeLock().withLock {
+        check(purchase === token)
+        recoveryRequired = true
+        try { publish(); recoveryRequired = false }
+        finally { purchase = null }
+    }
 
     fun <T> decision(unavailable: () -> T, action: () -> T): T {
         if (!lock.readLock().tryLock()) return unavailable()
-        try { return if (recoveryRequired) unavailable() else action() }
+        try { return if (recoveryRequired || purchase != null) unavailable() else action() }
         finally { lock.readLock().unlock() }
     }
 
@@ -21,6 +34,7 @@ class ProtectionCoordinator {
         repeat(heldReads) { lock.readLock().unlock() }
         lock.writeLock().lock()
         try {
+            check(purchase == null) { "A plot purchase is in progress; retry after it finishes" }
             check(!recoveryRequired) { "Protection cache requires recovery before another mutation" }
             try { return action() }
             finally {
@@ -35,6 +49,7 @@ class ProtectionCoordinator {
     }
 
     fun recover(publish: () -> Unit) = lock.writeLock().withLock {
+        check(purchase == null) { "Cannot reload protection during a purchase" }
         recoveryRequired = true
         publish()
         recoveryRequired = false

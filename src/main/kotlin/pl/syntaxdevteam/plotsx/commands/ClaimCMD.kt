@@ -130,7 +130,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                 val actor = p.uniqueId
                 val namePrefix = "Działka ${p.name}"
                 plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-                    when (val result = dbh.claimPlotAtomically(
+                    val result = try { dbh.claimPlotAtomically(
                         ownerUuid = uuid,
                         actorUuid = actor,
                         world = world,
@@ -142,7 +142,11 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                         maxTotalArea = limits.maxTotalArea,
                         namePrefix = namePrefix,
                         maxChunksPerPlot = maxChunksPerPlot, maxChunksOwned = maxChunksOwned
-                    )) {
+                    ) } catch (failure: Exception) {
+                        plugin.logger.err("Claim failed: ${failure.message}")
+                        DatabaseHandler.ClaimResult.DatabaseError
+                    }
+                    when (result) {
                         is DatabaseHandler.ClaimResult.Success -> {
                             plugin.server.scheduler.runTask(plugin, Runnable {
                                 p.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "claim_success"))
