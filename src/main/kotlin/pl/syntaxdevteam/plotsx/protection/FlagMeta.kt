@@ -11,5 +11,6 @@ data class FlagMeta(
     val descriptionKey: String,
     val memberBypass: Boolean = true,
     val customDisplayName: String? = null,
-    val customDescription: String? = null
+    val customDescription: String? = null,
+    val visibleInGui: Boolean = true
 )
