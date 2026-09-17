@@ -55,8 +55,9 @@ internal class AnimalProtectionListener(private val plugin: PlotsX) : Listener {
         }
     }
 
-    private fun deny(player: Player, flag: String) {
-        player.sendMessage(message.stringMessageToComponent("flags", "$flag.not_allowed"))
+    private fun deny(player: Player) {
+        // Keep the already translated legacy denial until dedicated PL/EN message keys land.
+        player.sendMessage(message.stringMessageToComponent("flags", "animal-interact.not_allowed"))
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -64,7 +65,7 @@ internal class AnimalProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = plotAt(event.entity) ?: return
         if (!hasPlotPermission(event.player, plot, "animal-leash")) {
             event.isCancelled = true
-            deny(event.player, "animal-leash")
+            deny(event.player)
         }
     }
 
@@ -73,7 +74,7 @@ internal class AnimalProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = plotAt(event.entity) ?: return
         if (!hasPlotPermission(event.player, plot, "animal-leash")) {
             event.isCancelled = true
-            deny(event.player, "animal-leash")
+            deny(event.player)
         }
     }
 
@@ -84,7 +85,7 @@ internal class AnimalProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = plotAt(event.mount) ?: return
         if (!hasPlotPermission(player, plot, "animal-ride")) {
             event.isCancelled = true
-            deny(player, "animal-ride")
+            deny(player)
         }
     }
 
@@ -94,7 +95,7 @@ internal class AnimalProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = plotAt(event.entity) ?: return
         if (!hasPlotPermission(player, plot, "animal-breed")) {
             event.isCancelled = true
-            deny(player, "animal-breed")
+            deny(player)
         }
     }
 
@@ -108,7 +109,7 @@ internal class AnimalProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = plotAt(event.entity) ?: return
         if (!hasPlotPermission(player, plot, "animal-breed")) {
             event.isCancelled = true
-            deny(player, "animal-breed")
+            deny(player)
         }
     }
 }
