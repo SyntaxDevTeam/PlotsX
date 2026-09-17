@@ -36,9 +36,9 @@ internal object AnimalFlagMigration {
                 }
             }
 
-            roles.forEach { role ->
+            roles.forEach roleLoop@{ role ->
                 val legacyGrant = "role_permission.$role.flag.$LEGACY_FLAG"
-                val legacyGrantValue = stored[legacyGrant]?.value?.toBooleanStrictOrNull() ?: return@forEach
+                val legacyGrantValue = stored[legacyGrant]?.value?.toBooleanStrictOrNull() ?: return@roleLoop
 
                 splitFlags.forEach { flag ->
                     val newGrant = "role_permission.$role.flag.$flag"
