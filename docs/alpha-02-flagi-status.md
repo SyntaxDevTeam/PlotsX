@@ -19,17 +19,17 @@
 
 ### Zabezpieczenie przed kradzieżą zwierząt
 
-- ✅ ~~Flaga `animal-leash` — blokująca przywiązywanie zwierząt do liny~~
+- ✅ Flaga `animal-leash` — blokująca przywiązywanie zwierząt do liny
   - Nie istnieje jako osobna flaga.
   - Funkcjonalność została połączona we wspólną flagę `animal-interact`.
   - Obsługiwane są `PlayerLeashEntityEvent` oraz `PlayerUnleashEntityEvent`.
 
-- ✅ ~~Flaga `animal-ride` — blokująca wsiadanie na zwierzęta (konie, muły, osły)~~
+- ✅ Flaga `animal-ride` — blokująca wsiadanie na zwierzęta (konie, muły, osły)
   - Nie istnieje jako osobna flaga.
   - Obsługiwana przez `animal-interact`.
   - Wykorzystywany jest `EntityMountEvent`.
 
-- ✅ ~~Flaga `animal-breed` — blokująca rozmnażanie zwierząt~~
+- ✅ Flaga `animal-breed` — blokująca rozmnażanie zwierząt
   - Nie istnieje jako osobna flaga.
   - Obsługiwana przez `animal-interact`.
   - Wykorzystywany jest `EntityBreedEvent`.
@@ -44,12 +44,12 @@
 
 ### Zabezpieczenie przed kradzieżą przedmiotów
 
-- ✅ ~~Flaga `item-pickup` — blokująca podnoszenie przedmiotów z ziemi~~
+- ✅ Flaga `item-pickup` — blokująca podnoszenie przedmiotów z ziemi
   - Jest już pełnoprawną flagą.
   - Obsługiwana przez `EntityPickupItemEvent`.
   - Dotyczy graczy podnoszących przedmioty znajdujące się na terenie działki.
 
-- ✅ ~~Flaga `item-drop` — blokująca wyrzucanie przedmiotów na działce~~
+- ✅ Flaga `item-drop` — blokująca wyrzucanie przedmiotów na działce
   - Jest już pełnoprawną flagą.
   - Obsługiwana przez `PlayerDropItemEvent`.
 
@@ -61,13 +61,13 @@
   - Sprawdzane jest `Action.PHYSICAL` na `Material.FARMLAND`.
   - Spełnia wymaganie oznaczone wcześniej jako konieczne jeszcze dla Alpha-01.
 
-- ➖ ~~Flaga `sapling-trample` — blokująca niszczenie sadzonek~~
+- ➖ Flaga `sapling-trample` — blokująca niszczenie sadzonek
   - Osobna flaga nie została dodana.
   - Zgodnie z założeniem ten przypadek pozostaje pod ochroną budowania/niszczenia bloków, czyli `build`.
 
 ### Zabezpieczenie przed używaniem przedmiotów
 
-- ➖ ~~Flaga `item-use` — blokująca używanie przedmiotów (np. łuki, miecze, narzędzia)~~
+- ➖ Flaga `item-use` — blokująca używanie przedmiotów (np. łuki, miecze, narzędzia)
   - Nie istnieje jedna ogólna flaga `item-use`.
   - Zakres został rozdzielony na bardziej precyzyjne zabezpieczenia, m.in.:
     - `projectiles`,
