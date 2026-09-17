@@ -1,8 +1,8 @@
 # PlotsX — Alpha-02: status dodatkowych flag i zabezpieczeń
 
-> Stan repozytorium zweryfikowany na gałęzi `main`, commit `c4ce7dc246f0a3693b6504e269ba17a74289ef79`.
+> Stan repozytorium zweryfikowany ponownie 17.09.2026 na gałęzi `main`.
 >
-> Dokument opisuje nie tylko obecność wpisu w `PlotFlagRegistry`, ale również faktyczną obsługę zdarzeń w `PlotProtectionListener`, obecność w GUI i zgodność z pierwotnym założeniem Alpha-02.
+> Dokument opisuje nie tylko obecność wpisu w `PlotFlagRegistry`, ale również faktyczną obsługę zdarzeń, obecność w GUI i zgodność z pierwotnym założeniem Alpha-02.
 
 ## Legenda
 
@@ -19,38 +19,53 @@
 
 ### Zabezpieczenie przed kradzieżą zwierząt
 
-- ✅ Flaga `animal-leash` — blokująca przywiązywanie zwierząt do liny
-  - Nie istnieje jako osobna flaga.
-  - Funkcjonalność została połączona we wspólną flagę `animal-interact`.
-  - Obsługiwane są `PlayerLeashEntityEvent` oraz `PlayerUnleashEntityEvent`.
+- ✅ **Flaga `animal-leash` — blokująca przywiązywanie i odwiązywanie zwierząt.**
+  - Jest osobną flagą typu `WHITELIST`, domyślnie `false`.
+  - Obsługuje `PlayerLeashEntityEvent` oraz `PlayerUnleashEntityEvent`.
+  - Paper udostępnia te zdarzenia jako niezależne i anulowalne, więc nie ma potrzeby łączenia smyczy z jazdą lub rozmnażaniem.
 
-- ✅ Flaga `animal-ride` — blokująca wsiadanie na zwierzęta (konie, muły, osły)
-  - Nie istnieje jako osobna flaga.
-  - Obsługiwana przez `animal-interact`.
-  - Wykorzystywany jest `EntityMountEvent`.
+- ✅ **Flaga `animal-ride` — blokująca wsiadanie na zwierzęta.**
+  - Jest osobną flagą typu `WHITELIST`, domyślnie `false`.
+  - Obsługiwana przez anulowalny `EntityMountEvent`.
+  - Ochrona jest stosowana do bytów rozpoznawanych przez PlotsX jako pasywne zwierzęta.
 
-- ✅ Flaga `animal-breed` — blokująca rozmnażanie zwierząt
-  - Nie istnieje jako osobna flaga.
-  - Obsługiwana przez `animal-interact`.
-  - Wykorzystywany jest `EntityBreedEvent`.
+- ✅ **Flaga `animal-breed` — blokująca rozmnażanie zwierząt.**
+  - Jest osobną flagą typu `WHITELIST`, domyślnie `false`.
+  - Obsługuje `EntityBreedEvent` dla klasycznego rozmnażania kończącego się utworzeniem potomka.
+  - Dodatkowo obsługuje Paper `EntityFertilizeEggEvent`, ponieważ żaby, snifferry i żółwie używają mechanizmu zapłodnienia, w którym potomek lub jajo powstaje później.
 
-- 🟡 **Jedna flaga `passive`, która to wszystko blokuje automatycznie.**
-  - Konsolidacja została wykonana, ale nie pod nazwą `passive`.
-  - Obecna flaga `animal-interact` kontroluje interakcje ze zwierzętami, m.in. smycz, rozmnażanie, wsiadanie i część pozostałych interakcji.
-  - Obecna flaga `passives` ma inne znaczenie: blokuje zadawanie obrażeń pasywnym zwierzętom.
-  - Taki podział jest czytelniejszy i warto go zachować:
-    - `passives` — ochrona zwierząt przed obrażeniami,
-    - `animal-interact` — ochrona przed interakcjami/kradzieżą/użyciem zwierząt.
+- ➖ **Dawna wspólna flaga `animal-interact`.**
+  - Nie jest już flagą konfiguracyjną prezentowaną użytkownikowi.
+  - Pozostaje tymczasowo jako ukryty klucz zgodności wstecznej.
+  - Przy starcie pluginu istniejąca zapisana wartość `animal-interact` jest kopiowana do `animal-leash`, `animal-ride` i `animal-breed`, jeżeli konkretna nowa flaga nie ma już własnej wartości.
+  - Po migracji legacy `animal-interact` jest ustawiane na wartość neutralizującą stare handlery, aby nie nakładały ponownie wspólnej blokady.
+  - Analogicznie migrowane są zapisane granty ról `flag.animal-interact`.
+
+- ✅ **Flaga `passives` pozostaje osobna.**
+  - Jej zadaniem jest ochrona zwierząt przed zadawaniem obrażeń.
+  - Nie należy jej łączyć z `animal-leash`, `animal-ride` ani `animal-breed`, ponieważ opisuje inną kategorię działania.
+
+### Zgodność API dla rozdzielenia flag zwierząt
+
+Rozdzielenie zostało sprawdzone względem API Paper używanego przez nowsze wersje Minecraft/Paper:
+
+| Wersja | Smycz | Jazda | Rozmnażanie | Zapłodnienie jaj |
+| --- | --- | --- | --- | --- |
+| `26.1.2` | osobne anulowalne zdarzenie | osobne anulowalne zdarzenie | `EntityBreedEvent` | `EntityFertilizeEggEvent` |
+| `26.2` | osobne anulowalne zdarzenie | osobne anulowalne zdarzenie | `EntityBreedEvent` | `EntityFertilizeEggEvent` |
+| `26.3` | API nadal zawiera osobne zdarzenia | API nadal zawiera osobne zdarzenia | API nadal zawiera zdarzenie | API nadal zawiera zdarzenie |
+
+Wniosek: technicznie nie ma potrzeby utrzymywania jednej wspólnej flagi. Paper rozdziela te mechaniki wystarczająco precyzyjnie, aby PlotsX również mógł udostępniać trzy niezależne ustawienia.
 
 ### Zabezpieczenie przed kradzieżą przedmiotów
 
-- ✅ Flaga `item-pickup` — blokująca podnoszenie przedmiotów z ziemi
-  - Jest już pełnoprawną flagą.
+- ✅ **Flaga `item-pickup` — blokująca podnoszenie przedmiotów z ziemi.**
+  - Jest pełnoprawną flagą.
   - Obsługiwana przez `EntityPickupItemEvent`.
   - Dotyczy graczy podnoszących przedmioty znajdujące się na terenie działki.
 
-- ✅ Flaga `item-drop` — blokująca wyrzucanie przedmiotów na działce
-  - Jest już pełnoprawną flagą.
+- ✅ **Flaga `item-drop` — blokująca wyrzucanie przedmiotów na działce.**
+  - Jest pełnoprawną flagą.
   - Obsługiwana przez `PlayerDropItemEvent`.
 
 ### Zabezpieczenie przed niszczeniem roślin
@@ -61,13 +76,13 @@
   - Sprawdzane jest `Action.PHYSICAL` na `Material.FARMLAND`.
   - Spełnia wymaganie oznaczone wcześniej jako konieczne jeszcze dla Alpha-01.
 
-- ➖ Flaga `sapling-trample` — blokująca niszczenie sadzonek
+- ➖ **Flaga `sapling-trample` — blokująca niszczenie sadzonek.**
   - Osobna flaga nie została dodana.
-  - Zgodnie z założeniem ten przypadek pozostaje pod ochroną budowania/niszczenia bloków, czyli `build`.
+  - Ten przypadek pozostaje pod ochroną budowania/niszczenia bloków, czyli `build`.
 
 ### Zabezpieczenie przed używaniem przedmiotów
 
-- ➖ Flaga `item-use` — blokująca używanie przedmiotów (np. łuki, miecze, narzędzia)
+- ➖ **Flaga `item-use` — blokująca używanie przedmiotów.**
   - Nie istnieje jedna ogólna flaga `item-use`.
   - Zakres został rozdzielony na bardziej precyzyjne zabezpieczenia, m.in.:
     - `projectiles`,
@@ -75,7 +90,6 @@
     - `special-weapons`,
     - `fishing`,
     - `elytra`.
-  - Obecny podział daje większą kontrolę właścicielowi działki.
 
 - ✅ **Flaga `fishing` — blokująca łowienie ryb.**
   - Zaimplementowana.
@@ -87,116 +101,83 @@
 - ✅ **Flaga `bed-use` — blokująca używanie łóżek.**
   - Zaimplementowana.
   - Obejmuje wszystkie materiały, których nazwa kończy się na `_BED`.
-  - Spełnia wymaganie oznaczone wcześniej jako konieczne jeszcze dla Alpha-01.
 
-- ✅ **Flaga `crafting` — blokująca używanie stołów rzemieślniczych jako osobna flaga poza `utility`.**
-  - Zaimplementowana.
+- ✅ **Flaga `crafting` — osobna od `utility`.**
   - Obejmuje `CRAFTING_TABLE` oraz `CRAFTER`.
-  - Jest oddzielona od ogólnej flagi `utility`.
   - Automatycznie pojawia się w GUI flag.
 
-- ✅ **Flaga `enchanting` — blokująca używanie stołów do zaklęć jako osobna flaga poza `utility`.**
-  - Zaimplementowana.
+- ✅ **Flaga `enchanting` — osobna od `utility`.**
   - Obejmuje `ENCHANTING_TABLE`.
-  - Jest oddzielona od `utility`.
   - Automatycznie pojawia się w GUI flag.
 
 ### Zabezpieczenie przed efektami pogodowymi
 
 - 🟡 **Flaga `weather-damage` — blokująca obrażenia od piorunów.**
   - Funkcjonalność istnieje pod wspólną flagą `weather`.
-  - Obsługiwane są:
-    - `LightningStrikeEvent`,
-    - `EntityDamageEvent` z `DamageCause.LIGHTNING`.
-  - Osobna flaga `weather-damage` nie jest obecnie potrzebna, jeśli akceptujemy wspólną kontrolę przez `weather`.
+  - Obsługiwane są `LightningStrikeEvent` oraz `EntityDamageEvent` z `DamageCause.LIGHTNING`.
 
 - ❌ **Flaga `weather-effects` — blokująca efekty pogodowe (deszcz, burza).**
   - Brak implementacji.
   - Obecne `weather` chroni przed piorunami, ale nie tworzy lokalnej pogody dla gracza na działce.
-  - Do realizacji wymagane byłoby sterowanie pogodą per-player albo inne rozwiązanie symulujące lokalne warunki pogodowe.
 
 ### Zabezpieczenie przed używaniem komend
 
 - ✅ **Flaga `command-use` — blokująca używanie komend na działce.**
   - Zaimplementowana przez `PlayerCommandPreprocessEvent`.
   - `/home` i `/sethome` mają osobną kontrolę przez `allow-home`.
-  - Bezpieczne wyjątki dla komend PlotsX:
-    - `/plotsx`,
-    - `/ptx`,
-    - `/plot`,
-    - `/claim`,
-    - `/unclaim`.
+  - Bezpieczne wyjątki dla komend PlotsX: `/plotsx`, `/ptx`, `/plot`, `/claim`, `/unclaim`.
 
 ### Zabezpieczenie przed używaniem przedmiotów specjalnych
 
-- ✅ **Flaga `elytra-use` — blokująca używanie elytry.**
+- ✅ **Flaga `elytra-use`.**
   - Funkcjonalność istnieje pod nazwą `elytra`.
   - Blokowane jest rozpoczęcie szybowania przez `EntityToggleGlideEvent`.
 
-- 🟡 **Flaga `trident-use` — blokująca używanie trójzębu.**
-  - Funkcjonalność została połączona z `special-weapons`.
-  - Obsługiwane jest:
-    - rzucanie trójzębem przez `ProjectileLaunchEvent`,
-    - zadawanie obrażeń trójzębem.
-  - Do sprawdzenia / uzupełnienia pozostaje obsługa Riptide (`PlayerRiptideEvent`), aby nie można było ominąć ochrony poprzez użycie trójzębu do przemieszczania się.
+- 🟡 **Flaga `trident-use`.**
+  - Funkcjonalność jest połączona z `special-weapons`.
+  - Obsługiwane jest rzucanie trójzębem i zadawanie nim obrażeń.
+  - Do uzupełnienia pozostaje Riptide (`PlayerRiptideEvent`).
 
-- ✅ **Flaga `mace-use` — blokująca używanie buzdyganu.**
+- ✅ **Flaga `mace-use`.**
   - Funkcjonalność istnieje pod wspólną flagą `special-weapons`.
   - Blokowane są obrażenia zadawane przez `MACE`.
 
 ### Zabezpieczenie przed używaniem bloków specjalnych
 
-- 🟡 **Flaga `conduit-use` — blokująca używanie przewodników.**
+- 🟡 **Flaga `conduit-use`.**
   - Funkcjonalność istnieje jako `conduit-effects`.
   - Blokowane jest nakładanie efektu przewodnika przez `EntityPotionEffectEvent.Cause.CONDUIT`.
-  - To rozwiązanie odpowiada faktycznemu mechanizmowi działania conduitów lepiej niż blokowanie zwykłej interakcji kliknięciem.
 
-- ✅ **Flaga `respawn-anchor-use` — blokująca używanie kotwic odrodzenia.**
+- ✅ **Flaga `respawn-anchor-use`.**
   - Funkcjonalność istnieje pod nazwą `respawn-anchor`.
   - Obsługiwana podczas interakcji z `Material.RESPAWN_ANCHOR`.
 
 ### Zabezpieczenie przed używaniem przedmiotów dekoracyjnych
 
-- 🟡 **Flaga `frame-use` — blokująca używanie ramek na przedmioty.**
+- 🟡 **Flaga `frame-use`.**
   - Funkcjonalność jest częściowo objęta wspólną flagą `decorations`.
-  - Chronione jest m.in.:
-    - umieszczanie obiektów wiszących,
-    - niszczenie obiektów wiszących,
-    - usuwanie przez gracza lub pocisk.
-  - Potencjalna luka: brak dedykowanej obsługi interakcji z już istniejącym `ItemFrame` / `GlowItemFrame` podczas obracania lub podmiany przedmiotu.
-  - **Do uzupełnienia.**
+  - Chronione jest umieszczanie i niszczenie obiektów wiszących.
+  - Do uzupełnienia pozostają interakcje z istniejącym `ItemFrame` / `GlowItemFrame`, np. obracanie lub podmiana przedmiotu.
 
-- ✅ **Flaga `armor-stand-use` — blokująca używanie stojaków na zbroję.**
+- ✅ **Flaga `armor-stand-use`.**
   - Funkcjonalność istnieje pod wspólną flagą `decorations`.
-  - Obsługiwane jest:
-    - `PlayerArmorStandManipulateEvent`,
-    - niszczenie ArmorStanda przez gracza lub pocisk.
+  - Obsługiwane jest `PlayerArmorStandManipulateEvent` oraz niszczenie ArmorStanda.
 
 ---
 
 # GUI flag
 
-`FlagsGUI` nie posiada ręcznie utrzymywanej listy flag.
+`FlagsGUI` korzysta z listy `PlotFlagRegistry.visibleFlags`.
 
-GUI iteruje po `PlotFlagRegistry.allFlags`, dlatego każda poprawnie zarejestrowana flaga automatycznie pojawia się w panelu. Dotyczy to między innymi:
+Każda normalna, widoczna flaga jest automatycznie umieszczana w panelu, natomiast klucze legacy mogą pozostać w rejestrze bez pokazywania ich użytkownikowi.
 
-- `crop-trample`,
-- `animal-interact`,
-- `item-pickup`,
-- `item-drop`,
-- `fishing`,
-- `command-use`,
-- `elytra`,
-- `special-weapons`,
-- `weather`,
-- `bed-use`,
-- `crafting`,
-- `enchanting`,
-- `respawn-anchor`,
-- `conduit-effects`,
-- `decorations`.
+Po rozdzieleniu zwierząt GUI pokazuje osobno:
 
-Dla nowych flag nie trzeba ręcznie dodawać osobnych slotów, o ile zostaną poprawnie dodane do `PlotFlagRegistry` wraz z nazwą, opisem i materiałem.
+- `animal-leash`,
+- `animal-ride`,
+- `animal-breed`.
+
+`animal-interact` jest ukryte i służy wyłącznie do zgodności/migracji istniejących danych.
 
 ---
 
@@ -206,39 +187,39 @@ Dla nowych flag nie trzeba ręcznie dodawać osobnych slotów, o ile zostaną po
 
 Status: ❌ brak.
 
-Do zaprojektowania pozostaje sposób blokowania lub ukrywania deszczu/burzy dla gracza znajdującego się na działce. Należy pamiętać, że standardowa pogoda świata nie jest ograniczona do regionu działki, więc najprawdopodobniej potrzebne będzie rozwiązanie per-player.
+Do zaprojektowania pozostaje sposób blokowania lub ukrywania deszczu/burzy dla gracza znajdującego się na działce. Standardowa pogoda świata nie jest ograniczona do regionu działki, więc potrzebne będzie rozwiązanie per-player albo równoważny mechanizm.
 
 ## 2. Pełna ochrona ItemFrame / GlowItemFrame
 
 Status: 🟡 częściowo.
 
-`decorations` chroni obecnie umieszczanie i niszczenie dekoracji, ale trzeba upewnić się, że blokowane są również:
+`decorations` chroni obecnie umieszczanie i niszczenie dekoracji, ale trzeba objąć również:
 
 - wkładanie przedmiotu do ramki,
 - wyjmowanie przedmiotu,
-- podmiana przedmiotu,
+- podmianę przedmiotu,
 - obracanie przedmiotu,
 - analogiczne operacje dla `GlowItemFrame`.
 
 ## 3. Trident + Riptide
 
-Status: 🟡 do weryfikacji / uzupełnienia.
+Status: 🟡 do uzupełnienia.
 
-`special-weapons` blokuje rzucanie trójzębem oraz obrażenia, ale warto dodać kontrolę `PlayerRiptideEvent`, aby użytkownik nie mógł wykorzystać trójzębu do poruszania się na działce mimo blokady.
+`special-weapons` blokuje rzucanie trójzębem oraz obrażenia, ale należy dodać kontrolę `PlayerRiptideEvent`.
 
 ---
 
 # Podsumowanie
 
-Alpha-02 jest już w zdecydowanej większości zaimplementowana.
+Alpha-02 jest w zdecydowanej większości zaimplementowana.
 
-Najważniejsza zmiana względem pierwotnej listy polega na scaleniu części bardzo szczegółowych flag w bardziej ogólne grupy:
+Po analizie nowszego Paper API wcześniejsze scalenie `animal-leash`, `animal-ride` i `animal-breed` pod `animal-interact` zostało wycofane. API rozdziela te mechaniki na niezależne anulowalne zdarzenia, dlatego PlotsX również używa obecnie trzech niezależnych flag.
 
 | Pierwotny pomysł | Aktualna flaga |
 | --- | --- |
-| `animal-leash` | `animal-interact` |
-| `animal-ride` | `animal-interact` |
-| `animal-breed` | `animal-interact` |
+| `animal-leash` | `animal-leash` |
+| `animal-ride` | `animal-ride` |
+| `animal-breed` | `animal-breed` |
 | ochrona zwierząt przed obrażeniami | `passives` |
 | `elytra-use` | `elytra` |
 | `trident-use` | `special-weapons` |
@@ -249,12 +230,8 @@ Najważniejsza zmiana względem pierwotnej listy polega na scaleniu części bar
 | `frame-use` | `decorations` |
 | `armor-stand-use` | `decorations` |
 
-Aktualna architektura jest bardziej zwarta i pozwala uniknąć nadmiernego rozdrobnienia GUI flag.
-
-Do pełnego zamknięcia tej listy pozostają przede wszystkim:
+Do pełnego zamknięcia tej checklisty pozostają przede wszystkim:
 
 1. `weather-effects`,
 2. pełna ochrona interakcji z `ItemFrame` / `GlowItemFrame`,
 3. obsługa Riptide dla `special-weapons`.
-
-Po zaimplementowaniu tych elementów Alpha-02 można uznać za funkcjonalnie domkniętą w zakresie tej checklisty.
