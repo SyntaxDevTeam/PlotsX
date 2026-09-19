@@ -44,7 +44,19 @@ object PlotFlagRegistry {
         FlagMeta("item-pickup", false, FlagType.WHITELIST, Material.DIAMOND, "item-pickup.name", "item-pickup.description"),
         FlagMeta("item-drop", false, FlagType.WHITELIST, Material.DROPPER, "item-drop.name", "item-drop.description"),
         FlagMeta("crop-trample", false, FlagType.WHITELIST, Material.FARMLAND, "crop-trample.name", "crop-trample.description"),
-        FlagMeta("animal-interact", false, FlagType.WHITELIST, Material.LEAD, "animal-interact.name", "animal-interact.description"),
+        FlagMeta("animal-leash", false, FlagType.WHITELIST, Material.LEAD,
+            "animal-leash.name", "animal-leash.description",
+            customDisplayName = "animal-leash", customDescription = "Controls leashing and unleashing animals on the plot."),
+        FlagMeta("animal-ride", false, FlagType.WHITELIST, Material.SADDLE,
+            "animal-ride.name", "animal-ride.description",
+            customDisplayName = "animal-ride", customDescription = "Controls mounting and riding animals on the plot."),
+        FlagMeta("animal-breed", false, FlagType.WHITELIST, Material.WHEAT,
+            "animal-breed.name", "animal-breed.description",
+            customDisplayName = "animal-breed", customDescription = "Controls breeding and egg fertilization on the plot."),
+        // Legacy compatibility flag. Existing values are copied to the three dedicated flags at startup.
+        // It remains enabled and hidden so the old broad handlers are neutral while upgraded databases migrate safely.
+        FlagMeta("animal-interact", true, FlagType.WHITELIST, Material.LEAD,
+            "animal-interact.name", "animal-interact.description", visibleInGui = false),
         FlagMeta("command-use", true, FlagType.WHITELIST, Material.COMMAND_BLOCK, "command-use.name", "command-use.description"),
         FlagMeta("fishing", false, FlagType.WHITELIST, Material.FISHING_ROD, "fishing.name", "fishing.description"),
         FlagMeta("elytra", false, FlagType.WHITELIST, Material.ELYTRA, "elytra.name", "elytra.description"),
@@ -65,6 +77,7 @@ object PlotFlagRegistry {
 
     @Volatile private var registered: Map<String, FlagMeta> = java.util.Collections.unmodifiableMap(builtInFlags)
     val allFlags: Map<String, FlagMeta> get() = registered
+    val visibleFlags: List<FlagMeta> get() = registered.values.filter(FlagMeta::visibleInGui)
 
     @Synchronized internal fun register(flag: FlagMeta): Boolean {
         if (flag.name in registered) return false

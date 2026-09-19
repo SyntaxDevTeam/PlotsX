@@ -30,8 +30,9 @@ class FlagsGUI(
         inventory.clear()
 
         val flags = plugin.cacheManager.getFlags(plot.id) ?: plugin.databaseHandler.getPlotFlags(plot.id)
+        val visibleFlags = PlotFlagRegistry.visibleFlags
 
-        PlotFlagRegistry.allFlags.values.drop(page * 45).take(45).forEachIndexed { idx: Int, flagMeta ->
+        visibleFlags.drop(page * 45).take(45).forEachIndexed { idx: Int, flagMeta ->
 
             val flagData = flags.firstOrNull { it.name == flagMeta.name }
             val current = flagData?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
@@ -56,7 +57,7 @@ class FlagsGUI(
 
         if (page > 0) inventory.setItem(45, plugin.guiHandler.createItem(Material.ARROW,
             message.stringMessageToComponentNoPrefix("members", "previous")))
-        if ((page + 1) * 45 < PlotFlagRegistry.allFlags.size) inventory.setItem(53, plugin.guiHandler.createItem(Material.ARROW,
+        if ((page + 1) * 45 < visibleFlags.size) inventory.setItem(53, plugin.guiHandler.createItem(Material.ARROW,
             message.stringMessageToComponentNoPrefix("members", "next")))
         super.open(player)
     }
@@ -69,6 +70,7 @@ class FlagsGUI(
         val player = event.whoClicked as? Player ?: return
         val clicked = event.currentItem ?: return
         val meta = clicked.itemMeta ?: return
+        val visibleFlags = PlotFlagRegistry.visibleFlags
 
         plugin.guiHandler.unregisterGui(player)
         player.closeInventory()
@@ -80,7 +82,7 @@ class FlagsGUI(
             plugin.guiHandler.registerGui(player, FlagsGUI(plugin, plot, page - 1))
             return
         }
-        if (event.slot == 53 && (page + 1) * 45 < PlotFlagRegistry.allFlags.size) {
+        if (event.slot == 53 && (page + 1) * 45 < visibleFlags.size) {
             plugin.guiHandler.registerGui(player, FlagsGUI(plugin, plot, page + 1))
             return
         }

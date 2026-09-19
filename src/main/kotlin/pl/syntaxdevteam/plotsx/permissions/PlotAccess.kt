@@ -10,7 +10,7 @@ import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 class PlotAccess(private val plugin: PlotsX) {
     val roles = listOf("member", "builder", "manager")
     val actions get() = listOf("invite", "kick", "rename") +
-        PlotFlagRegistry.allFlags.keys.map { "flag.$it" }
+        PlotFlagRegistry.visibleFlags.map { "flag.${it.name}" }
 
     fun admin(sender: CommandSender) = PermissionChecker.canManagePlots(sender)
     fun owner(sender: CommandSender, plot: PlotData) = admin(sender) ||

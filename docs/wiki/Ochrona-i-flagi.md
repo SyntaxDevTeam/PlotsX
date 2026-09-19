@@ -66,11 +66,15 @@ Inteligentne drzwi mają własny dostęp. Jeśli chcesz zamknąć wejście przed
 | `use-potions` | Goście mogą używać mikstur. | NIE |
 | `special-weapons` | Goście mogą korzystać z obsługiwanych specjalnych broni, np. trójzębu. | NIE |
 | `projectiles` | Goście mogą wystrzeliwać pociski. | NIE |
-| `animal-interact` | Goście mogą wykonywać obsługiwane interakcje ze zwierzętami, np. karmić je i używać smyczy. | NIE |
+| `animal-leash` | Goście mogą zakładać i zdejmować smycze zwierzętom. | NIE |
+| `animal-ride` | Goście mogą dosiadać obsługiwanych zwierząt. | NIE |
+| `animal-breed` | Goście mogą rozmnażać zwierzęta; obejmuje również zapłodnienie jaj u mechanik odroczonego potomstwa. | NIE |
 | `fishing` | Goście mogą łowić. | NIE |
 | `item-pickup` | Goście mogą podnosić przedmioty. | NIE |
 | `item-drop` | Goście mogą wyrzucać przedmioty. | NIE |
 | `crop-trample` | Goście mogą deptać grządki. | NIE |
+
+Od Alpha-02 wcześniejsza zbiorcza flaga `animal-interact` jest kluczem zgodności wstecznej i nie jest pokazywana w GUI. Przy aktualizacji jej zapisana wartość jest kopiowana do `animal-leash`, `animal-ride` i `animal-breed`, o ile konkretna nowa flaga nie ma już własnej wartości. Dzięki temu istniejące działki zachowują dotychczasowe zachowanie, a po migracji każdą czynność można konfigurować niezależnie.
 
 Dodanie osoby do działki daje jej szerszy dostęp również przy sprawdzaniu wielu z tych zasad. Flaga PvP nie jest gwarancją wyłączenia walki między wszystkimi członkami ekipy.
 

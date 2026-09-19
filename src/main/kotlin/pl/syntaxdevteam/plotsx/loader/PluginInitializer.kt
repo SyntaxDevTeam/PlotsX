@@ -12,8 +12,11 @@ import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.gui.GUIHandler
 import pl.syntaxdevteam.plotsx.hooks.CoreProtectHook
 import pl.syntaxdevteam.plotsx.hooks.WorldGuardHook
+import pl.syntaxdevteam.plotsx.protection.AnimalFlagMigration
+import pl.syntaxdevteam.plotsx.protection.AnimalProtectionListener
 import pl.syntaxdevteam.plotsx.protection.PlotProtectionListener
 import pl.syntaxdevteam.plotsx.protection.PrivateChestManager
+import pl.syntaxdevteam.plotsx.protection.ProtectionEventRegistration
 import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
 
 class PluginInitializer(private val plugin: PlotsX) {
@@ -78,9 +81,13 @@ class PluginInitializer(private val plugin: PlotsX) {
     private fun registerEvents() {
         plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)
         plugin.versionChecker = VersionChecker(plugin)
+
+        AnimalFlagMigration.migrate(plugin)
         plugin.cacheManager.clearAllCaches()
         plugin.cacheManager.reloadAllCachesSync()
-        pl.syntaxdevteam.plotsx.protection.ProtectionEventRegistration.register(plugin, PlotProtectionListener(plugin))
+
+        ProtectionEventRegistration.register(plugin, PlotProtectionListener(plugin))
+        ProtectionEventRegistration.register(plugin, AnimalProtectionListener(plugin))
         plugin.server.pluginManager.registerEvents(plugin.renamePlotChatListener, plugin)
         plugin.coreProtectHook = CoreProtectHook(plugin)
         plugin.server.pluginManager.registerEvents(object : org.bukkit.event.Listener {
