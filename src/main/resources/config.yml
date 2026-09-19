@@ -35,7 +35,12 @@ plots:
   claiming:
     mode: classic
   chunks:
+    # Maximum chunks in one chunk plot; override with
+    # plotsx.plot.max-chunks-per-plot.<number>.
     maxPerPlot: 32
+    # Maximum chunks owned across all chunk plots and worlds; override with
+    # plotsx.plot.max-chunks.<number>.
+    # Highest granted numeric permission wins; 0 blocks further expansion.
     maxTotalOwned: 64
     expansion:
       # Price per additional chunk; the first claimed chunk remains free.

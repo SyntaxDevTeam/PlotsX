@@ -194,4 +194,67 @@ class OperationJournalTest {
         assertThrows(IllegalArgumentException::class.java) { OperationJournal.migrate(c) }
         assertFalse(OperationJournal.exists(c))
     }
+    @Test fun `reconciliation is audited atomic and rejects stale or repeated decisions`() = databases { c, _, op ->
+        paid(c, op)
+        OperationJournal.recoverInterrupted(c, 200)
+        val admin = UUID.randomUUID()
+        assertFalse(OperationJournal.reconcile(c, op.id, OperationJournal.State.REFUND_REQUIRED, 199,
+            OperationJournal.Resolution.REFUND_CONFIRMED, admin, "provider receipt 123", 201))
+        assertTrue(OperationJournal.reconcile(c, op.id, OperationJournal.State.REFUND_REQUIRED, 200,
+            OperationJournal.Resolution.REFUND_CONFIRMED, admin, "provider receipt 123", 201))
+        assertFalse(OperationJournal.reconcile(c, op.id, OperationJournal.State.REFUND_REQUIRED, 200,
+            OperationJournal.Resolution.REFUND_CONFIRMED, admin, "provider receipt 123", 202))
+        assertEquals(OperationJournal.State.REFUNDED, OperationJournal.readAll(c).single().state)
+        assertEquals(256L, PlotRepository.readAll(c).single().geometry.area)
+        c.createStatement().use { it.executeQuery("SELECT * FROM plot_logs").use { r ->
+            assertTrue(r.next()); assertEquals(admin.toString(), r.getString("actor_uuid"))
+            assertTrue(r.getString("action").contains(op.id.toString()))
+            assertTrue(r.getString("action").contains("provider receipt 123")); assertFalse(r.next())
+        } }
+    }
+    @Test fun `reconciliation rejects contradictory outcome and invalid evidence`() = databases { c, _, op ->
+        paid(c, op); OperationJournal.recoverInterrupted(c, 200)
+        assertThrows(IllegalArgumentException::class.java) {
+            OperationJournal.reconcile(c, op.id, OperationJournal.State.REFUND_REQUIRED, 200,
+                OperationJournal.Resolution.NO_DEBIT, owner, "checked provider", 201)
+        }
+        for (reason in listOf("", "short", "a".repeat(121), "receipt\n123")) {
+            assertThrows(IllegalArgumentException::class.java) {
+                OperationJournal.reconcile(c, op.id, OperationJournal.State.REFUND_REQUIRED, 200,
+                    OperationJournal.Resolution.REFUND_CONFIRMED, owner, reason, 201)
+            }
+        }
+        assertEquals(OperationJournal.State.REFUND_REQUIRED, OperationJournal.readAll(c).single().state)
+    }
+    @Test fun `audit failure rolls back resolution even after plot deletion`() = databases { c, _, op ->
+        paid(c, op); OperationJournal.recoverInterrupted(c, 200)
+        c.createStatement().use { it.executeUpdate("DELETE FROM plots"); it.execute("DROP TABLE plot_logs") }
+        assertThrows(java.sql.SQLException::class.java) {
+            OperationJournal.reconcile(c, op.id, OperationJournal.State.REFUND_REQUIRED, 200,
+                OperationJournal.Resolution.REFUND_CONFIRMED, owner, "provider receipt", 201)
+        }
+        assertTrue(c.autoCommit)
+        assertEquals(OperationJournal.State.REFUND_REQUIRED, OperationJournal.readAll(c).single().state)
+    }
+    @Test fun `uncertain no debit resolution survives backup with audit and releases owner`() = databases { c, type, op ->
+        OperationJournal.prepare(c, op)
+        OperationJournal.transition(c, op.id, OperationJournal.State.PREPARED, OperationJournal.State.DEBIT_REQUESTED, 101)
+        OperationJournal.recoverInterrupted(c, 200)
+        c.createStatement().use { it.executeUpdate("DELETE FROM plots") }
+        assertTrue(OperationJournal.reconcile(c, op.id, OperationJournal.State.UNCERTAIN, 200,
+            OperationJournal.Resolution.NO_DEBIT, UUID(0, 0), "provider confirms no debit", 201))
+        val dir = Files.createTempDirectory("reconciled-backup").toFile()
+        try {
+            val backup = SqlBackup.export(c, type, dir)
+            connect(type).use { target ->
+                SqlBackup.restore(target, type, backup, true)
+                assertEquals(OperationJournal.State.CANCELLED, OperationJournal.readAll(target).single().state)
+                target.createStatement().use { it.executeQuery("SELECT action FROM plot_logs").use { r ->
+                    assertTrue(r.next()); assertTrue(r.getString(1).contains("provider confirms no debit"))
+                } }
+            }
+        } finally { dir.deleteRecursively() }
+        assertTrue(OperationJournal.prepare(c, op.copy(id = UUID.randomUUID())))
+    }
+
 }
