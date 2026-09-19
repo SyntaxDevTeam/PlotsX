@@ -1,6 +1,6 @@
 # Plan dodania chunkowego systemu działek
 
-Status: **E3/E4 zintegrowane, E5 podłączony, zakup chunków z dziennikiem i GUI podłączony; komendy uzgadniania zaimplementowane**. Kod zawiera wybór trybu, zajmowanie jednego chunka i płatne rozszerzanie działki chunkowej; testy z rzeczywistymi usługami oraz wydanie pozostają w kolejnych etapach. Aktualizacja: 19 września 2026 r. Dokumentacja powstała na podstawie kodu PlotsX w tym repozytorium. Bieżący zakres wykonanych i pozostałych prac opisuje [rejestr postępu](06-postep-implementacji.md). Nazwy nowych klas, kluczy konfiguracji i uprawnień pozostają propozycją, dopóki rejestr nie potwierdza ich implementacji.
+Status: **E3/E4 zintegrowane, E5 podłączony, zakup chunków z dziennikiem i GUI podłączony**. Kod zawiera wybór trybu, zajmowanie jednego chunka i płatne rozszerzanie działki chunkowej; testy z rzeczywistymi usługami oraz wydanie pozostają w kolejnych etapach. Aktualizacja: 19 września 2026 r. Dokumentacja powstała na podstawie kodu PlotsX w tym repozytorium. Bieżący zakres wykonanych i pozostałych prac opisuje [rejestr postępu](06-postep-implementacji.md). Nazwy nowych klas, kluczy konfiguracji i uprawnień pozostają propozycją, dopóki rejestr nie potwierdza ich implementacji.
 
 ## Cel i zasada nadrzędna
 
@@ -23,7 +23,6 @@ Dodać drugą metodę zajmowania terenu: działki zbudowane z całych chunków. 
 | [09 — Rozszerzanie chunków](09-rozszerzanie-chunkow.md) | Transakcja E6 A, rewizje, liczniki, testy i dalsza integracja płatności. |
 | [10 — Dziennik operacji](10-dziennik-operacji.md) | Stany płatności, migracja, recovery, backup v3 i pozostała integracja. |
 | [11 — Zakup i GUI](11-zakup-chunka-i-gui.md) | Usługa zakupu, wątki, kompensacja, cennik i podłączone GUI chunków. |
-| [12 — Uzgadnianie płatności](12-uzgadnianie-platnosci.md) | Komendy administratora, potwierdzanie dowodów, atomowy audyt i testy. |
 
 ## Najważniejsze decyzje projektowe
 

@@ -2,7 +2,7 @@
 
 [Spis planu](README.md) · [Etapy i kryteria odbioru](05-realizacja-testy-wdrozenie.md) · [API i uruchomienie](07-api-v2-i-uruchomienie.md) · [Raport testów](08-raport-weryfikacji.md)
 
-Aktualizacja: **19 września 2026 r.** `[x]` oznacza wykonany zakres, `[ ]` pracę pozostałą. **Podłączono zajmowanie i zakup chunków, trwały dziennik płatności, kompensację, GUI oraz administracyjne uzgadnianie operacji.** Nie oznacza to zakończenia całego wydania: akceptacja z rzeczywistymi dostawcami, pełne interfejsy i staging pozostają w E5–E8.
+Aktualizacja: **19 września 2026 r.** `[x]` oznacza wykonany zakres, `[ ]` pracę pozostałą. **Podłączono zajmowanie i zakup chunków, trwały dziennik płatności, kompensację oraz GUI.** Tryb `classic | chunks` wybiera sposób tworzenia nowych działek, a zapisany typ działki wybiera późniejszy sposób jej rozszerzania. Nie oznacza to zakończenia całego wydania: akceptacja z rzeczywistymi dostawcami, pełne interfejsy i staging pozostają w E5–E8.
 
 ## Iteracja 1 — Fundament geometrii i kontrakt wyboru trybu
 
@@ -119,7 +119,7 @@ Stan: **warstwa transakcyjna zaimplementowana i przetestowana; E6 jako całość
 - [x] Wymuszona konkurencja dwóch ofert tej samej rewizji: jeden sukces, jedna nieaktualna oferta, jeden przyrost powierzchni/poziomu i zgodny cache.
 - [x] Dziennik `plot_operations`, migracja i backup v3 — wykonane w iteracji 6 poniżej.
 - [x] Osobny cennik, zachowany dostawca, obciążenia i zwroty — podłączone w iteracji 7.
-- [x] Ręczne uzgadnianie wyników niepewnych z audytem administratora — iteracja 8.
+- [ ] Wewnętrzna obsługa operacji niepewnych bez wystawiania technicznych komend w głównym interfejsie gracza.
 - [x] Podłączenie zakupu w GUI ekwipunkowym z ponowną kontrolą uprawnień, położenia gracza, WorldGuard i ceny — iteracja 7.
 - [ ] Natywne dialogi oraz akceptacja UI z klientem.
 - [ ] Testy nowego rozszerzania na pozostałych silnikach i działającym Paper po integracji usługi zakupu.
@@ -142,7 +142,6 @@ Stan na koniec iteracji 6: **model i persystencja dziennika wykonane**. Podłąc
 - [x] 15 nowych testów na SQLite/H2; pełny lokalny zestaw **122 testów bez błędów**; `shadowJar` zbudowany.
 - [x] Usługa zakupu, adaptery ekonomii, cennik i rezerwacja całego przebiegu — kod podłączony w iteracji 7.
 - [ ] Weryfikacja z rzeczywistym dostawcą ekonomii.
-- [x] Komendy uzgadniania wyników niepewnych z audytem administratora — iteracja 8.
 - [x] Podłączenie GUI ekwipunkowego — iteracja 7.
 - [ ] Natywne dialogi i testy awarii z rzeczywistym dostawcą.
 - [ ] Weryfikacja nowej migracji i backupu v3 na MySQL/MariaDB/PostgreSQL oraz integracja na Paper.
@@ -164,21 +163,8 @@ Stan: **usługa zakupu i GUI podłączone; testy kontrolowanych awarii przechodz
 - [x] Komunikaty PL/EN dla przetwarzania, limitów, kolizji, zajętej rezerwacji i operacji wymagającej wyjaśnienia.
 - [x] Klasyczne GUI nie obciąża konta przed odmową rezerwacji; reload odrzuca próbę przed podmianą configu.
 - [x] 12 testów zakupu i 2 testy loadera; pełny zestaw **136 testów bez błędów**, `shadowJar` zbudowany.
-- [x] Komendy uzgadniania nierozliczonych operacji z audytem administratora — iteracja 8.
 - [ ] Akceptacja zakupu na Paper z prawdziwym dostawcą i klientem oraz natywne dialogi.
 - [ ] Pozostałe silniki, platformy, testy obciążenia i staging.
-
-## Iteracja 8 — E6 D: administracyjne uzgadnianie płatności
-
-- [x] `/ptx payments list/show/resolve` i osobne uprawnienie `plotsx.admin.payments`.
-- [x] Rozstrzygnięcia potwierdzonego braku obciążenia oraz wykonanego zwrotu; bez wywoływania dostawcy.
-- [x] Jawne potwierdzenie, uzasadnienie, UUID administratora i porównanie stanu oraz znacznika czasu.
-- [x] Stan końcowy i audyt w jednej transakcji; koordynator blokuje konflikt z trwającym zakupem.
-- [x] Zachowanie audytu po usunięciu działki i w backupie, bez nowej migracji.
-- [x] Cztery nowe testy na SQLite/H2; pełny zestaw **140 testów bez błędów**, `shadowJar` zbudowany.
-- [ ] Akceptacja komend i uprawnień na Paper oraz sprawdzenie historii rzeczywistego dostawcy.
-
-Procedura i ograniczenia: [12 — Uzgadnianie płatności](12-uzgadnianie-platnosci.md).
 
 ## Etapy całościowe i dalsze prace
 
@@ -189,8 +175,8 @@ Procedura i ograniczenia: [12 — Uzgadnianie płatności](12-uzgadnianie-platno
 | E3 — Persystencja | Wykonano | Następna migracja dziennika płatności należy do E6. |
 | E4 — Ochrona | Wykonano w opisanym modelu pojedynczego serwera | Optymalizacje bariery i budżety produkcyjne w E8. |
 | E5 — Zajmowanie | Kod i transakcje podłączone; akceptacja częściowo otwarta | Testy klienta/dialogów i WorldGuard wymienione powyżej. |
-| E6 — Cykl życia | Zakup chunków z dziennikiem, ekonomią, kompensacją i GUI podłączony | Akceptacja zakupu i komend uzgadniania z rzeczywistymi dostawcami/platformami. |
+| E6 — Cykl życia | Zakup chunków z dziennikiem, ekonomią, kompensacją i GUI podłączony | Akceptacja zakupu z rzeczywistymi dostawcami/platformami i wewnętrzna obsługa stanów niepewnych. |
 | E7 — Interfejsy | Podstawowe opisy, granice i komunikaty PL/EN | Pełna akceptacja GUI/dialogów, pozostałe języki, dokładne operacje CoreProtect. |
 | E8 — Wydanie | Macierz SQL, pierwszy test Paper i benchmark wykonane | Pozostałe wersje/platformy, staging, testy obciążenia oraz próba wycofania całego wydania. |
 
-**Kolejny zakres E6:** test zakupu i uzgadniania na Paper z rzeczywistym dostawcą i klientem; narzędzia administracyjne są zaimplementowane w iteracji 8. GUI ekwipunkowe rozszerzania chunków jest już podłączone; natywne dialogi i pełna akceptacja E5/E7/E8 pozostają otwarte. Wyniki testów kontrolowanych dostawców nie są deklaracją gotowości całego wydania.
+**Kolejny zakres E6:** test zakupu na Paper z rzeczywistym dostawcą i klientem. GUI ekwipunkowe rozszerzania chunków jest już podłączone; techniczne komendy płatności nie są częścią interfejsu produktu. Natywne dialogi i pełna akceptacja E5/E7/E8 pozostają otwarte. Wyniki testów kontrolowanych dostawców nie są deklaracją gotowości całego wydania.

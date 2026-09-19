@@ -21,7 +21,6 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
 
         if (args.isNotEmpty()) {
             when {
-                args[0].equals("payments", ignoreCase = true) -> PaymentAdminCommand(plugin).execute(stack.sender, args.drop(1).toTypedArray())
                 args[0].equals("help", ignoreCase = true) -> {
 
                     val page = args.getOrNull(1)?.toIntOrNull() ?: 1
@@ -158,20 +157,13 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
             return emptyList()
         }
         return when (args.size) {
-            1 -> listOf("help", "version", "reload", "export", "import") +
-                if (stack.sender.hasPermission("plotsx.admin.payments")) listOf("payments") else emptyList()
-            2 -> when {
-                args[0].equals("help", ignoreCase = true) -> (1..helpPages).map(Int::toString)
-                    .filter { it.startsWith(args[1]) }
-                args[0].equals("export", ignoreCase = true) -> SqlBackup.dialects.filter {
-                    it.startsWith(args[1], ignoreCase = true)
-                }
-                args[0].equals("payments", ignoreCase = true) && stack.sender.hasPermission("plotsx.admin.payments") ->
-                    PaymentAdminCommand(plugin).suggest(args.drop(1).toTypedArray())
-                else -> emptyList()
-            }
-            else -> if (args[0].equals("payments", ignoreCase = true) && stack.sender.hasPermission("plotsx.admin.payments"))
-                PaymentAdminCommand(plugin).suggest(args.drop(1).toTypedArray()) else emptyList()
+            1 -> listOf("help", "version", "reload", "export", "import")
+            2 -> if (args[0].equals("help", ignoreCase = true)) (1..helpPages).map(Int::toString)
+                .filter { it.startsWith(args[1]) }
+            else if (args[0].equals("export", ignoreCase = true)) SqlBackup.dialects.filter {
+                it.startsWith(args[1], ignoreCase = true)
+            } else emptyList()
+            else -> emptyList()
         }
     }
 }

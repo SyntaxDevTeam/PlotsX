@@ -2,7 +2,7 @@
 
 [Postęp](06-postep-implementacji.md) · [Dziennik](10-dziennik-operacji.md)
 
-Aktualizacja: 14 września 2026 r. Podłączono zakup rozszerzenia do GUI ekwipunkowego. Nie jest to deklaracja zakończenia E6/E7/E8: pozostają narzędzia uzgadniania, testy z rzeczywistym dostawcą, klientem i pełna akceptacja platform.
+Aktualizacja: 19 września 2026 r. Podłączono zakup rozszerzenia do GUI ekwipunkowego. Publiczne techniczne komendy płatności nie należą do interfejsu produktu. Nie jest to deklaracja zakończenia E6/E7/E8: pozostają testy z rzeczywistym dostawcą, klientem i pełna akceptacja platform.
 
 ## Dostępna ścieżka gracza
 
@@ -54,4 +54,4 @@ Dodano 12 testów `ChunkPurchaseServiceTest` na H2 z kontrolowanym dostawcą i o
 
 Dwa nowe testy wskazanego `PlotCacheLoaderTest` sprawdzają rzeczywisty licznik w pełnym i pojedynczym odczycie oraz odrzucenie ujemnej wartości. Dotychczasowa regresja SQLite/H2, geometrii, API i backupów przechodzi.
 
-Nie wykonano w tej iteracji testu GUI z klientem Minecraft, realnego Vault/VaultUnlocked/WorldGuard ani nowego przebiegu Paper/Folia i zewnętrznej macierzy SQL. Kontrolowany executor testowy nie zastępuje tych prób. Kolejny zakres: komendy uzgadniania z audytem administratora, test akceptacyjny zakupu na Paper z dostawcą, natywne dialogi i pozostała macierz E6–E8.
+Nie wykonano w tej iteracji testu GUI z klientem Minecraft, realnego Vault/VaultUnlocked/WorldGuard ani nowego przebiegu Paper/Folia i zewnętrznej macierzy SQL. Kontrolowany executor testowy nie zastępuje tych prób. Kolejny zakres: test akceptacyjny zakupu na Paper z dostawcą, natywne dialogi, wewnętrzna obsługa stanów niepewnych i pozostała macierz E6–E8.

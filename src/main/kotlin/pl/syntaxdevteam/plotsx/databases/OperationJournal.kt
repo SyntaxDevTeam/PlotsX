@@ -154,43 +154,6 @@ internal object OperationJournal {
         return result
     }
 
-    enum class Resolution { NO_DEBIT, REFUND_CONFIRMED }
-
-    /** Dedicated connection; caller holds the mutation coordinator. No money or land is changed. */
-    fun reconcile(conn: Connection, id: UUID, expected: State, expectedUpdatedAt: Long,
-                  resolution: Resolution, administrator: UUID, reason: String, now: Long): Boolean {
-        require(conn.autoCommit)
-        require(expected in setOf(State.UNCERTAIN, State.REFUND_REQUIRED)) { "Operation is not awaiting reconciliation" }
-        require(resolution != Resolution.NO_DEBIT || expected == State.UNCERTAIN) { "A confirmed debit requires a confirmed refund" }
-        require(reason.length in 8..120 && reason.none { it.isISOControl() }) { "Evidence reference/reason must contain 8–120 characters without control characters" }
-        require(now >= expectedUpdatedAt && expectedUpdatedAt >= 0)
-        val next = if (resolution == Resolution.NO_DEBIT) State.CANCELLED else State.REFUNDED
-        conn.autoCommit = false
-        try {
-            val operation = readAll(conn).singleOrNull { it.id == id }
-            if (operation == null || operation.state != expected || operation.updatedAt != expectedUpdatedAt) {
-                conn.rollback()
-                return false
-            }
-            val changed = conn.prepareStatement("UPDATE plot_operations SET state = ?, updated_at = ? WHERE operation_id = ? AND state = ? AND updated_at = ?").use {
-                it.setString(1, next.name); it.setLong(2, now); it.setString(3, id.toString())
-                it.setString(4, expected.name); it.setLong(5, expectedUpdatedAt); it.executeUpdate() == 1
-            }
-            if (!changed) { conn.rollback(); return false }
-            // Existing non-cascading audit table is included in every backup format.
-            conn.prepareStatement("INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp) VALUES (?, ?, ?, ?)").use {
-                it.setInt(1, operation.plotId)
-                it.setString(2, "RECONCILE $id ${expected.name}->${next.name} $reason")
-                it.setString(3, administrator.toString()); it.setLong(4, now); it.executeUpdate()
-            }
-            conn.commit()
-            return true
-        } catch (failure: Exception) {
-            try { conn.rollback() } catch (rollback: Exception) { failure.addSuppressed(rollback) }
-            throw failure
-        } finally { conn.autoCommit = true }
-    }
-
     /** A backup can predate a later debit/refund. Imported pending work must never resume blindly. */
     fun quarantineRestored(conn: Connection, now: Long) {
         require(!conn.autoCommit) { "Import quarantine must commit with restored data" }

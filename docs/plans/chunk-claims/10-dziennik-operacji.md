@@ -6,7 +6,7 @@
 
 ## Stan implementacji
 
-Wykonano część E6 B dotyczącą trwałego modelu płatności, migracji, transakcyjnego połączenia z geometrią, odzyskiwania po restarcie i backupu. `OperationJournal` nie wywołuje dostawcy ekonomii. Usługa zakupu, komendy uzgadniania i GUI pozostają kolejnym zakresem; samo istnienie dziennika nie włącza płatnego rozszerzania.
+Wykonano część E6 B dotyczącą trwałego modelu płatności, migracji, transakcyjnego połączenia z geometrią, odzyskiwania po restarcie i backupu. `OperationJournal` nie wywołuje dostawcy ekonomii. Usługa zakupu i GUI zostały podłączone w kolejnej iteracji. Publiczne techniczne komendy płatności nie są częścią interfejsu produktu.
 
 ## Dane i migracja
 
@@ -72,4 +72,4 @@ Dodano 15 testów `OperationJournalTest` na SQLite i H2. Obejmują migrację/pow
 
 W tej części nie wykonywano ponownie zewnętrznej macierzy MySQL/MariaDB/PostgreSQL ani testów Paper. Historyczne wyniki E3/E4 nie są deklaracją sprawdzenia nowej migracji finansowej na tych silnikach.
 
-Pozostało: usługa zakupu i osobny cennik, podłączenie rzeczywistych dostawców ekonomii z bezpiecznym wątkiem wywołania, spójna rezerwacja od walidacji oferty do publikacji, narzędzie uzgadniania z audytem administratora, GUI/dialogi i scenariusze awarii z dostawcą. Chunkowe GUI rozszerzania nadal jest nieaktywne.
+Stan po kolejnej iteracji: usługa zakupu, osobny cennik, bezpieczne przełączanie wątków, rezerwacja od walidacji do publikacji oraz GUI ekwipunkowe są podłączone. Pozostają natywne dialogi, testy z rzeczywistym dostawcą i klientem oraz wewnętrzna obsługa operacji niepewnych bez dodawania technicznych komend do głównego interfejsu.

@@ -24,9 +24,6 @@ features:
   debug: true
 
 permissions:
-  plotsx.admin.payments:
-    description: Inspect and reconcile chunk payment operations
-    default: op
   # Keep access checks in PermissionChecker; these entries register the nodes.
   # No children: plotsx.owner and plotsx.* retain their existing code-level scope.
   plotsx.*:

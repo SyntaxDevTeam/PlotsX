@@ -346,17 +346,6 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
 
     /** Worker-thread purchase entry point; Bukkit and economy calls return to the server thread. */
-    internal fun paymentOperations(): List<OperationJournal.Operation> =
-        (getConnection() ?: error("No database connection")).use { OperationJournal.readAll(it) }
-
-    internal fun reconcilePayment(id: UUID, expected: OperationJournal.State, updatedAt: Long,
-                                  resolution: OperationJournal.Resolution, administrator: UUID, reason: String): Boolean = protectedMutation {
-        check(!org.bukkit.Bukkit.isPrimaryThread()) { "Reconciliation SQL must run off the server thread" }
-        (getConnection() ?: error("No database connection")).use {
-            OperationJournal.reconcile(it, id, expected, updatedAt, resolution, administrator, reason, System.currentTimeMillis())
-        }
-    }
-
     internal fun purchaseChunk(operation: OperationJournal.Operation, level: Int,
                                limits: ChunkExpansionTransaction.Limits,
                                account: pl.syntaxdevteam.plotsx.hooks.ExpansionEconomy.Account?,

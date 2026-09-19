@@ -49,8 +49,9 @@ plots:
   # Maximum plots across ALL worlds; override with plotsx.plot.max-plots.<number>.
   # Highest granted numeric permission wins; without one, this value is used.
   maxPlots: 5
-  # Initial radius; override with plotsx.plot.radius.<radius> (e.g. VIP: 24).
-  # Still subject to maximum radius and combined area limits below.
+  # Initial radius for NEW classic plots only; it does not affect chunk plots.
+  # Override with plotsx.plot.radius.<radius> (e.g. VIP: 24).
+  # Classic plots remain subject to maximum radius and combined area limits below.
   radius: 16
   # Allowed loaded worlds, including worlds loaded by Multiverse-Core.
   # A legacy single string is also supported. ["*"] = all worlds; [] = none.
@@ -58,6 +59,7 @@ plots:
   # Duration of Show borders in the plot and expansion menus (seconds, minimum 1).
   borderDisplaySeconds: 30
   expansion:
+    # Classic plots only. Chunk expansion uses plots.chunks.expansion above.
     # Stand in the segment from which you want to expand; select an adjacent direction.
     # Each purchase adds one square of the plot's original size in the selected direction.
     # Base price of the first segment in the default economy currency; 0 = free.
