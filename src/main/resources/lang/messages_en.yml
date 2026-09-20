@@ -407,7 +407,7 @@ dialogs:
   expired: "This form has expired. Open it again to continue."
   plot: "Plot: <plot>"
   claim_body: "Create a plot in <world>, at X: <x>, Z: <z>, radius: <radius>?"
-  claim_chunk_body: "Claim chunk <chunkX>, <chunkZ> in <world>? Area: 256 blocks."
+  claim_chunk_body: "Claim chunk <chunk_x>, <chunk_z> in <world>? Area: 256 blocks."
   claim_changed: "Your position or claim radius changed. Run /claim again."
   chunk_expand_title: "Expand chunk plot"
   chunk_expand_choose: "Choose an adjacent direction. The exact target and price will be confirmed next."

@@ -21,7 +21,7 @@ class ClaimConfirmGUI(
     override fun open(player: Player) {
         val loc = player.location
         val body = plugin.interactions.text(if (plugin.claimMode == pl.syntaxdevteam.plotsx.claiming.ClaimMode.CHUNKS) "claim_chunk_body" else "claim_body", mapOf(
-            "chunkX" to Math.floorDiv(loc.blockX, 16).toString(), "chunkZ" to Math.floorDiv(loc.blockZ, 16).toString(),
+            "chunk_x" to Math.floorDiv(loc.blockX, 16).toString(), "chunk_z" to Math.floorDiv(loc.blockZ, 16).toString(),
             "world" to loc.world.name, "x" to loc.blockX.toString(), "z" to loc.blockZ.toString(),
             "radius" to plugin.hookHandler.getClaimRadius(player).toString()))
         inventory.setItem(13, plugin.guiHandler.createItem(Material.MAP, body))
