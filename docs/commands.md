@@ -11,6 +11,10 @@ Lista odpowiada aktualnej implementacji. `[argument]` jest opcjonalny, a `<argum
 | `/plot` | `plotsx.cmd.plot` | Otwiera panel działki pod graczem, jeśli jest jej właścicielem, członkiem lub ma dostęp administracyjny; poza działką pokazuje listę własnych działek, również dla OP. |
 | `/plot <nazwa>` | `plotsx.cmd.plot` | Otwiera panel dostępnej działki wyszukanej po nazwie; własna ma pierwszeństwo. |
 
+Rodzaj nowej działki wybiera administrator przez `plots.claiming.mode: classic | chunks`.
+W trybie `classic` `/claim` używa `plots.radius`; w trybie `chunks` zajmuje cały
+chunk gracza. Zmiana trybu wymaga restartu i nie konwertuje istniejących działek.
+
 Zwykłe komendy działek są dostępne tylko dla graczy; `/plot admin <id> <podkomenda>` działa również z konsoli. `/unclaim` nie obsługuje wyboru działki po nazwie, mimo że podpowiedzi komendy zawierają nazwy działek. Panel `/plot` udostępnia flagi, teleportację, zmianę nazwy, listę działek, wizualizację granic i rozszerzanie; rozszerzanie wymaga dodatkowo `plotsx.plot.expand`.
 
 ### Członkowie działki
@@ -42,12 +46,32 @@ W panelu `/plot` wybierz rozszerzanie i potwierdź zakup. Wymagane są własnoś
 
 ```yaml
 plots:
+  chunks:
+    maxPerPlot: 32
+    maxTotalOwned: 64
+    expansion:
+      price: 500.0
+      priceMultiplier: 1.5
   expansion:
     price: 500.0
     priceMultiplier: 1.5
     defaultMaxRadius: 64
     defaultMaxTotalArea: 16641
 ```
+
+Typ zapisanej działki wybiera właściwe rozszerzanie niezależnie od aktualnego
+`claiming.mode`. Działka klasyczna otrzymuje kwadratowy segment. Działka chunkowa
+otrzymuje jeden wolny chunk przylegający bokiem do chunka, w którym stoi właściciel.
+Oba warianty są obsługiwane przez panel; na zgodnym Paper używany jest natywny dialog,
+a na starszym lub tłumaczonym kliencie GUI ekwipunkowe.
+
+Zakup chunkowy używa osobnego cennika `plots.chunks.expansion`. Cena następnego
+chunka to `price × priceMultiplier ^ liczba_dokupionych_chunków`. Obowiązują
+`maxPerPlot`, `maxTotalOwned`, odpowiadające im uprawnienia liczbowe, wspólny limit
+powierzchni, kolizje z obiema geometriami oraz dokładna kontrola WorldGuard.
+Płatność, zapis chunka, rewizja geometrii i publikacja cache są chronione trwałym
+dziennikiem operacji; po odrzuconym zapisie wykonywana jest próba zwrotu przez tego
+samego dostawcę i w tej samej walucie.
 
 GUI pozwala wybrać północ (−Z), wschód (+X), południe (+Z) lub zachód (−X), a następnie potwierdzić zakup. Każdy zakup dodaje jeden segment o rozmiarze pierwotnej działki, za cenę `plots.expansion.price × plots.expansion.priceMultiplier ^ liczba_zakupionych_segmentów`. `0` oznacza darmowe rozszerzenie. Nie ma poziomów ani przyrostu promienia. Dla promienia 16 każdy segment ma 33 × 33 bloki i dodaje 1089 bloków².
 
@@ -63,7 +87,10 @@ Istniejące działki zachowują cały teren; ich aktualny rozmiar staje się sta
 
 Plugin korzysta z VaultUnlocked lub Vault oraz dostawcy ekonomii. Zmiana ceny lub docelowego segmentu po otwarciu oferty wymaga ponownego otwarcia menu. OP i bypass nie zwalniają z opłaty.
 
-Płatność jest pobierana przed transakcją rozszerzenia. Odrzucenie rozszerzenia powoduje próbę zwrotu przez tego samego dostawcę. Nieudany zwrot jest zgłaszany graczowi i zapisany w logu jako `REFUND REQUIRED` z UUID, ID działki i kwotą. Ekonomia i SQL nie są wspólną transakcją: awaria procesu lub niejednoznaczny błąd dostawcy/połączenia może wymagać ręcznego rozliczenia. Obsługa płatności i SQL odbywa się synchronicznie; wolna baza może opóźnić wątek obsługujący zakup.
+Klasyczne rozszerzanie zachowuje dotychczasowy mechanizm płatności. Zakup chunkowy
+wykonuje SQL na workerze, a wywołania Bukkit i ekonomii na wątku serwera. Ekonomia
+i SQL nie są jedną transakcją zewnętrzną: niejednoznaczna odpowiedź dostawcy jest
+trwale oznaczana i nie powoduje automatycznego ponownego obciążenia.
 
 Dokumentacja API: [Vault](https://milkbowl.github.io/VaultAPI/net/milkbowl/vault/economy/Economy.html), [VaultUnlocked](https://github.com/TheNewEconomy/VaultUnlockedAPI).
 
@@ -107,9 +134,9 @@ Nowe kontenery właścicieli i członków działki są automatycznie zabezpiecza
 | `/ptx` | Wyświetla wskazówkę użycia `/ptx help`. |
 | `/ptx help [strona]` | Wyświetla wbudowaną, skróconą pomoc. Domyślna strona: 1. |
 | `/ptx version` | Wyświetla nazwę pluginu, autorów, witrynę i wersję. |
-| `/ptx reload` | Ponownie wczytuje konfigurację pluginu; nie przeładowuje całego pluginu ani cache działek. |
-| `/ptx export` | Uruchamia zapis do `dump/backup.sql` w katalogu danych pluginu. Obecna implementacja odwołuje się do tabel `punishments` i `punishmenthistory`, więc nie jest poprawnym eksportem działek PlotsX. |
-| `/ptx import` | Wykonuje SQL z `dump/backup.sql` w katalogu danych pluginu. Nie odświeża cache działek po imporcie. |
+| `/ptx reload` | Ponownie wczytuje konfigurację i odbudowuje cache. Zmiana `plots.claiming.mode` wymaga restartu i jest odrzucana. |
+| `/ptx export [silnik]` | Zapisuje przenośny backup geometrii, metadanych i dziennika operacji do `dump/backup.sql`; opcjonalny silnik wybiera dialekt docelowy. |
+| `/ptx import` | Waliduje i przywraca `dump/backup.sql`, po czym atomowo publikuje odbudowany cache. Import nie nadpisuje nierozliczonej płatności. |
 
 `reload`, `export` i `import` nie mają osobnych kontroli uprawnień administracyjnych — uprawnienie `plotsx.cmd.ptx` pozwala wywołać je wszystkie.
 

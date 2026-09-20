@@ -1,6 +1,6 @@
 # 07 — API v2 i uruchomienie trybu chunkowego
 
-> Aktualizacja 14.09.2026: zakup chunków z ekonomią i GUI ekwipunkowym jest podłączony — [iteracja 7 i aktualny zakres](11-zakup-chunka-i-gui.md). Poniższy opis ograniczeń odzwierciedla etap powstania tego dokumentu.
+> Aktualizacja 20.09.2026: zakup chunków z ekonomią, GUI ekwipunkowym i natywnym dialogiem jest podłączony — [iteracja 7 i aktualny zakres](11-zakup-chunka-i-gui.md).
 
 [Spis planu](README.md) · [Postęp](06-postep-implementacji.md)
 
@@ -15,7 +15,7 @@ plots:
     maxTotalOwned: 64
 ```
 
-`classic` jest domyślny. `chunks` zmienia strategię nowych zajęć na jeden chunk 16 × 16, obejmujący pełną wysokość świata. Typ zapisany w bazie zawsze rozstrzyga ochronę. Zmiana konfiguracji nie konwertuje danych. Zmiana trybu wymaga restartu; `/ptxreload` odrzuca zmianę aktywnej strategii. Nieznany tryb i niepoprawne liczbowe limity powodują błąd walidacji.
+`classic` jest domyślny. `chunks` zmienia strategię nowych zajęć na jeden chunk 16 × 16, obejmujący pełną wysokość świata. Typ zapisany w bazie zawsze rozstrzyga ochronę. Zmiana konfiguracji nie konwertuje danych. Zmiana trybu wymaga restartu; `/ptx reload` odrzuca zmianę aktywnej strategii. Nieznany tryb i niepoprawne liczbowe limity powodują błąd walidacji.
 
 Dodatkowe uprawnienia liczbowe:
 
@@ -30,7 +30,7 @@ Potwierdzenie `/claim` porównuje świat i geometrię oferty. Przemieszczenie we
 
 Start pluginu tworzy brakujące tabele starego schematu, a następnie wykonuje powtarzalną migrację geometrii przed ładowaniem cache i rejestracją ochrony. Rekordy klasyczne zachowują ID, właścicieli, promienie, rozszerzenia, flagi i członków. Chunk ma `radius = NULL`, jawny typ, rewizję i rekordy `plot_chunks`.
 
-Import przez plugin dopuszcza teraz poprawne działki chunkowe. Import i zwykłe mutacje są objęte wspólną barierą ochrony. Backup v1 nadal jest obsługiwany; eksport mieszanych danych używa v2. Cofnięcie do starego pluginu wymaga odtworzenia kopii sprzed migracji; zmiana samego `mode` nie cofa schematu.
+Import przez plugin dopuszcza poprawne działki chunkowe. Import i zwykłe mutacje są objęte wspólną barierą ochrony. Backupy v1/v2 nadal są obsługiwane; bieżący eksport z dziennikiem operacji używa v3. Cofnięcie do starego pluginu wymaga odtworzenia kopii sprzed migracji; zmiana samego `mode` nie cofa schematu.
 
 ## Kontrakt publiczny
 
@@ -65,6 +65,9 @@ Każde wywołanie handlera `PlotProtectionListener` otrzymuje przypięty snapsho
 
 Błąd publikacji pozostawia ochronę w stanie odmowy i blokuje kolejne mutacje. Udany reload odbudowuje cache i zwalnia blokadę. Samo niepowodzenie SQL z poprawnym rollbackiem i udaną publikacją nie wymaga ręcznego odblokowania. Nie jest obsługiwany równoległy zapis tej samej bazy przez kilka serwerów ani ręczne SQL w czasie pracy.
 
-## Zakres następnego etapu
+## Zakres akceptacyjny
 
-Zajmowanie jednego chunka, transfer, usunięcie, ochrona, API i podstawowa wizualizacja są podłączone. Rozszerzanie chunkowe z płatnościami i dziennikiem odzyskiwania pozostaje E6. GUI rozszerzania chunków informuje o niedostępności tej operacji. Pełne testy dialogów z klientem, hooków z zewnętrznymi pluginami, tłumaczenia wszystkich języków oraz staging należą do E7/E8. Nie jest to deklaracja gotowości całego wydania.
+Zajmowanie jednego chunka, transfer, usunięcie, ochrona, API, wizualizacja,
+rozszerzanie z płatnością, dziennik oraz oba interfejsy są podłączone. Pozostają
+testy z rzeczywistym klientem, dostawcą ekonomii i WorldGuardem, tłumaczenia
+pozostałych języków oraz staging E8.

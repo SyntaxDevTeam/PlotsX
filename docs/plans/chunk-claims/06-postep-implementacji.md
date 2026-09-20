@@ -2,7 +2,7 @@
 
 [Spis planu](README.md) · [Etapy i kryteria odbioru](05-realizacja-testy-wdrozenie.md) · [API i uruchomienie](07-api-v2-i-uruchomienie.md) · [Raport testów](08-raport-weryfikacji.md)
 
-Aktualizacja: **19 września 2026 r.** `[x]` oznacza wykonany zakres, `[ ]` pracę pozostałą. **Podłączono zajmowanie i zakup chunków, trwały dziennik płatności, kompensację oraz GUI.** Tryb `classic | chunks` wybiera sposób tworzenia nowych działek, a zapisany typ działki wybiera późniejszy sposób jej rozszerzania. Nie oznacza to zakończenia całego wydania: akceptacja z rzeczywistymi dostawcami, pełne interfejsy i staging pozostają w E5–E8.
+Aktualizacja: **20 września 2026 r.** `[x]` oznacza wykonany zakres, `[ ]` pracę pozostałą. **Podłączono zajmowanie i zakup chunków, trwały dziennik płatności, kompensację, GUI ekwipunkowe oraz natywne dialogi.** Tryb `classic | chunks` wybiera sposób tworzenia nowych działek, a zapisany typ działki wybiera późniejszy sposób jej rozszerzania. Otwarte są przede wszystkim testy akceptacyjne wykonywane na docelowym serwerze.
 
 ## Iteracja 1 — Fundament geometrii i kontrakt wyboru trybu
 
@@ -119,9 +119,10 @@ Stan: **warstwa transakcyjna zaimplementowana i przetestowana; E6 jako całość
 - [x] Wymuszona konkurencja dwóch ofert tej samej rewizji: jeden sukces, jedna nieaktualna oferta, jeden przyrost powierzchni/poziomu i zgodny cache.
 - [x] Dziennik `plot_operations`, migracja i backup v3 — wykonane w iteracji 6 poniżej.
 - [x] Osobny cennik, zachowany dostawca, obciążenia i zwroty — podłączone w iteracji 7.
-- [ ] Wewnętrzna obsługa operacji niepewnych bez wystawiania technicznych komend w głównym interfejsie gracza.
+- [x] Wewnętrzna klasyfikacja i trwałe raportowanie operacji niepewnych po restarcie, bez automatycznego ponawiania i technicznych komend w interfejsie gracza.
 - [x] Podłączenie zakupu w GUI ekwipunkowym z ponowną kontrolą uprawnień, położenia gracza, WorldGuard i ceny — iteracja 7.
-- [ ] Natywne dialogi oraz akceptacja UI z klientem.
+- [x] Natywny, dwustopniowy dialog wyboru kierunku i potwierdzenia zakupu, ze wspólną ścieżką zapisu i fallbackiem do GUI ekwipunkowego.
+- [ ] Akceptacja UI z rzeczywistym klientem.
 - [ ] Testy nowego rozszerzania na pozostałych silnikach i działającym Paper po integracji usługi zakupu.
 
 Na koniec iteracji 5 nie wystawiono tej metody jako zakupu ani nie usunięto blokady chunkowego GUI. Iteracja 7 poniżej podłącza usługę zakupu. Warstwa zapisu nie pobiera pieniędzy i nie zastępuje autoryzacji ani zewnętrznych regionów; udostępnienie płatnego przycisku przed dziennikiem przeczyłoby kontraktowi E6.
@@ -143,7 +144,8 @@ Stan na koniec iteracji 6: **model i persystencja dziennika wykonane**. Podłąc
 - [x] Usługa zakupu, adaptery ekonomii, cennik i rezerwacja całego przebiegu — kod podłączony w iteracji 7.
 - [ ] Weryfikacja z rzeczywistym dostawcą ekonomii.
 - [x] Podłączenie GUI ekwipunkowego — iteracja 7.
-- [ ] Natywne dialogi i testy awarii z rzeczywistym dostawcą.
+- [x] Natywne dialogi korzystające z tej samej usługi zakupu co GUI ekwipunkowe.
+- [ ] Testy awarii z rzeczywistym dostawcą.
 - [ ] Weryfikacja nowej migracji i backupu v3 na MySQL/MariaDB/PostgreSQL oraz integracja na Paper.
 
 ## Iteracja 7 — E6 C: zakup w tle i GUI chunków
@@ -163,7 +165,8 @@ Stan: **usługa zakupu i GUI podłączone; testy kontrolowanych awarii przechodz
 - [x] Komunikaty PL/EN dla przetwarzania, limitów, kolizji, zajętej rezerwacji i operacji wymagającej wyjaśnienia.
 - [x] Klasyczne GUI nie obciąża konta przed odmową rezerwacji; reload odrzuca próbę przed podmianą configu.
 - [x] 12 testów zakupu i 2 testy loadera; pełny zestaw **136 testów bez błędów**, `shadowJar` zbudowany.
-- [ ] Akceptacja zakupu na Paper z prawdziwym dostawcą i klientem oraz natywne dialogi.
+- [x] Natywny dialog zakupu: wybór dostępnego kierunku, ponowna wycena i osobne potwierdzenie celu.
+- [ ] Akceptacja zakupu na Paper z prawdziwym dostawcą i klientem.
 - [ ] Pozostałe silniki, platformy, testy obciążenia i staging.
 
 ## Etapy całościowe i dalsze prace
@@ -176,7 +179,11 @@ Stan: **usługa zakupu i GUI podłączone; testy kontrolowanych awarii przechodz
 | E4 — Ochrona | Wykonano w opisanym modelu pojedynczego serwera | Optymalizacje bariery i budżety produkcyjne w E8. |
 | E5 — Zajmowanie | Kod i transakcje podłączone; akceptacja częściowo otwarta | Testy klienta/dialogów i WorldGuard wymienione powyżej. |
 | E6 — Cykl życia | Zakup chunków z dziennikiem, ekonomią, kompensacją i GUI podłączony | Akceptacja zakupu z rzeczywistymi dostawcami/platformami i wewnętrzna obsługa stanów niepewnych. |
-| E7 — Interfejsy | Podstawowe opisy, granice i komunikaty PL/EN | Pełna akceptacja GUI/dialogów, pozostałe języki, dokładne operacje CoreProtect. |
+| E7 — Interfejsy | GUI ekwipunkowe i natywne dialogi używają wspólnej operacji; opisy, granice i komunikaty PL/EN | Akceptacja klienta, pozostałe języki i dokładne operacje CoreProtect. |
 | E8 — Wydanie | Macierz SQL, pierwszy test Paper i benchmark wykonane | Pozostałe wersje/platformy, staging, testy obciążenia oraz próba wycofania całego wydania. |
 
-**Kolejny zakres E6:** test zakupu na Paper z rzeczywistym dostawcą i klientem. GUI ekwipunkowe rozszerzania chunków jest już podłączone; techniczne komendy płatności nie są częścią interfejsu produktu. Natywne dialogi i pełna akceptacja E5/E7/E8 pozostają otwarte. Wyniki testów kontrolowanych dostawców nie są deklaracją gotowości całego wydania.
+**Pozostały zakres akceptacyjny:** test zakupu na Paper z rzeczywistym dostawcą,
+WorldGuardem i klientem oraz próby staging/obciążenia. GUI ekwipunkowe i natywne
+dialogi rozszerzania chunków są podłączone; techniczne komendy płatności nie są
+częścią interfejsu produktu. Wyniki testów kontrolowanych dostawców nie są deklaracją
+gotowości całego wydania.

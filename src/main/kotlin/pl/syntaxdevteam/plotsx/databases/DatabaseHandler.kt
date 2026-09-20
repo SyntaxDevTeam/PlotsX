@@ -414,7 +414,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                     ).use { stmt ->
                         stmt.setInt(1, plotId)
                         stmt.executeQuery().use { rs ->
-                            if (!rs.next()) null else arrayOf(
+                            if (!rs.next()) null else arrayOf<Any>(
                                 rs.getString("owner_uuid"), rs.getInt("x"), rs.getInt("z"),
                                 rs.getInt("radius"), rs.getString("world")
                             )

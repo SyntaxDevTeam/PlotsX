@@ -13,6 +13,9 @@ val paperApiVersion = providers.gradleProperty("paperApiVersion")
     .getOrElse("1.21.11-R0.1-SNAPSHOT")
 val worldGuardVersion = providers.gradleProperty("worldGuardVersion")
     .getOrElse("7.0.13")
+// WorldEdit 7.4.x is compiled for Java 25. PlotsX still targets Java 21.
+val worldEditVersion = providers.gradleProperty("worldEditVersion")
+    .getOrElse("7.3.9")
 
 repositories {
     mavenCentral()
@@ -74,10 +77,10 @@ dependencies {
     compileOnly("com.sk89q.worldguard:worldguard-core:$worldGuardVersion") {
         isTransitive = false
     }
-    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.4.5") {
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:$worldEditVersion") {
         isTransitive = false
     }
-    compileOnly("com.sk89q.worldedit:worldedit-core:7.4.5") {
+    compileOnly("com.sk89q.worldedit:worldedit-core:$worldEditVersion") {
         isTransitive = false
     }
 }
@@ -98,6 +101,11 @@ tasks {
         runDirectory(file("run/paper"))
     }
     runPaper.folia.registerTask()
+    shadowJar {
+        // Kotlin module metadata is merged by Shadow's transformer. EXCLUDE would
+        // discard duplicates before the transformer can combine them.
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
 }
 
 tasks.processResources {

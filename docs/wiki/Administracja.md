@@ -22,7 +22,10 @@ Zwykłym kontem gracza utwórz działkę, dodaj znajomego, zabezpiecz skrzynię 
 
 ## Kopie zapasowe
 
-W tym wydaniu `/ptx export` **nie tworzy poprawnej kopii działek**. Nie używaj go jako zabezpieczenia przed utratą danych.
+`/ptx export [mysql|mariadb|sqlite|postgresql|h2]` zapisuje do
+`plugins/PlotsX/dump/backup.sql` przenośny backup działek klasycznych i chunkowych,
+członków, flag, historii oraz dziennika operacji. Bez argumentu używa dialektu
+bieżącej bazy. Nadal zachowuj osobną kopię świata — backup PlotsX nie zawiera bloków.
 
 Dla domyślnego SQLite:
 
@@ -36,7 +39,10 @@ Dla H2 również wykonuj kopię przy wyłączonym serwerze. Przy zewnętrznej ba
 
 Aby przywrócić dane, wyłącz serwer, zachowaj kopię obecnego stanu, a następnie przywróć pasujące do siebie dane pluginu, bazy i światów. Uruchom serwer i sprawdź działki.
 
-`/ptx import` wykonuje polecenia z `plugins/PlotsX/dump/backup.sql` i nie odświeża od razu wczytanych działek. To nie jest zwykły przycisk przywracania kompletnej kopii serwera.
+`/ptx import` waliduje geometrię, kolizje i dziennik, przywraca dane transakcyjnie
+tam, gdzie pozwala na to silnik, a następnie odbudowuje cache ochrony. Import jest
+odrzucany, jeśli nadpisałby bieżącą nierozliczoną operację płatniczą. Nie zastępuje
+kopii świata ani procedury testowego odtworzenia przed wdrożeniem.
 
 ## Aktualizacja PlotsX
 
@@ -46,11 +52,17 @@ Aby przywrócić dane, wyłącz serwer, zachowaj kopię obecnego stanu, a nastę
 4. Uruchom serwer i sprawdź komunikaty.
 5. Sprawdź działkę, prywatny pojemnik i rozszerzenie na zwykłym koncie.
 
-Przy uruchomieniu plugin może uzupełnić brakujące domyślne wpisy configu. Po aktualizacji sprawdź zwłaszcza ofertę poziomów rozszerzania.
+Przy uruchomieniu plugin może uzupełnić brakujące domyślne wpisy configu. Po
+aktualizacji sprawdź `plots.claiming.mode`, osobne cenniki `plots.expansion` i
+`plots.chunks.expansion` oraz limity chunków.
 
 ## Problem z płatnością
 
-Jeśli gracz zgłasza pobranie pieniędzy bez rozszerzenia, sprawdź saldo, rozmiar działki i komunikaty z tego momentu. Nieudany zwrot jest oznaczany w konsoli tekstem `REFUND REQUIRED` wraz z graczem, działką i kwotą. Uzgodnij zwrot po sprawdzeniu, czy pieniądze nie wróciły wcześniej.
+Jeśli gracz zgłasza pobranie pieniędzy bez rozszerzenia, sprawdź saldo, geometrię
+działki i komunikaty z tego momentu. Dla zakupu chunkowego zapisz UUID operacji,
+dostawcę, walutę, kwotę i stan z komunikatu `PAYMENT REVIEW` lub
+`PAYMENT RECONCILIATION REQUIRED`. Nie ponawiaj obciążenia ani zwrotu bez sprawdzenia
+historii dostawcy — niejednoznaczny wynik jest celowo zachowywany w dzienniku.
 
 ## Zgłoszenie problemu
 

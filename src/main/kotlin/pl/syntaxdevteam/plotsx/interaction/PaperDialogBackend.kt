@@ -36,4 +36,28 @@ class PaperDialogBackend : DialogBackend {
         }
         player.showDialog(dialog)
     }
+
+    override fun showChoices(player: Player, title: Component, body: List<Component>,
+                             choices: Map<String, Component>, cancel: Component,
+                             reply: (String?) -> Unit) {
+        val buttons = choices.map { (value, label) ->
+            ActionButton.builder(label).action(DialogAction.customClick({ _, audience ->
+                if (audience is Player && audience.uniqueId == player.uniqueId) reply(value)
+            }, callbackOptions())).build()
+        }
+        val cancelButton = ActionButton.builder(cancel).action(DialogAction.customClick({ _, audience ->
+            if (audience is Player && audience.uniqueId == player.uniqueId) reply(null)
+        }, callbackOptions())).build()
+        val dialog = Dialog.create { builder ->
+            builder.empty().base(DialogBase.builder(title)
+                .canCloseWithEscape(true)
+                .body(body.map { DialogBody.plainMessage(it) })
+                .build())
+                .type(DialogType.multiAction(buttons, cancelButton, 2))
+        }
+        player.showDialog(dialog)
+    }
+
+    private fun callbackOptions(): ClickCallback.Options =
+        ClickCallback.Options.builder().uses(1).lifetime(Duration.ofSeconds(60)).build()
 }

@@ -16,6 +16,11 @@
 | `/plot remove <gracz>` | Usuwa członka z twojej działki. | `plotsx.cmd.plot` |
 | `/plot members` | Otwiera panel członków działki. | `plotsx.cmd.plot` |
 
+Administrator wybiera sposób tworzenia nowych działek przez
+`plots.claiming.mode: classic | chunks`. `classic` używa promienia, a `chunks`
+zajmuje cały chunk 16 × 16. Zmiana wymaga restartu; zapisane działki obu typów
+pozostają chronione i rozszerzają się według własnej geometrii.
+
 ### Role, granty i administracja
 
 Komendy wymagają `plotsx.cmd.plot` i stania na działce, do której gracz ma dostęp. Właściciel i administrator zarządzają wszystkimi opcjami; członkowie korzystają z grantów swojej roli.
@@ -53,6 +58,11 @@ Liczba i powierzchnia działek są liczone łącznie we wszystkich światach.
 Promień początkowy podlega również limitowi `plotsx.plot.size.<promień>` i łącznej powierzchni.
 Limity i świat są sprawdzane ponownie przy potwierdzeniu utworzenia działki.
 
+Dla działek chunkowych `plotsx.plot.max-chunks-per-plot.<liczba>` ogranicza jedną
+działkę, a `plotsx.plot.max-chunks.<liczba>` sumę chunków właściciela. Rozszerzanie
+odbywa się w panelu działki i korzysta z ceny `plots.chunks.expansion.price` oraz
+mnożnika `priceMultiplier`.
+
 ## Prywatne pojemniki
 
 Wszystkie poniższe opcje wymagają `plotsx.cmd.privatechest` i patrzenia na pojemnik na działce z odległości do 6 bloków.
@@ -81,9 +91,9 @@ Skrót `/pchest` działa z każdą opcją. Szczegóły dostępu opisuje strona [
 | `/ptx` | Podpowiada, jak otworzyć pomoc. |
 | `/ptx help [strona]` | Pokazuje skróconą pomoc. |
 | `/ptx version` | Pokazuje wersję i informacje o pluginie. |
-| `/ptx reload` | Wczytuje ponownie config. |
-| `/ptx export` | Uruchamia eksport do `dump/backup.sql`. W tym wydaniu nie tworzy poprawnej kopii działek. |
-| `/ptx import` | Wczytuje polecenia bazy z `dump/backup.sql`. Nie służy do zwykłego wczytywania configu. |
+| `/ptx reload` | Wczytuje config i odbudowuje cache; nie pozwala przełączyć `claiming.mode` bez restartu. |
+| `/ptx export [silnik]` | Tworzy przenośny backup działek i dziennika operacji w `dump/backup.sql`. |
+| `/ptx import` | Waliduje i przywraca backup, a następnie publikuje nowy cache. |
 
 Do kopii i przywracania danych użyj procedury z [administracji](Administracja.md).
 

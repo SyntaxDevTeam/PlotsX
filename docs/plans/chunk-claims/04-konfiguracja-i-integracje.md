@@ -83,7 +83,11 @@ Zachować obie istniejące ścieżki interakcji: menu ekwipunku i natywne dialog
 
 Panel działki pokazuje typ, powierzchnię, a dla chunkowej również liczbę chunków. Panel rozszerzania wskazuje źródło, cel, przyrost powierzchni, cenę i limity po zakupie. Podgląd granic rysuje zewnętrzne krawędzie zajętych chunków; wspólne krawędzie wewnętrzne pomija, a puste obszary wewnątrz działki pozostają wyraźnie wyłączone. Ograniczyć liczbę cząsteczek i czas zadania, wykorzystując `borderDisplaySeconds`.
 
-Planowane grupy komunikatów: typ działki, współrzędne chunka, kolizja mieszana, limit chunków na działkę, limit chunków właściciela, zmieniona oferta, niedostępna płatność, niepewne rozliczenie, restart wymagany po zmianie trybu. Dodać tłumaczenia do EN, PL, ES, FR i DE oraz sprawdzić placeholdery. W komunikatach dla gracza nie ujawniać surowych wyjątków SQL.
+Zaimplementowane grupy komunikatów PL/EN obejmują typ działki, współrzędne chunka,
+kolizję mieszaną, limity chunków, zmienioną ofertę, niedostępną płatność, wynik
+niepewny i restart wymagany po zmianie trybu. Pozostają tłumaczenia ES/FR/DE oraz
+ich weryfikacja na docelowych klientach. Komunikaty gracza nie ujawniają surowych
+wyjątków SQL.
 
 ## 6. Integracje
 

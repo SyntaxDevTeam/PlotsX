@@ -1,4 +1,4 @@
-# PlotsX API v1
+# PlotsX API v2
 
 Kontrakt znajduje się w `pl.syntaxdevteam.plotsx.api`. Pobieraj go przez Bukkit
 `ServicesManager`; nie odwołuj się do `DatabaseHandler`, `CacheManager` ani
@@ -13,7 +13,7 @@ Artefakt nie jest jeszcze publikowany do repozytorium Maven.
 
 ```kotlin
 dependencies {
-    compileOnly(files("libs/PlotsX-1.0.0-R0.2-Alpha-api.jar"))
+    compileOnly(files("libs/PlotsX-1.0.0-Beta-1-api.jar"))
 }
 ```
 
@@ -37,7 +37,7 @@ Kotlin, wewnątrz klasy integracji:
 
 ```kotlin
 val api = server.servicesManager.load(PlotsXApi::class.java) ?: return
-check(api.apiVersion == 1)
+check(api.apiVersion == 2)
 val plot = api.getPlotAt(player.world.name, player.location.blockX, player.location.blockZ)
 val owned = api.getOwnedPlots(player.uniqueId)
 val accessible = api.getAccessiblePlots(player.uniqueId)
@@ -47,7 +47,7 @@ Java:
 
 ```java
 PlotsXApi api = getServer().getServicesManager().load(PlotsXApi.class);
-if (api == null || api.getApiVersion() != 1) return;
+if (api == null || api.getApiVersion() != 2) return;
 PlotSnapshot plot = api.getPlotAt(player.getWorld().getName(),
     player.getLocation().getBlockX(), player.getLocation().getBlockZ());
 if (plot != null) {
@@ -70,8 +70,16 @@ if (plot != null) {
 Snapshoty i zwracane listy nie pozwalają modyfikować stanu pluginu. `isMember`
 sprawdza wyłącznie dodanych członków; właściciel jest osobnym polem snapshotu.
 `getAccessiblePlots` oznacza własne działki i członkostwa, bez administracyjnego bypassu.
-Tworzenie/usuwanie działek i rozszerzanie nie są częścią API v1 — wymagają osobnych
+Tworzenie/usuwanie działek i rozszerzanie nie są częścią API v2 — wymagają osobnych
 kontraktów obejmujących ekonomię, kolizje i ochronę innych pluginów.
+
+API v2 rozróżnia geometrię przez `PlotSnapshot.geometryType`. Dla działki klasycznej
+`radius` jest liczbą, `extensions` zawiera dokupione segmenty, a `chunks` jest puste.
+Dla działki chunkowej `radius == null`, `chunks` zawiera kompletne współrzędne chunków,
+`area` wynosi `liczba_chunków × 256`, a `contains()` używa dokładnej geometrii.
+`geometryRevision` zmienia się przy modyfikacji kształtu i pozwala wykryć nieaktualny
+snapshot. Zmiana typu getterów względem API v1 jest binarnie niezgodna; integracje
+należy przebudować z artefaktem v2.
 
 Metody zapisujące wymagają `CommandSender` inicjującego operację, sprawdzają aktualne
 uprawnienia właściciela/rangi/administratora i zwracają enum wyniku. Nie wysyłają

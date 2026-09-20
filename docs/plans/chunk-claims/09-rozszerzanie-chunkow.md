@@ -1,6 +1,6 @@
 # 09 — Rozszerzanie chunków: transakcja geometrii
 
-> Aktualizacja 14.09.2026: zakup chunków z ekonomią i GUI ekwipunkowym jest podłączony — [iteracja 7 i aktualny zakres](11-zakup-chunka-i-gui.md). Poniższy opis ograniczeń odzwierciedla etap powstania tego dokumentu.
+> Aktualizacja 20.09.2026: zakup chunków z ekonomią, GUI ekwipunkowym i natywnym dialogiem jest podłączony — [iteracja 7 i aktualny zakres](11-zakup-chunka-i-gui.md). Opis E6 A poniżej zachowuje historię warstwy geometrii.
 
 [Postęp](06-postep-implementacji.md) · [Plan danych i płatności](03-dane-transakcje-migracja.md)
 
@@ -53,8 +53,10 @@ Dodano 12 testów `ChunkExpansionTransactionTest`. Scenariusze zapisu działają
 
 Ta iteracja nie dodaje nowych wyników testów zewnętrznych silników, płatności, GUI ani serwera Paper. Wcześniejsza macierz E3/E4 pozostaje historycznym wynikiem swojego zakresu.
 
-## Następny zakres E6 B
+## Zrealizowana integracja E6 B/C
 
-Aktualizacja: trwały dziennik, migracja i backup v3 są już wykonane — [opis implementacji](10-dziennik-operacji.md). Poniższy akapit zachowuje zakres zależności usługi zakupu; jej integracja z ekonomią i GUI nadal pozostaje otwarta.
-
-Przed udostępnieniem płatnego rozszerzania potrzebne są: migracja `plot_operations`, backup nierozliczonych operacji, trwałe stany obciążenia/zwrotu, zachowany dostawca, rozróżnienie niepewnego wyniku i obsługa restartu. GUI musi ponownie sprawdzać uprawnienia, położenie, cenę oraz dokładny region WorldGuard. Dopiero ta usługa może wywołać gotowy zapis geometrii w ramach zakupu. Obecny komunikat o niedostępności chunkowego rozszerzania w GUI pozostaje prawdziwy.
+Trwały dziennik, migracja, backup v3, zachowany dostawca i waluta, klasyfikacja
+wyników niepewnych, obsługa restartu oraz kompensacja są wykonane —
+[opis dziennika](10-dziennik-operacji.md). GUI i dialog ponownie sprawdzają
+uprawnienia, położenie, cenę, limity, rewizję oraz dokładny region WorldGuard,
+a następnie wywołują wspólną usługę zakupu opisaną w dokumencie 11.

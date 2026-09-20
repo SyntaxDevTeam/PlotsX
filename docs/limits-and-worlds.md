@@ -2,13 +2,23 @@
 
 ```yaml
 plots:
+  claiming:
+    mode: classic # classic | chunks; zmiana wymaga restartu
+  chunks:
+    maxPerPlot: 32
+    maxTotalOwned: 64
+    expansion:
+      price: 500.0
+      priceMultiplier: 1.5
   maxPlots: 5
   radius: 16
   world: ["world", "survival", "world_nether"]
 ```
 
-`maxPlots` liczy działki łącznie we wszystkich światach. `radius` określa promień
-nowej działki; długość boku to `2 * radius + 1` bloków.
+`maxPlots` liczy działki łącznie we wszystkich światach. `claiming.mode` wybiera
+geometrię wyłącznie nowych działek. `classic` używa promienia, a `chunks` tworzy
+działkę z całego chunka 16 × 16. Istniejące działki zachowują swój typ po zmianie
+configu i są nadal chronione. `radius` dotyczy tylko nowych działek klasycznych.
 
 Przykładowe uprawnienia do nadania grupie VIP:
 
@@ -18,11 +28,16 @@ Przykładowe uprawnienia do nadania grupie VIP:
 | `plotsx.plot.radius.24` | Początkowy promień 24. |
 | `plotsx.plot.size.96` | Maksymalny promień 96. |
 | `plotsx.plot.max-area.100000` | Łączna powierzchnia do 100000 bloków. |
+| `plotsx.plot.max-chunks-per-plot.64` | Do 64 chunków w jednej działce chunkowej. |
+| `plotsx.plot.max-chunks.128` | Łącznie do 128 posiadanych chunków. |
 
 Wygrywa najwyższa przyznana wartość danego uprawnienia; bez niej obowiązuje config.
 Wartości ujemne i nienumeryczne są pomijane. `max-plots.0` blokuje nowe działki;
 promień jest ograniczony od dołu do 1. Początkowy promień nadal podlega limitowi
 rozmiaru i powierzchni. Zmiany nie usuwają ani nie zmniejszają istniejących działek.
+Limity powierzchni i liczby działek są wspólne dla obu geometrii. Limity chunków są
+dodatkowe i nie wpływają na działki klasyczne. `maxPerPlot: 0` lub
+`maxTotalOwned: 0` blokuje dalsze dodawanie chunków.
 
 `plots.world` przyjmuje listę nazw. Stary zapis `world: "world"` nadal działa.
 `["*"]` dopuszcza wszystkie światy, `[]` blokuje tworzenie działek. Dla zgodności

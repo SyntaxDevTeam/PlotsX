@@ -2,11 +2,17 @@
 
 [Postęp](06-postep-implementacji.md) · [Dziennik](10-dziennik-operacji.md)
 
-Aktualizacja: 19 września 2026 r. Podłączono zakup rozszerzenia do GUI ekwipunkowego. Publiczne techniczne komendy płatności nie należą do interfejsu produktu. Nie jest to deklaracja zakończenia E6/E7/E8: pozostają testy z rzeczywistym dostawcą, klientem i pełna akceptacja platform.
+Aktualizacja: 20 września 2026 r. Podłączono zakup rozszerzenia do GUI ekwipunkowego i natywnego, dwustopniowego dialogu. Publiczne techniczne komendy płatności nie należą do interfejsu produktu. Pozostają testy z rzeczywistym dostawcą, klientem i pełna akceptacja platform.
 
 ## Dostępna ścieżka gracza
 
 Menu rozszerzania rozpoznaje zapisany typ działki. Dla `chunks` otwiera `ChunkExpandGUI`, niezależnie od trybu tworzenia nowych działek. Właściciel stoi w źródłowym chunku, wybiera kierunek i widzi współrzędne celu, liczbę chunków i cenę. Wybór kierunku odświeża ofertę. Przycisk granic korzysta z rzeczywistej geometrii.
+
+Na Paper z dostępnym API dialogów gracz najpierw wybiera jeden z faktycznie wolnych
+kierunków, a następnie otrzymuje osobne potwierdzenie dokładnego chunka, ceny i limitu.
+Zmiana stanu między ekranami powoduje ponowne przygotowanie oferty. Ten sam
+`submit()` i `ChunkPurchaseService` obsługują dialog i GUI ekwipunkowe. Tryb legacy,
+proxy tłumaczące protokół oraz błąd API dialogów używają GUI ekwipunkowego.
 
 Potwierdzenie ma jednorazowe ID i blokadę ponownego kliknięcia. Przełączenie/zamknięcie inventory jest wykonywane w zaplanowanym callbacku po zdarzeniu kliknięcia. Oferta jest sprawdzana przed płatnością i przed zapisem terenu: obecność gracza, właściciel, uprawnienie rozszerzania, świat, źródłowy chunk, rewizja, poziom cenowy, aktualna cena, limity i dokładny docelowy region WorldGuard.
 

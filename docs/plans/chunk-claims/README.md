@@ -1,6 +1,6 @@
 # Plan dodania chunkowego systemu działek
 
-Status: **E3/E4 zintegrowane, E5 podłączony, zakup chunków z dziennikiem i GUI podłączony**. Kod zawiera wybór trybu, zajmowanie jednego chunka i płatne rozszerzanie działki chunkowej; testy z rzeczywistymi usługami oraz wydanie pozostają w kolejnych etapach. Aktualizacja: 19 września 2026 r. Dokumentacja powstała na podstawie kodu PlotsX w tym repozytorium. Bieżący zakres wykonanych i pozostałych prac opisuje [rejestr postępu](06-postep-implementacji.md). Nazwy nowych klas, kluczy konfiguracji i uprawnień pozostają propozycją, dopóki rejestr nie potwierdza ich implementacji.
+Status: **E3–E7 podłączone w kodzie: geometria, ochrona, zajmowanie, zakup, dziennik, GUI ekwipunkowe i natywne dialogi**. Testy akceptacyjne z rzeczywistym klientem, dostawcą ekonomii i WorldGuardem oraz staging pozostają po stronie przygotowania wydania. Aktualizacja: 20 września 2026 r. Dokumentacja powstała na podstawie kodu PlotsX w tym repozytorium. Bieżący zakres wykonanych i pozostałych prac opisuje [rejestr postępu](06-postep-implementacji.md).
 
 ## Cel i zasada nadrzędna
 

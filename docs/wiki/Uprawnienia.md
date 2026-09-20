@@ -26,10 +26,15 @@ Automatyczna ochrona nowych pojemników nie wymaga uprawnienia do komendy skrzy�
 | `plotsx.plot.radius.24` | Początkowy promień nowej działki: 24 bloki. |
 | `plotsx.plot.size.64` | Maksymalny promień działki: 64 bloki. |
 | `plotsx.plot.max-area.16641` | Łączny teren gracza: najwyżej 16641 bloków². |
+| `plotsx.plot.max-chunks-per-plot.32` | Maksymalna liczba chunków jednej działki chunkowej. |
+| `plotsx.plot.max-chunks.64` | Łączna liczba chunków właściciela we wszystkich światach. |
 
 Końcową liczbę możesz zmienić na inną dodatnią wartość. Gdy gracz ma kilka wartości tego samego limitu, wygrywa największa. Bez takich uprawnień obowiązują limity z configu.
 
-Domyślne wartości to `plots.maxPlots`, `plots.radius` oraz limity w `plots.expansion`. `max-plots.0` blokuje nowe działki; promień początkowy jest ograniczony od dołu do 1. Promień początkowy nadal musi mieścić się w limicie rozmiaru i łącznej powierzchni. Zmiana uprawnień nie zmienia istniejących działek.
+Domyślne wartości to `plots.maxPlots`, `plots.radius`, `plots.chunks` oraz limity w
+`plots.expansion`. `max-plots.0` blokuje nowe działki; promień początkowy jest
+ograniczony od dołu do 1. Limity chunków mogą wynosić 0, co blokuje dalsze
+rozszerzanie chunkowe. Zmiana uprawnień nie zmienia istniejących działek.
 
 Przykład VIP: nadaj `plotsx.plot.max-plots.10`, `plotsx.plot.radius.24`, `plotsx.plot.size.96` i `plotsx.plot.max-area.100000`, oprócz uprawnień komend. [Szczegóły limitów i światów](../limits-and-worlds.md).
 

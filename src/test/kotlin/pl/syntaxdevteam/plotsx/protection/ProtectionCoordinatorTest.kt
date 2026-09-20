@@ -25,9 +25,9 @@ class ProtectionCoordinatorTest {
     }
     @Test fun `failed publication requires explicit successful recovery`() {
         val coordinator = ProtectionCoordinator()
-        assertThrows(IllegalStateException::class.java) { coordinator.mutate({ error("load failed") }) { 1 } }
+        assertThrows(IllegalStateException::class.java) { coordinator.mutate<Unit>({ error("load failed") }) {} }
         assertFalse(coordinator.decision({ false }) { true })
-        assertThrows(IllegalStateException::class.java) { coordinator.mutate({}) { 2 } }
+        assertThrows(IllegalStateException::class.java) { coordinator.mutate<Unit>({}) {} }
         coordinator.recover {}
         assertTrue(coordinator.decision({ false }) { true })
     }

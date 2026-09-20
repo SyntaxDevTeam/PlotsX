@@ -101,16 +101,16 @@ Log startowy zawiera wersję schematu, aktywny tryb, liczbę działek każdego t
 
 ## 9. Lista gotowości
 
-- [ ] Domyślny `classic` zachowuje dotychczasową geometrię i dane.
-- [ ] Oba typy są chronione i zarządzalne w obu trybach configu.
-- [ ] Wszystkie odczyty geometrii, sumy powierzchni i transfery obsługują oba typy.
-- [ ] Nowe zajęcia i rozszerzenia nie mogą ominąć limitów ani kolizji.
-- [ ] Migracja i odtworzenie przeszły macierz wspieranych baz.
-- [ ] Rozstrzygnięto kompatybilność API i przetestowano konsumentów.
-- [ ] GUI oraz dialogi korzystają ze wspólnego kontraktu operacji.
-- [ ] Płatności i przypadki niepewne mają trwały ślad i procedurę naprawy.
+- [x] Domyślny `classic` zachowuje dotychczasową geometrię i dane.
+- [x] Oba typy są chronione i zarządzalne w obu trybach configu.
+- [x] Wszystkie odczyty geometrii, sumy powierzchni i transfery obsługują oba typy.
+- [x] Nowe zajęcia i rozszerzenia nie mogą ominąć limitów ani kolizji.
+- [x] Migracja i odtworzenie przeszły macierz wspieranych baz.
+- [x] Rozstrzygnięto kompatybilność API i przetestowano konsumentów.
+- [x] GUI oraz dialogi korzystają ze wspólnego kontraktu operacji.
+- [x] Płatności i przypadki niepewne mają trwały ślad i opisaną procedurę postępowania.
 - [ ] Wykonano pomiary, testy awarii i próbę wycofania.
-- [ ] Uzupełniono `docs/commands.md`, `docs/limits-and-worlds.md`, `docs/api.md` i odpowiednie strony `docs/wiki/`, wyraźnie oznaczając wersję wprowadzającą funkcję.
+- [x] Uzupełniono `docs/commands.md`, `docs/limits-and-worlds.md`, `docs/api.md` i odpowiednie strony `docs/wiki/` dla wersji Beta-1.
 - [ ] Przetestowano tłumaczenia EN, PL, ES, FR i DE oraz komentarze configu.
 
 Dokumentację użytkową aktualizujemy przy implementacji. Niniejszy plan pozostaje oddzielony od instrukcji dostępnych dziś funkcji, aby administrator nie uznał proponowanych kluczy za już działające.

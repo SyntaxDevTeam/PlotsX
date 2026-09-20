@@ -12,6 +12,8 @@ import pl.syntaxdevteam.plotsx.PlotsX
 interface DialogBackend {
     fun show(player: Player, title: Component, body: List<Component>, initial: String?,
              yes: Component, no: Component, reply: (String?) -> Unit)
+    fun showChoices(player: Player, title: Component, body: List<Component>, choices: Map<String, Component>,
+                    cancel: Component, reply: (String?) -> Unit)
 }
 
 class PlotInteractions(private val plugin: PlotsX) : Listener {
@@ -40,6 +42,15 @@ class PlotInteractions(private val plugin: PlotsX) : Listener {
             if (value != null) onConfirm(p) else onCancel(p)
         }, fallback)
 
+    fun choose(player: Player, title: Component, body: List<Component>, choices: Map<String, Component>,
+               onChoice: (Player, String) -> Unit, onCancel: (Player) -> Unit = {},
+               fallback: () -> Unit): Boolean {
+        if (choices.isEmpty()) return false
+        return showSession(player, fallback, { reply ->
+            backend!!.showChoices(player, title, body, choices, text("cancel"), reply)
+        }) { p, value -> if (value == null) onCancel(p) else onChoice(p, value) }
+    }
+
     fun rename(player: Player, plotId: Int, initial: String, error: Component? = null): Boolean =
         show(player, text("rename"), listOfNotNull(error), initial, text("save"), text("cancel"), { p, value ->
             if (value != null) {
@@ -52,7 +63,13 @@ class PlotInteractions(private val plugin: PlotsX) : Listener {
 
     private fun show(player: Player, title: Component, body: List<Component>, initial: String?,
                      yes: Component, no: Component, reply: (Player, String?) -> Unit,
-                     fallback: () -> Unit): Boolean {
+                     fallback: () -> Unit): Boolean = showSession(player, fallback, { callback ->
+        backend!!.show(player, title, body, initial, yes, no, callback)
+    }, reply)
+
+    private fun showSession(player: Player, fallback: () -> Unit,
+                            display: ((String?) -> Unit) -> Unit,
+                            reply: (Player, String?) -> Unit): Boolean {
         if (!available()) return false
         plugin.renamePlotChatListener.cancel(player)
         val token = sessions.start(player.uniqueId)
@@ -62,7 +79,7 @@ class PlotInteractions(private val plugin: PlotsX) : Listener {
             plugin.guiHandler.unregisterGui(player)
             player.closeInventory()
             try {
-                backend!!.show(player, title, body, initial, yes, no) { value ->
+                display { value ->
                     player.scheduler.run(plugin, {
                         if (sessions.consume(player.uniqueId, token)) reply(player, value)
                     }, null)
