@@ -1,12 +1,12 @@
 plugins {
-    kotlin("jvm") version "2.4.10"
+    kotlin("jvm") version "2.4.20"
     id("com.gradleup.shadow") version "9.6.1"
     id("xyz.jpenilla.run-paper") version "3.1.0"
     id("pl.syntaxdevteam.plugindeployer") version "1.0.6-R0.2-SNAPSHOT"
 }
 
 group = "pl.syntaxdevteam"
-version = "1.0.0-R0.2-Alpha"
+version = "1.0.0-Beta-1"
 description = "Lightweight and versatile player plot protection plugin"
 
 val paperApiVersion = providers.gradleProperty("paperApiVersion")
@@ -41,25 +41,26 @@ repositories {
 dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.xerial:sqlite-jdbc:3.53.4.0")
-    testImplementation("com.h2database:h2:2.4.240")
+    testImplementation("com.h2database:h2:2.5.250")
     testRuntimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.10")
     testRuntimeOnly("org.postgresql:postgresql:42.7.13")
+
     compileOnly("io.papermc.paper:paper-api:$paperApiVersion")
     compileOnly("pl.syntaxdevteam:syntaxcore:1.4.0-R0.1-SNAPSHOT")
     compileOnly("pl.syntaxdevteam:messageHandler-paper:1.2.2-R0.4-SNAPSHOT")
     compileOnly("pl.syntaxdevteam:cleanerx:1.5.8")
     compileOnly("org.eclipse.aether:aether-api:1.1.0")
-    compileOnly("org.yaml:snakeyaml:2.6")
+    compileOnly("org.yaml:snakeyaml:2.7")
     compileOnly("com.google.code.gson:gson:2.14.0")
-    compileOnly("net.kyori:adventure-text-serializer-legacy:5.1.0")
-    compileOnly("net.kyori:adventure-text-minimessage:5.1.0")
-    compileOnly("net.kyori:adventure-text-serializer-gson:5.1.0")
-    compileOnly("net.kyori:adventure-text-serializer-plain:5.1.0")
-    compileOnly("net.kyori:adventure-text-serializer-ansi:5.1.0")
+    compileOnly("net.kyori:adventure-text-serializer-legacy:5.2.0")
+    compileOnly("net.kyori:adventure-text-minimessage:5.2.0")
+    compileOnly("net.kyori:adventure-text-serializer-gson:5.2.0")
+    compileOnly("net.kyori:adventure-text-serializer-plain:5.2.0")
+    compileOnly("net.kyori:adventure-text-serializer-ansi:5.2.0")
     compileOnly("org.mariadb.jdbc:mariadb-java-client:3.5.10")
     compileOnly("org.xerial:sqlite-jdbc:3.53.4.0")
     compileOnly("org.postgresql:postgresql:42.7.13")
-    compileOnly("com.h2database:h2:2.4.240")
+    compileOnly("com.h2database:h2:2.5.250")
     compileOnly("com.zaxxer:HikariCP:7.1.0")
     compileOnly("net.luckperms:api:5.5")
     compileOnly("me.clip:placeholderapi:2.12.3")
@@ -73,10 +74,10 @@ dependencies {
     compileOnly("com.sk89q.worldguard:worldguard-core:$worldGuardVersion") {
         isTransitive = false
     }
-    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.9") {
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.4.5") {
         isTransitive = false
     }
-    compileOnly("com.sk89q.worldedit:worldedit-core:7.3.9") {
+    compileOnly("com.sk89q.worldedit:worldedit-core:7.4.5") {
         isTransitive = false
     }
 }

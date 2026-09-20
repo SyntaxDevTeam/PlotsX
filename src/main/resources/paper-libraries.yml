@@ -3,7 +3,7 @@ libraries:
   - pl.syntaxdevteam:messageHandler-paper:1.2.2-R0.4-SNAPSHOT
   - com.github.ben-manes.caffeine:caffeine:3.2.2
   - org.eclipse.aether:aether-api:1.1.0
-  - org.yaml:snakeyaml:2.5
+  - org.yaml:snakeyaml:2.7
   - com.google.code.gson:gson:2.14.0
   - net.kyori:adventure-text-minimessage:5.2.0
   - net.kyori:adventure-text-serializer-gson:5.2.0
@@ -14,5 +14,5 @@ libraries:
   - org.mariadb.jdbc:mariadb-java-client:3.5.10
   - org.xerial:sqlite-jdbc:3.50.3.0
   - org.postgresql:postgresql:42.7.13
-  - com.h2database:h2:2.4.240
+  - com.h2database:h2:2.5.250
   - com.zaxxer:HikariCP:7.1.0
