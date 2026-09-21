@@ -24,7 +24,7 @@ Na serwerze z dostępnym Paper Dialog API (od 1.21.7) opcja otwiera formularz z 
 
 Na starszych wersjach lub przy wymuszonym starym interfejsie masz 60 sekund na wpisanie nazwy na czacie. Wiadomość posłuży jako nazwa, zamiast trafić na czat ogólny. Gdy czas minie, otwórz opcję ponownie. Maksymalna długość nazwy wynosi 255 znaków.
 
-Dialogi obsługują także potwierdzenia tworzenia, usuwania i rozszerzania działek oraz usuwania członków i przekazywania własności. Szczegóły wyboru interfejsu i obsługi translatorów protokołu opisuje [konfiguracja dialogów](../dialogs.md).
+Pozostałe operacje, w tym tworzenie, usuwanie i rozszerzanie działek oraz zarządzanie członkami, używają menu ekwipunku. Dialog jest przeznaczony wyłącznie dla interakcji wymagających wpisania tekstu. Szczegóły wyboru interfejsu i obsługi translatorów protokołu opisuje [konfiguracja dialogów](../dialogs.md).
 
 Nie możesz nadać dwóch swoim działkom tej samej nazwy. Wybieraj proste nazwy, na przykład `Baza`, `Farma` i `Port`. Unikaj nazw `add`, `remove` i `members`, bo są używane przez komendy.
 

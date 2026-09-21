@@ -45,7 +45,6 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
     private fun openUnclaimGui(player: Player, plotId: Int) {
         val gui = UnclaimConfirmGUI(
             plugin = plugin,
-            plotName = plugin.databaseHandler.getPlotById(plotId)?.name ?: plotId.toString(),
             player = player,
             onConfirm = { p ->
                 val current = plugin.databaseHandler.getPlotById(plotId)

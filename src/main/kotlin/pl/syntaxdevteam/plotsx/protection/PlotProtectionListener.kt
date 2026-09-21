@@ -1,5 +1,6 @@
 package pl.syntaxdevteam.plotsx.protection
 
+import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
 import org.bukkit.Material
 import org.bukkit.block.Block
@@ -250,6 +251,13 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     private fun projectilePlayer(projectile: Projectile): Player? = projectile.shooter as? Player
 
+    private fun notifyPlotBoundary(player: Player, component: Component) {
+        when (PlotNotificationMode.fromConfig(plugin.config.getString("plots.notifications.boundary"))) {
+            PlotNotificationMode.ACTIONBAR -> player.sendActionBar(component)
+            PlotNotificationMode.CHAT -> player.sendMessage(component)
+        }
+    }
+
     /**
      * Zdarzenie wywoływane, gdy gracz wchodzi na działkę.
      * Sprawdza, czy gracz zmienił działkę i wysyła odpowiednie wiadomości.
@@ -276,12 +284,14 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             if (oldPlotId != null) {
                 val oldPlot = plugin.cacheManager.getCachedPlots().firstOrNull { it.id == oldPlotId }
                 if (oldPlot != null) {
-                    player.sendMessage(message.stringMessageToComponent("plots", "leave_plot", mapOf("plot" to oldPlot.name)))
+                    notifyPlotBoundary(player,
+                        message.stringMessageToComponent("plots", "leave_plot", mapOf("plot" to oldPlot.name)))
                     }
             }
 
             if (newPlot != null) {
-                player.sendMessage(message.stringMessageToComponent("plots", "enter_plot", mapOf("plot" to newPlot.name)))
+                notifyPlotBoundary(player,
+                    message.stringMessageToComponent("plots", "enter_plot", mapOf("plot" to newPlot.name)))
             }
         }
 
@@ -293,7 +303,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             if (approachingPlot != null && approachingPlot.ownerUuid != uuid && approachingPlot.id != newPlotId) {
                 if (approachingPlotWarnings[uuid] != approachingPlot.id) {
                     approachingPlotWarnings[uuid] = approachingPlot.id
-                    player.sendMessage(
+                    notifyPlotBoundary(player,
                         message.stringMessageToComponent("plots", "approaching_plot", mapOf("plot" to approachingPlot.name))
                     )
                 }

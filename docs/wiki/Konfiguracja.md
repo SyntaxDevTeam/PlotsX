@@ -71,6 +71,20 @@ Zmiana początkowego promienia nie zmienia wielkości już utworzonych działek.
 
 Przycisk „Pokaż granice” w GUI rozszerzania zamyka menu i pokazuje obrys istniejącej działki. Czas ustawia `plots.borderDisplaySeconds: 30` (sekundy, minimum 1); obowiązuje również w głównym panelu działki. Podgląd nie kupuje segmentu.
 
+## Powiadomienia o granicach działek
+
+Informacje o zbliżaniu się do działki, wejściu na nią i jej opuszczeniu są domyślnie
+wyświetlane na pasku akcji, dzięki czemu nie zapełniają historii czatu:
+
+```yaml
+plots:
+  notifications:
+    boundary: actionbar
+```
+
+Ustaw `boundary: chat`, jeśli te trzy rodzaje powiadomień mają trafiać na czat.
+Niepoprawna wartość jest bezpiecznie traktowana jak `actionbar`.
+
 Cena kolejnych rozszerzeń rośnie według `price × priceMultiplier ^ liczba_zakupionych_segmentów`. Domyślny `plots.expansion.priceMultiplier: 1.5` daje ceny 500, 750, 1125, 1687.5. Mnożnik musi wynosić co najmniej 1; wartość 1 wyłącza wzrost. Licznik jest osobny dla każdej działki, uwzględnia istniejące segmenty i pozostaje po restarcie lub przekazaniu działki. Pierwotny teren i nieudane zakupy nie zwiększają licznika. Zmiana ceny bazowej lub mnożnika przelicza cenę następnego zakupu. Nieprawidłowe wartości lub wynik przekraczający zakres obsługiwany przez ekonomię blokują zakup.
 
 Nie używa się już `levels` ani `step`. Przy aktualizacji usuń `levels` i ustaw `price: 500.0` lub własną cenę. Istniejące działki zachowują teren, a ich aktualny rozmiar staje się rozmiarem bazowym. Limity powierzchni liczą sumę segmentów; limit promienia określa najdalszą granicę względem pierwotnego środka. Szczegóły: [rozszerzanie i opłaty](../commands.md#rozszerzanie-działki-i-opłaty).

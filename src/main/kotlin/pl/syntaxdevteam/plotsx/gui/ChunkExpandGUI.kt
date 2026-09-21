@@ -30,30 +30,7 @@ internal class ChunkExpandGUI(private val plugin: PlotsX, private val plotId: In
     override fun open(player: Player) {
         val plot = prepareOffer(player) ?: return
         renderInventory(player, plot)
-        val geometry = plot.geometry as ChunkGeometry
-        val availableDirections = ExpansionDirection.entries
-            .filter { value -> source?.let { geometry.expansion(value, it) }?.let { candidate ->
-                plugin.cacheManager.getCachedPlots().none { other ->
-                    other.id != plot.id && other.world.equals(plot.world, true) &&
-                        other.geometry.intersects(ChunkGeometry(setOf(candidate)))
-                } && plugin.regionProtectionHook?.overlapsBounds(player.world, candidate.bounds) != true
-            } == true }
-            .associate { it.name to text("expand.directions.${it.name.lowercase()}") }
-        val body = listOf(
-            if (source == null) text("expand.stand_inside") else text("expand.source", mapOf(
-                "x" to source!!.x.toString(), "z" to source!!.z.toString())),
-            text("expand.chunk_count", mapOf("count" to plot.chunks.size.toString(),
-                "max" to plugin.hookHandler.getMaxChunksPerPlot(player).toString())),
-            text("expand.price", mapOf("price" to (price?.toPlainString() ?: "?"))),
-            plugin.interactions.text("chunk_expand_choose")
-        )
-        if (!plugin.interactions.choose(player, plugin.interactions.text("chunk_expand_title"), body,
-                availableDirections, onChoice = { selected, value ->
-                    direction = ExpansionDirection.valueOf(value)
-                    val refreshed = prepareOffer(selected) ?: return@choose
-                    renderInventory(selected, refreshed)
-                    openNativeConfirmation(selected, refreshed)
-                }, fallback = { openLegacy(player) })) openLegacy(player)
+        openLegacy(player)
     }
 
     private fun prepareOffer(player: Player): PlotData? {
@@ -80,20 +57,6 @@ internal class ChunkExpandGUI(private val plugin: PlotsX, private val plotId: In
         )
         inventory.setItem(20, item(Material.EMERALD_BLOCK, "expand.confirm").apply { itemMeta = itemMeta.apply { lore(lore) } })
         inventory.setItem(24, item(Material.BARRIER, "expand.cancel"))
-    }
-
-    private fun openNativeConfirmation(player: Player, plot: PlotData) {
-        val to = target ?: run { player.sendMessage(text("expand.direction_blocked")); open(player); return }
-        val body = listOf(
-            text("expand.directions.${direction.name.lowercase()}"),
-            text("expand.chunk_target", mapOf("x" to to.x.toString(), "z" to to.z.toString())),
-            text("expand.chunk_count", mapOf("count" to plot.chunks.size.toString(),
-                "max" to plugin.hookHandler.getMaxChunksPerPlot(player).toString())),
-            text("expand.price", mapOf("price" to (price?.toPlainString() ?: "?")))
-        )
-        if (!plugin.interactions.confirm(player, plugin.interactions.text("chunk_expand_confirm"), body,
-                onConfirm = { if (!submitted) { submitted = true; submit(it) } },
-                onCancel = { open(it) }, fallback = { openLegacy(player) })) openLegacy(player)
     }
 
     private fun openLegacy(player: Player) { plugin.guiHandler.openLegacy(player, this) }
