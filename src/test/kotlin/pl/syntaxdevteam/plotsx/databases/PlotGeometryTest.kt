@@ -2,11 +2,28 @@ package pl.syntaxdevteam.plotsx.databases
 
 import org.junit.Assert.*
 import org.junit.Test
+import pl.syntaxdevteam.plotsx.api.ChunkSnapshot
 import pl.syntaxdevteam.plotsx.api.PlotRegionSnapshot
 import pl.syntaxdevteam.plotsx.api.PlotSnapshot
 import java.util.UUID
 
 class PlotGeometryTest {
+
+    @Test
+    fun `api snapshot requires the complete requested area to be claimed`() {
+        val owner = UUID.randomUUID()
+        val chunkPlot = PlotSnapshot(1, owner, "world", 0, 64, 0, null, "chunks", 0,
+            chunks = listOf(ChunkSnapshot(0, 0), ChunkSnapshot(1, 0)))
+        assertTrue(chunkPlot.containsArea("world", 2, 2, 29, 13))
+        assertFalse(chunkPlot.containsArea("world", 2, 2, 29, 18))
+
+        val joined = PlotSnapshot(2, owner, "world", 0, 64, 0, 2, "joined", 0,
+            extensions = listOf(PlotRegionSnapshot(5, 0, 2)))
+        assertTrue(joined.containsArea("world", -2, -2, 7, 2))
+        assertFalse(joined.containsArea("world", -2, -3, 7, 2))
+        assertTrue(joined.containsCircle("world", 0, 0, 5))
+        assertFalse(joined.containsCircle("world", 0, 0, 7))
+    }
     private val base = PlotData(1, UUID.randomUUID(), 0, 0, 64, 16, "world", "Home", 0)
 
     @Test fun `north and east form L without claiming missing corner`() {
