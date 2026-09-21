@@ -10,10 +10,8 @@ import pl.syntaxdevteam.plotsx.PlotsX
 
 /** No dialog API types may escape the optional adapter into this baseline facade. */
 interface DialogBackend {
-    fun show(player: Player, title: Component, body: List<Component>, initial: String?,
-             yes: Component, no: Component, reply: (String?) -> Unit)
-    fun showChoices(player: Player, title: Component, body: List<Component>, choices: Map<String, Component>,
-                    cancel: Component, reply: (String?) -> Unit)
+    fun showTextInput(player: Player, title: Component, body: List<Component>, initial: String,
+                      yes: Component, no: Component, reply: (String?) -> Unit)
 }
 
 class PlotInteractions(private val plugin: PlotsX) : Listener {
@@ -35,22 +33,6 @@ class PlotInteractions(private val plugin: PlotsX) : Listener {
             .none { plugin.server.pluginManager.isPluginEnabled(it) } &&
         !plugin.config.getBoolean("interactions.translated-clients", false)
 
-    fun confirm(player: Player, title: Component, body: List<Component>, yes: Component = text("confirm"),
-                no: Component = text("cancel"), onConfirm: (Player) -> Unit, onCancel: (Player) -> Unit = {},
-                fallback: () -> Unit): Boolean =
-        show(player, title, body, null, yes, no, { p, value ->
-            if (value != null) onConfirm(p) else onCancel(p)
-        }, fallback)
-
-    fun choose(player: Player, title: Component, body: List<Component>, choices: Map<String, Component>,
-               onChoice: (Player, String) -> Unit, onCancel: (Player) -> Unit = {},
-               fallback: () -> Unit): Boolean {
-        if (choices.isEmpty()) return false
-        return showSession(player, fallback, { reply ->
-            backend!!.showChoices(player, title, body, choices, text("cancel"), reply)
-        }) { p, value -> if (value == null) onCancel(p) else onChoice(p, value) }
-    }
-
     fun rename(player: Player, plotId: Int, initial: String, error: Component? = null): Boolean =
         show(player, text("rename"), listOfNotNull(error), initial, text("save"), text("cancel"), { p, value ->
             if (value != null) {
@@ -61,10 +43,10 @@ class PlotInteractions(private val plugin: PlotsX) : Listener {
             }
         }, { plugin.renamePlotChatListener.startRenameProcess(player, plotId) })
 
-    private fun show(player: Player, title: Component, body: List<Component>, initial: String?,
+    private fun show(player: Player, title: Component, body: List<Component>, initial: String,
                      yes: Component, no: Component, reply: (Player, String?) -> Unit,
                      fallback: () -> Unit): Boolean = showSession(player, fallback, { callback ->
-        backend!!.show(player, title, body, initial, yes, no, callback)
+        backend!!.showTextInput(player, title, body, initial, yes, no, callback)
     }, reply)
 
     private fun showSession(player: Player, fallback: () -> Unit,

@@ -15,12 +15,12 @@ import java.time.Duration
 /** Loaded reflectively only when Paper's dialog API exists. */
 @Suppress("UnstableApiUsage")
 class PaperDialogBackend : DialogBackend {
-    override fun show(player: Player, title: Component, body: List<Component>, initial: String?,
-                      yes: Component, no: Component, reply: (String?) -> Unit) {
+    override fun showTextInput(player: Player, title: Component, body: List<Component>, initial: String,
+                               yes: Component, no: Component, reply: (String?) -> Unit) {
         val options = ClickCallback.Options.builder().uses(1).lifetime(Duration.ofSeconds(60)).build()
         val accept = ActionButton.builder(yes).action(DialogAction.customClick({ response, audience ->
             if (audience is Player && audience.uniqueId == player.uniqueId)
-                reply(if (initial == null) "" else response.getText("name") ?: "")
+                reply(response.getText("name") ?: "")
         }, options)).build()
         val cancel = ActionButton.builder(no).action(DialogAction.customClick({ _, audience ->
             if (audience is Player && audience.uniqueId == player.uniqueId) reply(null)
@@ -29,35 +29,12 @@ class PaperDialogBackend : DialogBackend {
             builder.empty().base(DialogBase.builder(title)
                 .canCloseWithEscape(true)
                 .body(body.map { DialogBody.plainMessage(it) })
-                .inputs(if (initial == null) emptyList() else listOf(
-                    DialogInput.text("name", title).initial(initial.take(255)).maxLength(255).build()))
+                .inputs(listOf(DialogInput.text("name", title)
+                    .initial(initial.take(255)).maxLength(255).build()))
                 .build())
                 .type(DialogType.confirmation(accept, cancel))
         }
         player.showDialog(dialog)
     }
 
-    override fun showChoices(player: Player, title: Component, body: List<Component>,
-                             choices: Map<String, Component>, cancel: Component,
-                             reply: (String?) -> Unit) {
-        val buttons = choices.map { (value, label) ->
-            ActionButton.builder(label).action(DialogAction.customClick({ _, audience ->
-                if (audience is Player && audience.uniqueId == player.uniqueId) reply(value)
-            }, callbackOptions())).build()
-        }
-        val cancelButton = ActionButton.builder(cancel).action(DialogAction.customClick({ _, audience ->
-            if (audience is Player && audience.uniqueId == player.uniqueId) reply(null)
-        }, callbackOptions())).build()
-        val dialog = Dialog.create { builder ->
-            builder.empty().base(DialogBase.builder(title)
-                .canCloseWithEscape(true)
-                .body(body.map { DialogBody.plainMessage(it) })
-                .build())
-                .type(DialogType.multiAction(buttons, cancelButton, 2))
-        }
-        player.showDialog(dialog)
-    }
-
-    private fun callbackOptions(): ClickCallback.Options =
-        ClickCallback.Options.builder().uses(1).lifetime(Duration.ofSeconds(60)).build()
 }

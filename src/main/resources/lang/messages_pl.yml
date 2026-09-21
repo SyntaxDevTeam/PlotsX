@@ -401,7 +401,6 @@ flags:
     name: "Zarządzanie drużyną"
     description: "Dodaj lub usuń wszystkich członków swojej drużyny z działki."
 dialogs:
-  confirm: "Potwierdź"
   cancel: "Anuluj"
   save: "Zapisz"
   rename: "Nazwa działki"
@@ -410,12 +409,6 @@ dialogs:
   claim_body: "Utworzyć działkę w <world>, X: <x>, Z: <z>, o promieniu <radius>?"
   claim_chunk_body: "Zająć chunk <chunk_x>, <chunk_z> w świecie <world>? Powierzchnia: 256 bloków."
   claim_changed: "Pozycja lub promień działki uległy zmianie. Użyj ponownie /claim."
-  chunk_expand_title: "Rozszerz działkę chunkową"
-  chunk_expand_choose: "Wybierz sąsiedni kierunek. Dokładny cel i cena zostaną pokazane przed zakupem."
-  chunk_expand_confirm: "Potwierdź zakup chunka"
-  unclaim_body: "Usunąć działkę <plot>? Jej ochrona zostanie wyłączona."
-  transfer_body: "Przekazać działkę <plot> graczowi <player>? Utracisz uprawnienia właściciela."
-  remove_body: "Usunąć gracza <player> z działki <plot>?"
 
 help:
   header: "<gold><bold>Komendy <plugin></bold></gold>"
