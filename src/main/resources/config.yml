@@ -8,7 +8,7 @@ config-version: 100
 # If you would like to add your own language file, please contact us on Discord (https://discord.gg/Zk6mxv7eMh).
 language: "EN"
 
-# auto: native dialogs when available; legacy: existing inventory menus and chat.
+# auto: native text-entry dialogs when available; legacy: text entry through chat.
 interactions:
   mode: auto
   # Set true when a proxy translates client protocols (e.g. ViaVersion/Geyser).

@@ -159,15 +159,6 @@ class MembersGUI(
                 else -> show(it)
             }
         }
-        if (screen in listOf("remove", "transfer") && target != null &&
-            plugin.interactions.confirm(player,
-                plugin.messageHandler.stringMessageToComponentNoPrefix("members", "confirm_$screen",
-                    mapOf("player" to operations.name(target))),
-                listOf(plugin.interactions.text("${screen}_body", mapOf(
-                    "plot" to plot.name, "player" to operations.name(target)))),
-                onConfirm = { run(it, if (screen == "transfer") listOf("transfer", target.toString(), "confirm")
-                    else listOf("remove", target.toString())) },
-                onCancel = { show(it) }, fallback = { openLegacy(player) })) return
         openLegacy(player)
     }
 

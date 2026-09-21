@@ -9,8 +9,7 @@ class UnclaimConfirmGUI(
     private val plugin: PlotsX,
     private val player: Player,
     private val onConfirm: (Player) -> Unit,
-    private val onCancel: (Player) -> Unit,
-    private val plotName: String = ""
+    private val onCancel: (Player) -> Unit
 ) : AbstractGUI(plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "unclaim.title_unclaim"), 3*9) {
 
     private val message = plugin.messageHandler
@@ -20,11 +19,7 @@ class UnclaimConfirmGUI(
     private var submitted = false
 
     override fun open(player: Player) {
-        if (!plugin.interactions.confirm(player,
-                message.stringMessageToComponentNoPrefix("GUI", "unclaim.title_unclaim"),
-                listOf(plugin.interactions.text("unclaim_body", mapOf("plot" to plotName))),
-                onConfirm = { submit(it, true) }, onCancel = { submit(it, false) },
-                fallback = { openLegacy(player) })) openLegacy(player)
+        openLegacy(player)
     }
 
     private fun openLegacy(player: Player) { plugin.guiHandler.openLegacy(player, this) }

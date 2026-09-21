@@ -62,8 +62,8 @@ plots:
 Typ zapisanej działki wybiera właściwe rozszerzanie niezależnie od aktualnego
 `claiming.mode`. Działka klasyczna otrzymuje kwadratowy segment. Działka chunkowa
 otrzymuje jeden wolny chunk przylegający bokiem do chunka, w którym stoi właściciel.
-Oba warianty są obsługiwane przez panel; na zgodnym Paper używany jest natywny dialog,
-a na starszym lub tłumaczonym kliencie GUI ekwipunkowe.
+Oba warianty są obsługiwane przez GUI ekwipunkowe. Natywne dialogi są zarezerwowane
+dla operacji wymagających wpisania tekstu, takich jak zmiana nazwy działki.
 
 Zakup chunkowy używa osobnego cennika `plots.chunks.expansion`. Cena następnego
 chunka to `price × priceMultiplier ^ liczba_dokupionych_chunków`. Obowiązują
