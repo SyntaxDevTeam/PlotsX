@@ -58,6 +58,9 @@ plots:
   world: ["world"]
   # Duration of Show borders in the plot and expansion menus (seconds, minimum 1).
   borderDisplaySeconds: 30
+  notifications:
+    # Where approaching, entering and leaving plot notices appear: actionbar | chat.
+    boundary: actionbar
   expansion:
     # Classic plots only. Chunk expansion uses plots.chunks.expansion above.
     # Stand in the segment from which you want to expand; select an adjacent direction.
