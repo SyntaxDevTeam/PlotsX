@@ -66,6 +66,61 @@ data class PlotSnapshot @JvmOverloads constructor(val id: Int, val owner: UUID, 
         (if (radius == null) chunks.any { it.x == Math.floorDiv(x, 16) && it.z == Math.floorDiv(z, 16) }
         else (kotlin.math.abs(x.toLong() - this.x) <= radius.toLong() &&
         kotlin.math.abs(z.toLong() - this.z) <= radius.toLong()) || extensions.any { it.contains(x, z) })
+
+    /**
+     * Returns true only when every block column in the inclusive rectangle belongs to this plot.
+     * This is intentionally stricter than checking the four corners: chunk plots and joined classic
+     * segments may be non-rectangular and can contain holes between otherwise valid corners.
+     */
+    fun containsArea(world: String, minX: Int, minZ: Int, maxX: Int, maxZ: Int): Boolean {
+        if (!this.world.equals(world, true) || minX > maxX || minZ > maxZ) return false
+        if (radius == null) {
+            val claimed = chunks.toHashSet()
+            for (chunkX in Math.floorDiv(minX, 16)..Math.floorDiv(maxX, 16)) {
+                for (chunkZ in Math.floorDiv(minZ, 16)..Math.floorDiv(maxZ, 16)) {
+                    if (ChunkSnapshot(chunkX, chunkZ) !in claimed) return false
+                }
+            }
+            return true
+        }
+
+        // A rectangle covered by a union of square regions has no gaps iff each horizontal span is
+        // fully covered on every row. Avoid iterating every block in large declared areas.
+        for (blockZ in minZ..maxZ) {
+            val intervals = buildList {
+                fun addRegion(centerX: Int, centerZ: Int, regionRadius: Int) {
+                    if (blockZ.toLong() !in centerZ.toLong() - regionRadius..centerZ.toLong() + regionRadius) return
+                    add(centerX.toLong() - regionRadius to centerX.toLong() + regionRadius)
+                }
+                addRegion(x, z, requireNotNull(radius))
+                extensions.forEach { addRegion(it.x, it.z, it.radius) }
+            }.sortedBy { it.first }
+            var coveredUntil = minX.toLong() - 1
+            for ((start, end) in intervals) {
+                if (start > coveredUntil + 1) break
+                if (end > coveredUntil) coveredUntil = end
+                if (coveredUntil >= maxX) break
+            }
+            if (coveredUntil < maxX) return false
+        }
+        return true
+    }
+
+    /** Exact filled-circle containment. Diameter is expressed in block columns around the centre. */
+    fun containsCircle(world: String, centerX: Int, centerZ: Int, diameter: Int): Boolean {
+        if (diameter <= 0) return false
+        val radius = diameter / 2.0
+        val minZ = kotlin.math.ceil(centerZ - radius + 0.5).toInt()
+        val maxZ = kotlin.math.floor(centerZ + radius - 0.5).toInt()
+        for (blockZ in minZ..maxZ) {
+            val dz = blockZ + 0.5 - (centerZ + 0.5)
+            val halfSpan = kotlin.math.sqrt(radius * radius - dz * dz)
+            val minX = kotlin.math.ceil(centerX + 0.5 - halfSpan).toInt()
+            val maxX = kotlin.math.floor(centerX + 0.5 + halfSpan).toInt()
+            if (minX <= maxX && !containsArea(world, minX, blockZ, maxX, blockZ)) return false
+        }
+        return true
+    }
 }
 
 /** API v2: complete 16 x 16 block columns; radius is null for chunk plots. */

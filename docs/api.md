@@ -41,6 +41,10 @@ check(api.apiVersion == 2)
 val plot = api.getPlotAt(player.world.name, player.location.blockX, player.location.blockZ)
 val owned = api.getOwnedPlots(player.uniqueId)
 val accessible = api.getAccessiblePlots(player.uniqueId)
+
+// Exact containment for a building/arena footprint. Unlike corner checks this also rejects holes.
+val fits = plot?.containsArea(player.world.name, minX, minZ, maxX, maxZ) == true
+val roundArenaFits = plot?.containsCircle(player.world.name, centerX, centerZ, diameter) == true
 ```
 
 Java:
