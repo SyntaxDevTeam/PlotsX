@@ -67,6 +67,12 @@ otrzymuje jeden wolny chunk przylegający bokiem do chunka, w którym stoi wła�
 Oba warianty są obsługiwane przez GUI ekwipunkowe. Natywne dialogi są zarezerwowane
 dla operacji wymagających wpisania tekstu, takich jak zmiana nazwy działki.
 
+GUI działki chunkowej pokazuje przewijaną mapę 7 × 4 chunków. Białe pola należą do
+działki, głowa oznacza aktualną pozycję gracza, zielone pola są wolnymi chunkami
+przylegającymi bokiem, a czerwone są zablokowane przez inną działkę lub region.
+Kliknięcie zielonego pola wybiera cel zakupu; strzałki na krawędziach przesuwają mapę.
+Klasyczne rozszerzanie nadal używa wyboru kierunku względem segmentu, w którym stoi gracz.
+
 Dla działek chunkowych alternatywą dla wyboru kierunku w panelu jest `/plot expand`:
 właściciel staje na docelowym wolnym chunku, a komenda otwiera od razu potwierdzenie
 zakupu. `plots.chunks.expansion.standingCommand: false` wyłącza ten wariant. Jeśli
@@ -81,7 +87,7 @@ Płatność, zapis chunka, rewizja geometrii i publikacja cache są chronione tr
 dziennikiem operacji; po odrzuconym zapisie wykonywana jest próba zwrotu przez tego
 samego dostawcę i w tej samej walucie.
 
-GUI pozwala wybrać północ (−Z), wschód (+X), południe (+Z) lub zachód (−X), a następnie potwierdzić zakup. Każdy zakup dodaje jeden segment o rozmiarze pierwotnej działki, za cenę `plots.expansion.price × plots.expansion.priceMultiplier ^ liczba_zakupionych_segmentów`. `0` oznacza darmowe rozszerzenie. Nie ma poziomów ani przyrostu promienia. Dla promienia 16 każdy segment ma 33 × 33 bloki i dodaje 1089 bloków².
+GUI działki klasycznej pozwala wybrać północ (−Z), wschód (+X), południe (+Z) lub zachód (−X), a następnie potwierdzić zakup. Każdy zakup dodaje jeden segment o rozmiarze pierwotnej działki, za cenę `plots.expansion.price × plots.expansion.priceMultiplier ^ liczba_zakupionych_segmentów`. `0` oznacza darmowe rozszerzenie. Nie ma poziomów ani przyrostu promienia. Dla promienia 16 każdy segment ma 33 × 33 bloki i dodaje 1089 bloków².
 
 Przycisk „Pokaż granice” w GUI rozszerzania zamyka menu i pokazuje obrys istniejącej działki. Czas ustawia `plots.borderDisplaySeconds: 30` (sekundy, minimum 1); obowiązuje również w głównym panelu działki. Podgląd nie kupuje segmentu.
 

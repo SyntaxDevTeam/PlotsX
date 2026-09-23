@@ -19,14 +19,19 @@ internal class ChunkExpandGUI(
     private val plotId: Int,
     private val requestedTarget: ChunkPosition? = null
 ) : AbstractGUI(
-    plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "expand.title"), 27
+    plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "expand.title"), 54
 ) {
-    private val directions = mapOf(4 to ExpansionDirection.NORTH, 14 to ExpansionDirection.EAST,
-        22 to ExpansionDirection.SOUTH, 12 to ExpansionDirection.WEST)
+    private val panButtons = mapOf(4 to ExpansionDirection.NORTH, 26 to ExpansionDirection.EAST,
+        49 to ExpansionDirection.SOUTH, 18 to ExpansionDirection.WEST)
+    private val mapSlots = (1..4).flatMap { row -> (1..7).map { column -> row * 9 + column } }
+    private val bordersIndex = 45
+    private val confirmIndex = 47
+    private val cancelIndex = 51
     private var direction = ExpansionDirection.NORTH
     private var offered: PlotData? = null
     private var source: ChunkPosition? = null
     private var target: ChunkPosition? = null
+    private var viewCenter: ChunkPosition? = null
     private var price: BigDecimal? = null
     private var operationId = UUID.randomUUID()
     private var submitted = false
@@ -41,34 +46,66 @@ internal class ChunkExpandGUI(
         val plot = plugin.cacheManager.getPlot(plotId) ?: return null
         val geometry = plot.geometry as? ChunkGeometry ?: return null
         offered = plot
+        val standing = if (player.world.name == plot.world)
+            ChunkPosition.atBlock(player.location.blockX, player.location.blockZ) else null
+        if (viewCenter == null) viewCenter = requestedTarget ?: standing?.takeIf { it in geometry.chunks } ?: geometry.chunks.first()
         if (requestedTarget != null) {
             val expansion = geometry.expansionTo(requestedTarget) ?: return null
             source = expansion.source
             direction = expansion.direction
             target = expansion.target
-        } else {
-            source = if (player.world.name == plot.world) ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
-                .takeIf { it in geometry.chunks } else null
-            target = source?.let { geometry.expansion(direction, it) }
+        } else if (target != null) {
+            val expansion = geometry.expansionTo(target!!)
+            source = expansion?.source
+            direction = expansion?.direction ?: direction
+            target = expansion?.target
         }
         price = ExpansionEconomy.chunkPrice(plugin, plot.expansionLevel)
         operationId = UUID.randomUUID()
         return plot
     }
 
-    private fun renderInventory(player: Player, plot: PlotData) {
-        directions.forEach { (slot, value) -> inventory.setItem(slot, item(
-            if (value == direction) Material.LIME_CONCRETE else Material.COMPASS, "expand.directions.${value.name.lowercase()}")) }
-        inventory.setItem(13, item(Material.ENDER_EYE, "expand.show_borders"))
-        val lore = listOf(
-            if (source == null) text("expand.stand_inside") else text("expand.source", mapOf("x" to source!!.x.toString(), "z" to source!!.z.toString())),
-            if (target == null) text("expand.direction_blocked") else text("expand.chunk_target", mapOf("x" to target!!.x.toString(), "z" to target!!.z.toString())),
-            text("expand.chunk_count", mapOf("count" to plot.chunks.size.toString(), "max" to plugin.hookHandler.getMaxChunksPerPlot(player).toString())),
-            text("expand.price", mapOf("price" to (price?.toPlainString() ?: "?")))
-        )
-        inventory.setItem(20, item(Material.EMERALD_BLOCK, "expand.confirm").apply { itemMeta = itemMeta.apply { lore(lore) } })
-        inventory.setItem(24, item(Material.BARRIER, "expand.cancel"))
+private fun renderInventory(player: Player, plot: PlotData) {
+inventory.clear()
+val geometry = plot.geometry as ChunkGeometry
+val center = requireNotNull(viewCenter)
+val standing = ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
+mapSlots.forEach { slot ->
+    val row = slot / 9
+    val column = slot % 9
+    val position = offset(center, column - 4, row - 3) ?: return@forEach
+    val expansion = geometry.expansionTo(position)
+    val blocked = expansion != null && isBlocked(player, plot, position)
+    val material = when {
+        position == target -> Material.EMERALD_BLOCK
+        position in geometry.chunks && position == standing -> Material.PLAYER_HEAD
+        position in geometry.chunks -> Material.WHITE_CONCRETE
+        blocked -> Material.RED_STAINED_GLASS_PANE
+        expansion != null -> Material.LIME_STAINED_GLASS_PANE
+        else -> Material.GRAY_STAINED_GLASS_PANE
     }
+    val key = when {
+        position == target -> "expand.map_selected"
+        position in geometry.chunks && position == standing -> "expand.map_player"
+        position in geometry.chunks -> "expand.map_claimed"
+        blocked -> "expand.map_blocked"
+        expansion != null -> "expand.map_available"
+        else -> "expand.map_empty"
+    }
+    inventory.setItem(slot, mapItem(material, key, position))
+}
+panButtons.forEach { (slot, value) -> inventory.setItem(slot,
+    item(Material.ARROW, "expand.map_pan_${value.name.lowercase()}")) }
+inventory.setItem(bordersIndex, item(Material.ENDER_EYE, "expand.show_borders"))
+val lore = listOf(
+    if (target == null) text("expand.map_choose") else text("expand.chunk_target", mapOf("x" to target!!.x.toString(), "z" to target!!.z.toString())),
+    text("expand.chunk_count", mapOf("count" to plot.chunks.size.toString(), "max" to plugin.hookHandler.getMaxChunksPerPlot(player).toString())),
+    text("expand.price", mapOf("price" to (price?.toPlainString() ?: "?")))
+)
+inventory.setItem(confirmIndex, item(if (target == null) Material.GRAY_DYE else Material.EMERALD_BLOCK,
+    "expand.confirm").apply { itemMeta = itemMeta.apply { lore(lore) } })
+inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
+}
 
     private fun openLegacy(player: Player) { plugin.guiHandler.openLegacy(player, this) }
 
@@ -77,20 +114,34 @@ internal class ChunkExpandGUI(
         event.isCancelled = true
         val player = event.whoClicked as? Player ?: return
         if (submitted) return
-        directions[event.rawSlot]?.takeIf { requestedTarget == null }?.let {
-            direction = it
-            player.scheduler.run(plugin, {
-                if (!submitted && player.openInventory.topInventory === inventory) open(player)
-            }, null)
+        panButtons[event.rawSlot]?.let {
+            viewCenter = viewCenter?.neighbour(it) ?: viewCenter
+            offered?.let { plot -> renderInventory(player, plot) }
             return
         }
-        if (event.rawSlot == 13) {
+        if (event.rawSlot in mapSlots && requestedTarget == null) {
+            val plot = offered ?: return
+            val geometry = plot.geometry as? ChunkGeometry ?: return
+            val row = event.rawSlot / 9
+            val column = event.rawSlot % 9
+            val candidate = viewCenter?.let { offset(it, column - 4, row - 3) } ?: return
+            val expansion = geometry.expansionTo(candidate) ?: return
+            if (isBlocked(player, plot, candidate)) return
+            source = expansion.source
+            direction = expansion.direction
+            target = expansion.target
+            operationId = UUID.randomUUID()
+            renderInventory(player, plot)
+            return
+        }
+        if (event.rawSlot == bordersIndex) {
             plugin.cacheManager.getPlot(plotId)?.let { Helpers(plugin).visualizePlotBorder3D(player, it, Helpers(plugin).borderDurationSeconds(), 2, 4) }
             return
         }
-        if (event.rawSlot !in setOf(20, 24)) return
+        if (event.rawSlot !in setOf(confirmIndex, cancelIndex)) return
+        if (event.rawSlot == confirmIndex && target == null) { player.sendMessage(text("expand.map_choose")); return }
         submitted = true
-        val confirm = event.rawSlot == 20
+        val confirm = event.rawSlot == confirmIndex
         player.scheduler.run(plugin, {
             if (player.openInventory.topInventory !== inventory) return@run
             player.closeInventory(); plugin.guiHandler.unregisterGui(player)
@@ -114,7 +165,9 @@ internal class ChunkExpandGUI(
             if (current.ownerUuid != owner || current.geometryRevision != plot.geometryRevision || current.radius != null ||
                 current.expansionLevel != plot.expansionLevel || player.world.name != plot.world) return false
             val standing = ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
-            if ((requestedTarget == null && standing != from) || (requestedTarget != null && standing != to)) return false
+            val currentGeometry = current.geometry as? ChunkGeometry ?: return false
+            if ((requestedTarget == null && standing !in currentGeometry.chunks) ||
+                (requestedTarget != null && standing != to)) return false
             if (ExpansionEconomy.chunkPrice(plugin, current.expansionLevel)?.compareTo(amount) != 0 || limits(player) != limits) return false
             return plugin.regionProtectionHook?.overlapsBounds(player.world, to.bounds) != true
         }
@@ -158,4 +211,22 @@ internal class ChunkExpandGUI(
     private fun text(key: String, replacements: Map<String, String> = emptyMap()) =
         plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", key, replacements)
     private fun item(material: Material, key: String) = ItemStack(material).apply { itemMeta = itemMeta.apply { displayName(text(key)) } }
+    private fun mapItem(material: Material, key: String, position: ChunkPosition) = item(material, key).apply {
+        itemMeta = itemMeta.apply { lore(listOf(text("expand.map_coordinates", mapOf(
+            "x" to position.x.toString(), "z" to position.z.toString())))) }
+    }
+    private fun offset(origin: ChunkPosition, dx: Int, dz: Int): ChunkPosition? {
+        val x = origin.x.toLong() + dx
+        val z = origin.z.toLong() + dz
+        if (x !in ChunkPosition.MIN_COORDINATE.toLong()..ChunkPosition.MAX_COORDINATE.toLong() ||
+            z !in ChunkPosition.MIN_COORDINATE.toLong()..ChunkPosition.MAX_COORDINATE.toLong()) return null
+        return ChunkPosition(x.toInt(), z.toInt())
+    }
+    private fun isBlocked(player: Player, plot: PlotData, position: ChunkPosition): Boolean {
+        val occupied = plugin.cacheManager.getCachedPlots().any { other ->
+            other.id != plot.id && other.world.equals(plot.world, true) &&
+                other.geometry.intersects(ChunkGeometry(setOf(position)))
+        }
+        return occupied || plugin.regionProtectionHook?.overlapsBounds(player.world, position.bounds) == true
+    }
 }
