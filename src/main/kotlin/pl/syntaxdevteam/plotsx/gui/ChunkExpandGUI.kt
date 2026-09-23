@@ -140,6 +140,7 @@ inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
         }
         if (event.rawSlot !in setOf(confirmIndex, cancelIndex)) return
         if (event.rawSlot == confirmIndex && target == null) { player.sendMessage(text("expand.map_choose")); return }
+        if (event.rawSlot == confirmIndex && !refreshSelectedOffer(player)) return
         submitted = true
         val confirm = event.rawSlot == confirmIndex
         player.scheduler.run(plugin, {
@@ -147,6 +148,38 @@ inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
             player.closeInventory(); plugin.guiHandler.unregisterGui(player)
             if (confirm) submit(player)
         }, null)
+    }
+
+    /** Refreshes the quote immediately before closing the GUI, so map navigation cannot submit stale data. */
+    private fun refreshSelectedOffer(player: Player): Boolean {
+        val selected = target ?: return false
+        val current = plugin.cacheManager.getPlot(plotId)
+        val geometry = current?.geometry as? ChunkGeometry
+        val expansion = geometry?.expansionTo(selected)
+        val standing = ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
+        if (current == null || current.ownerUuid != player.uniqueId || player.world.name != current.world ||
+            expansion == null || (requestedTarget == null && standing !in geometry.chunks) ||
+            (requestedTarget != null && standing != selected)) {
+            player.sendMessage(text(if (requestedTarget == null) "expand.stand_inside" else "expand.direction_blocked"))
+            target = null
+            source = null
+            current?.let { renderInventory(player, it) }
+            return false
+        }
+        if (isBlocked(player, current, selected)) {
+            player.sendMessage(text("expand.direction_blocked"))
+            target = null
+            source = null
+            renderInventory(player, current)
+            return false
+        }
+        offered = current
+        source = expansion.source
+        direction = expansion.direction
+        target = expansion.target
+        price = ExpansionEconomy.chunkPrice(plugin, current.expansionLevel)
+        operationId = UUID.randomUUID()
+        return true
     }
 
     private fun submit(player: Player) {
