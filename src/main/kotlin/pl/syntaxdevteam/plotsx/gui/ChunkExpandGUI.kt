@@ -210,7 +210,10 @@ inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
         if (amount.signum() > 0 && account == null) { error(player, "expand_no_economy"); return }
         val operation = OperationJournal.Operation(operationId, plotId, owner, owner, plot.world, from, to,
             plot.geometryRevision, amount, account?.providerId ?: "free", account?.currencyId ?: "free", createdAt = System.currentTimeMillis())
-        player.sendMessage(text("expand.chunk_processing"))
+        plugin.logger.debug(
+            "Chunk purchase started: operation=${operation.id}, player=${player.name}, plot=$plotId, " +
+                "source=${from.x},${from.z}, target=${to.x},${to.z}, amount=$amount"
+        )
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             val result = try { plugin.databaseHandler.purchaseChunk(operation, plot.expansionLevel, limits, account, ::valid) }
             catch (failure: Exception) {
@@ -221,7 +224,10 @@ inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
                 if (!player.isOnline) return@Runnable
                 when (result) {
                     ChunkPurchaseService.Result.SUCCESS -> {
-                        player.sendMessage(text("expand.chunk_success"))
+                        plugin.logger.debug(
+                            "Chunk purchase completed: operation=${operation.id}, player=${player.name}, " +
+                                "plot=$plotId, target=${to.x},${to.z}"
+                        )
                         plugin.cacheManager.getPlot(plotId)?.let { Helpers(plugin).visualizePlotBorder3D(player, it, Helpers(plugin).borderDurationSeconds(), 2, 4) }
                     }
                     ChunkPurchaseService.Result.AREA_LIMIT -> error(player, "expand_area_limit")

@@ -184,8 +184,6 @@ GUI:
   expand:
     chunk_target: "Target chunk: <x>, <z> (256 columns)"
     chunk_count: "Chunks: <count>/<max>"
-    chunk_processing: "Processing the chunk purchase..."
-    chunk_success: "The adjacent chunk has been added."
     map_choose: "<gold>Choose a free chunk adjacent to the plot on the map.</gold>"
     map_player: "<green>Your position</green>"
     map_claimed: "<white>Plot chunk</white>"

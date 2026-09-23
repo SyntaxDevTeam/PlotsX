@@ -184,8 +184,6 @@ GUI:
   expand:
     chunk_target: "Docelowy chunk: <x>, <z> (256 kolumn)"
     chunk_count: "Chunki: <count>/<max>"
-    chunk_processing: "Przetwarzanie zakupu chunka..."
-    chunk_success: "Dodano sąsiedni chunk do działki."
     map_choose: "<gold>Wybierz na mapie wolny chunk przylegający do działki.</gold>"
     map_player: "<green>Twoja pozycja</green>"
     map_claimed: "<white>Chunk działki</white>"
