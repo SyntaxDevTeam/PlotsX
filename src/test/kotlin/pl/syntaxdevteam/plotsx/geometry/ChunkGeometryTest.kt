@@ -122,6 +122,17 @@ class ChunkGeometryTest {
         assertNull(plot.expansion(ExpansionDirection.EAST, ChunkPosition(5, 5)))
     }
 
+    @Test fun `standing target resolves its adjacent source and direction`() {
+        val plot = ChunkGeometry(listOf(ChunkPosition(0, 0), ChunkPosition(1, 0)))
+        val expansion = plot.expansionTo(ChunkPosition(2, 0))
+        assertEquals(ChunkPosition(1, 0), expansion?.source)
+        assertEquals(ExpansionDirection.EAST, expansion?.direction)
+        assertEquals(ChunkPosition(2, 0), expansion?.target)
+        assertNull(plot.expansionTo(ChunkPosition(1, 0)))
+        assertNull(plot.expansionTo(ChunkPosition(3, 0)))
+        assertNull(plot.expansionTo(ChunkPosition(2, 1)))
+    }
+
     @Test fun `integer block extremes are represented exactly and outward expansion is rejected`() {
         val low = ChunkPosition.atBlock(Int.MIN_VALUE, Int.MIN_VALUE)
         val high = ChunkPosition.atBlock(Int.MAX_VALUE, Int.MAX_VALUE)

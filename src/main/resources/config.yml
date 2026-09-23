@@ -46,6 +46,9 @@ plots:
       # Price per additional chunk; the first claimed chunk remains free.
       price: 500.0
       priceMultiplier: 1.5
+      # Allow /plot expand while standing on a free chunk adjacent to your chunk plot.
+      # The command skips direction selection and opens the purchase confirmation directly.
+      standingCommand: true
   # Maximum plots across ALL worlds; override with plotsx.plot.max-plots.<number>.
   # Highest granted numeric permission wins; without one, this value is used.
   maxPlots: 5

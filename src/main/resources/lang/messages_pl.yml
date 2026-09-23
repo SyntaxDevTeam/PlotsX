@@ -11,6 +11,11 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 error:
   chunk_purchase_busy: "Trwa inna operacja działki. Spróbuj ponownie za chwilę."
   chunk_purchase_review: "Płatność wymaga wyjaśnienia. Operacja: <operation>"
+  chunk_expand_command_usage: "<yellow>Użycie: /plot expand — stań na wolnym chunku obok swojej działki.</yellow>"
+  chunk_expand_command_disabled: "<red>Rozszerzanie przez stanie na docelowym chunku jest wyłączone.</red>"
+  chunk_expand_target_owned: "<red>Chunk, na którym stoisz, jest już zajęty.</red>"
+  chunk_expand_no_adjacent: "<red>Ten chunk nie przylega bokiem do żadnej Twojej działki chunkowej.</red>"
+  chunk_expand_ambiguous: "<red>Ten chunk przylega do kilku Twoich działek. Użyj panelu wybranej działki.</red>"
   chunk_expansion_pending: "Rozszerzanie działek chunkowych nie jest jeszcze dostępne na tym etapie wdrożenia."
   claim_chunk_limit: "Osiągnięto limit chunków działki lub właściciela."
   expand_invalid_price: "<red>Nieprawidłowa cena rozszerzenia w konfiguracji.</red>"

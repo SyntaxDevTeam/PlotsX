@@ -4,6 +4,9 @@ import io.papermc.paper.command.brigadier.BasicCommand
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import org.bukkit.entity.Player
 import pl.syntaxdevteam.plotsx.PlotsX
+import pl.syntaxdevteam.plotsx.geometry.ChunkGeometry
+import pl.syntaxdevteam.plotsx.geometry.ChunkPosition
+import pl.syntaxdevteam.plotsx.gui.ChunkExpandGUI
 import pl.syntaxdevteam.plotsx.gui.MembersGUI
 import pl.syntaxdevteam.plotsx.gui.PlotGUI
 import pl.syntaxdevteam.plotsx.gui.PlotListGUI
@@ -48,6 +51,10 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         val player = sender as? Player ?: run { members.reply(sender, "admin_usage"); return }
         if (!PermissionChecker.canManagePlot(player)) { members.reply(player, "denied"); return }
         val standing = plugin.databaseHandler.getPlotAtLocation(player.world.name, player.location.blockX, player.location.blockZ)
+        if (args.firstOrNull().equals("expand", true)) {
+            expandStandingChunk(player, args)
+            return
+        }
         if (args.firstOrNull()?.lowercase() in actions) {
             if (standing == null) { members.reply(player, "stand_on_plot"); return }
             if (args.size == 1 && args[0].equals("members", true) && access.canOpen(player, standing)) {
@@ -84,7 +91,9 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
                 it.world == p.world.name && it.contains(p.location.blockX, p.location.blockZ)
             } }
         val candidates = when {
-            words.size <= 1 -> actions + (if (!admin && access.admin(sender)) listOf("admin") else emptyList())
+            words.size <= 1 -> actions + (if (!admin && plugin.config.getBoolean(
+                    "plots.chunks.expansion.standingCommand", true)) listOf("expand") else emptyList()) +
+                (if (!admin && access.admin(sender)) listOf("admin") else emptyList())
             plot == null || !access.canOpen(sender, plot) -> emptyList()
             words.size == 2 && words[0] == "permission" -> if (access.owner(sender, plot)) access.roles else emptyList()
             words.size == 3 && words[0] == "permission" -> access.actions
@@ -98,5 +107,27 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             else -> emptyList()
         }
         return candidates.filter { it.startsWith(words.lastOrNull().orEmpty(), true) }.distinct().sorted()
+    }
+
+    private fun expandStandingChunk(player: Player, args: Array<String>) {
+        fun error(key: String) = player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", key))
+        if (args.size != 1) { error("chunk_expand_command_usage"); return }
+        if (!plugin.config.getBoolean("plots.chunks.expansion.standingCommand", true)) {
+            error("chunk_expand_command_disabled"); return
+        }
+        if (!PermissionChecker.canExpandPlot(player)) { error("no_permission"); return }
+        val target = ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
+        if (plugin.cacheManager.getCachedPlots().any {
+                it.world.equals(player.world.name, true) && it.geometry.contains(player.location.blockX, player.location.blockZ)
+            }) { error("chunk_expand_target_owned"); return }
+        val candidates = plugin.cacheManager.getCachedPlots().filter { plot ->
+            plot.ownerUuid == player.uniqueId && plot.world.equals(player.world.name, true) &&
+                (plot.geometry as? ChunkGeometry)?.expansionTo(target) != null
+        }
+        when (candidates.size) {
+            0 -> error("chunk_expand_no_adjacent")
+            1 -> plugin.guiHandler.registerGui(player, ChunkExpandGUI(plugin, candidates.single().id, target))
+            else -> error("chunk_expand_ambiguous")
+        }
     }
 }

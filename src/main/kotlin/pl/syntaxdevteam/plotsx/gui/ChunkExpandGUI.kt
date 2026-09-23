@@ -14,7 +14,11 @@ import java.math.BigDecimal
 import java.util.UUID
 
 /** Chunk offers use cached data. All SQL in the purchase is performed by a worker. */
-internal class ChunkExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractGUI(
+internal class ChunkExpandGUI(
+    private val plugin: PlotsX,
+    private val plotId: Int,
+    private val requestedTarget: ChunkPosition? = null
+) : AbstractGUI(
     plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "expand.title"), 27
 ) {
     private val directions = mapOf(4 to ExpansionDirection.NORTH, 14 to ExpansionDirection.EAST,
@@ -37,9 +41,16 @@ internal class ChunkExpandGUI(private val plugin: PlotsX, private val plotId: In
         val plot = plugin.cacheManager.getPlot(plotId) ?: return null
         val geometry = plot.geometry as? ChunkGeometry ?: return null
         offered = plot
-        source = if (player.world.name == plot.world) ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
-            .takeIf { it in geometry.chunks } else null
-        target = source?.let { geometry.expansion(direction, it) }
+        if (requestedTarget != null) {
+            val expansion = geometry.expansionTo(requestedTarget) ?: return null
+            source = expansion.source
+            direction = expansion.direction
+            target = expansion.target
+        } else {
+            source = if (player.world.name == plot.world) ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
+                .takeIf { it in geometry.chunks } else null
+            target = source?.let { geometry.expansion(direction, it) }
+        }
         price = ExpansionEconomy.chunkPrice(plugin, plot.expansionLevel)
         operationId = UUID.randomUUID()
         return plot
@@ -66,7 +77,7 @@ internal class ChunkExpandGUI(private val plugin: PlotsX, private val plotId: In
         event.isCancelled = true
         val player = event.whoClicked as? Player ?: return
         if (submitted) return
-        directions[event.rawSlot]?.let {
+        directions[event.rawSlot]?.takeIf { requestedTarget == null }?.let {
             direction = it
             player.scheduler.run(plugin, {
                 if (!submitted && player.openInventory.topInventory === inventory) open(player)
@@ -101,8 +112,9 @@ internal class ChunkExpandGUI(private val plugin: PlotsX, private val plotId: In
             if (!player.isOnline || !PermissionChecker.canExpandPlot(player) || owner != plot.ownerUuid) return false
             val current = plugin.cacheManager.getPlot(plotId) ?: return false
             if (current.ownerUuid != owner || current.geometryRevision != plot.geometryRevision || current.radius != null ||
-                current.expansionLevel != plot.expansionLevel || player.world.name != plot.world ||
-                ChunkPosition.atBlock(player.location.blockX, player.location.blockZ) != from) return false
+                current.expansionLevel != plot.expansionLevel || player.world.name != plot.world) return false
+            val standing = ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
+            if ((requestedTarget == null && standing != from) || (requestedTarget != null && standing != to)) return false
             if (ExpansionEconomy.chunkPrice(plugin, current.expansionLevel)?.compareTo(amount) != 0 || limits(player) != limits) return false
             return plugin.regionProtectionHook?.overlapsBounds(player.world, to.bounds) != true
         }

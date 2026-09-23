@@ -10,6 +10,7 @@ Lista odpowiada aktualnej implementacji. `[argument]` jest opcjonalny, a `<argum
 | `/unclaim` | `plotsx.cmd.unclaim` | Otwiera potwierdzenie usunięcia własnej działki, na której stoi gracz. |
 | `/plot` | `plotsx.cmd.plot` | Otwiera panel działki pod graczem, jeśli jest jej właścicielem, członkiem lub ma dostęp administracyjny; poza działką pokazuje listę własnych działek, również dla OP. |
 | `/plot <nazwa>` | `plotsx.cmd.plot` | Otwiera panel dostępnej działki wyszukanej po nazwie; własna ma pierwszeństwo. |
+| `/plot expand` | `plotsx.cmd.plot` + `plotsx.plot.expand` | Stojąc na wolnym chunku przylegającym bokiem do własnej działki chunkowej, otwiera bezpośrednio potwierdzenie jego zakupu. |
 
 Rodzaj nowej działki wybiera administrator przez `plots.claiming.mode: classic | chunks`.
 W trybie `classic` `/claim` używa `plots.radius`; w trybie `chunks` zajmuje cały
@@ -52,6 +53,7 @@ plots:
     expansion:
       price: 500.0
       priceMultiplier: 1.5
+      standingCommand: true
   expansion:
     price: 500.0
     priceMultiplier: 1.5
@@ -64,6 +66,12 @@ Typ zapisanej działki wybiera właściwe rozszerzanie niezależnie od aktualneg
 otrzymuje jeden wolny chunk przylegający bokiem do chunka, w którym stoi właściciel.
 Oba warianty są obsługiwane przez GUI ekwipunkowe. Natywne dialogi są zarezerwowane
 dla operacji wymagających wpisania tekstu, takich jak zmiana nazwy działki.
+
+Dla działek chunkowych alternatywą dla wyboru kierunku w panelu jest `/plot expand`:
+właściciel staje na docelowym wolnym chunku, a komenda otwiera od razu potwierdzenie
+zakupu. `plots.chunks.expansion.standingCommand: false` wyłącza ten wariant. Jeśli
+docelowy chunk dotyka kilku działek tego samego właściciela, trzeba użyć panelu
+konkretnej działki, aby wybór był jednoznaczny.
 
 Zakup chunkowy używa osobnego cennika `plots.chunks.expansion`. Cena następnego
 chunka to `price × priceMultiplier ^ liczba_dokupionych_chunków`. Obowiązują

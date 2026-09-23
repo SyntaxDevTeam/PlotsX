@@ -33,6 +33,8 @@ data class ChunkPosition(val x: Int, val z: Int) {
 
 /** A nonempty, side-connected set of complete chunks; holes inside its bounds remain unclaimed. */
 class ChunkGeometry(chunks: Collection<ChunkPosition>) : PlotGeometry {
+    data class Expansion(val source: ChunkPosition, val direction: ExpansionDirection, val target: ChunkPosition)
+
     val chunks: Set<ChunkPosition> = Collections.unmodifiableSet(LinkedHashSet(chunks))
 
     init {
@@ -69,5 +71,19 @@ class ChunkGeometry(chunks: Collection<ChunkPosition>) : PlotGeometry {
     fun expansion(direction: ExpansionDirection, source: ChunkPosition): ChunkPosition? {
         if (source !in chunks) return null
         return source.neighbour(direction)?.takeUnless { it in chunks }
+    }
+
+    /** Resolves a free chunk selected by standing on it to an expansion from this plot. */
+    fun expansionTo(target: ChunkPosition): Expansion? {
+        if (target in chunks) return null
+        for (direction in ExpansionDirection.entries) {
+            val sourceX = target.x.toLong() - direction.dx
+            val sourceZ = target.z.toLong() - direction.dz
+            if (sourceX !in ChunkPosition.MIN_COORDINATE.toLong()..ChunkPosition.MAX_COORDINATE.toLong() ||
+                sourceZ !in ChunkPosition.MIN_COORDINATE.toLong()..ChunkPosition.MAX_COORDINATE.toLong()) continue
+            val source = ChunkPosition(sourceX.toInt(), sourceZ.toInt())
+            if (source in chunks) return Expansion(source, direction, target)
+        }
+        return null
     }
 }
