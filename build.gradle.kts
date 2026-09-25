@@ -70,7 +70,7 @@ dependencies {
     compileOnly("io.github.miniplaceholders:miniplaceholders-kotlin-ext:2.3.0")
     compileOnly("com.github.milkbowl:VaultAPI:1.7.1")
     compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.15")
-    compileOnly("net.coreprotect:coreprotect:24.0")
+    compileOnly("net.coreprotect:coreprotect:25.0")
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:$worldGuardVersion") {
         isTransitive = false
     }
@@ -117,8 +117,8 @@ tasks.processResources {
     }
 }
 
-// Compile-only contract for integration authors; implementation and Kotlin runtime stay in PlotsX.
 val apiJar = tasks.register<Jar>("apiJar") {
+    description = "Generates a compile-only API jar for PlotsX integration authors."
     archiveClassifier.set("api")
     from(sourceSets.main.get().output) {
         include("pl/syntaxdevteam/plotsx/api/**")
@@ -132,14 +132,15 @@ plugindeployer {
     folia { dir = "/home/debian/poligon/Folia/26.2/plugins" } //ostatnia wersja dla Folia
 }
 
-// Isolated Paper acceptance harness; never included in the distributed plugin.
 val compileLiveTest = tasks.register<JavaCompile>("compileLiveTest") {
+    description = "Compiles the live test harness for PlotsX. This is a Paper plugin that runs integration tests against a live server."
     source(fileTree("src/liveTest/java") { include("**/*.java") })
     classpath = sourceSets.main.get().compileClasspath + sourceSets.main.get().output
     destinationDirectory.set(layout.buildDirectory.dir("classes/liveTest"))
     options.release.set(21)
 }
 tasks.register<Jar>("liveTestJar") {
+    description = "Generates a Paper plugin jar containing the live test harness for PlotsX."
     dependsOn(compileLiveTest)
     archiveClassifier.set("live-test")
     from(compileLiveTest.flatMap { it.destinationDirectory })
