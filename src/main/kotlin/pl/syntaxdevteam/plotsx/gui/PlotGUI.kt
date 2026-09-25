@@ -32,6 +32,7 @@ class PlotGUI(
     private val renameIndex = 29
     private val listIndex = 31
     private val expandIndex = 33
+    private val removeChunkIndex = 35
     private val membersIndex = 13
 
     override fun open(player: Player) {
@@ -90,6 +91,17 @@ class PlotGUI(
                 message.stringMessageToComponentNoPrefix("GUI", "plot.material_name.expand")
             )
         )
+        if (current.radius == null) {
+            inventory.setItem(
+                removeChunkIndex,
+                createItem(
+                    Material.REDSTONE_BLOCK,
+                    message.stringMessageToComponentNoPrefix("GUI", "plot.material_name.remove_chunk")
+                )
+            )
+        } else {
+            inventory.clear(removeChunkIndex)
+        }
 
         super.open(player)
     }
@@ -158,6 +170,18 @@ class PlotGUI(
                     player.sendMessage(message.stringMessageToComponent("error", "not_owner"))
                 } else {
                     plugin.guiHandler.registerGui(player, ExpandGUI(plugin, pd.id))
+                }
+            }
+
+            removeChunkIndex -> {
+                if (pd.radius != null) {
+                    player.sendMessage(message.stringMessageToComponent("error", "chunk_remove_wrong_geometry"))
+                } else if (!PermissionChecker.canExpandPlot(player)) {
+                    player.sendMessage(message.stringMessageToComponent("error", "no_permission"))
+                } else if (pd.ownerUuid != player.uniqueId) {
+                    player.sendMessage(message.stringMessageToComponent("error", "not_owner"))
+                } else {
+                    plugin.guiHandler.registerGui(player, ChunkRemoveGUI(plugin, pd.id))
                 }
             }
 
