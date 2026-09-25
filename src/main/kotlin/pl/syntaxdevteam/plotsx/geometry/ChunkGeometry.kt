@@ -86,4 +86,13 @@ class ChunkGeometry(chunks: Collection<ChunkPosition>) : PlotGeometry {
         }
         return null
     }
+
+    /**
+     * Returns the geometry after removing [target], or null when the target is not owned,
+     * is the last chunk, or its removal would split the plot into disconnected islands.
+     */
+    fun without(target: ChunkPosition): ChunkGeometry? {
+        if (target !in chunks || chunks.size <= 1) return null
+        return runCatching { ChunkGeometry(chunks - target) }.getOrNull()
+    }
 }

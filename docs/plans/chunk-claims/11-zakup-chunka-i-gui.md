@@ -61,3 +61,18 @@ Dodano 12 testów `ChunkPurchaseServiceTest` na H2 z kontrolowanym dostawcą i o
 Dwa nowe testy wskazanego `PlotCacheLoaderTest` sprawdzają rzeczywisty licznik w pełnym i pojedynczym odczycie oraz odrzucenie ujemnej wartości. Dotychczasowa regresja SQLite/H2, geometrii, API i backupów przechodzi.
 
 Nie wykonano w tej iteracji testu GUI z klientem Minecraft, realnego Vault/VaultUnlocked/WorldGuard ani nowego przebiegu Paper/Folia i zewnętrznej macierzy SQL. Kontrolowany executor testowy nie zastępuje tych prób. Kolejny zakres: test akceptacyjny zakupu na Paper z dostawcą, natywne dialogi, wewnętrzna obsługa stanów niepewnych i pozostała macierz E6–E8.
+
+
+## Ciągła obsługa GUI i usuwanie chunków
+
+Po udanym zakupie chunka `ChunkExpandGUI` pozostaje otwarte. Cache, geometria, licznik chunków
+oraz cena kolejnego poziomu są odświeżane po zakończeniu transakcji, więc gracz może od razu
+wybrać następny przylegający chunk bez ponownego otwierania panelu. Przycisk potwierdzenia jest
+blokowany na czas trwania operacji, aby nie wysłać dwóch zakupów tej samej oferty.
+
+Działki chunkowe mają osobne `ChunkRemoveGUI` dostępne z panelu działki. Usunięcie dotyczy
+dokładnie jednego chunka i zwiększa `geometry_revision` w tej samej transakcji co wpis historii.
+Nie można usunąć ostatniego chunka, bazowego chunka zawierającego zapisane `x/z` działki ani
+chunka, którego usunięcie rozdzieliłoby geometrię na niepołączone wyspy. Operacja nie zwraca
+kosztu zakupu i nie obniża `plot_expansion_levels`, dzięki czemu usuwanie terenu nie resetuje
+progresywnego cennika rozszerzeń.

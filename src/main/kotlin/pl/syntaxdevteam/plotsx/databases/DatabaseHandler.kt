@@ -377,6 +377,15 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
     }
 
+    /** Removes exactly one chunk while publishing the new protection snapshot atomically. */
+    internal fun removeChunkAtomically(
+        request: ChunkRemovalTransaction.Request
+    ): ChunkRemovalTransaction.Result = protectedMutation {
+        (getConnection() ?: error("No database connection for chunk removal")).use {
+            ChunkRemovalTransaction.remove(it, request)
+        }
+    }
+
     fun expandPlotAtomically(
         plotId: Int,
         ownerUuid: UUID,

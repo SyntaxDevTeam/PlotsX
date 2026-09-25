@@ -17,7 +17,7 @@ import java.util.UUID
 internal class ChunkExpandGUI(
     private val plugin: PlotsX,
     private val plotId: Int,
-    private val requestedTarget: ChunkPosition? = null
+    private var requestedTarget: ChunkPosition? = null
 ) : AbstractGUI(
     plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "expand.title"), 54
 ) {
@@ -48,9 +48,10 @@ internal class ChunkExpandGUI(
         offered = plot
         val standing = if (player.world.name == plot.world)
             ChunkPosition.atBlock(player.location.blockX, player.location.blockZ) else null
-        if (viewCenter == null) viewCenter = requestedTarget ?: standing?.takeIf { it in geometry.chunks } ?: geometry.chunks.first()
-        if (requestedTarget != null) {
-            val expansion = geometry.expansionTo(requestedTarget) ?: return null
+        val fixedRequestedTarget = requestedTarget
+        if (viewCenter == null) viewCenter = fixedRequestedTarget ?: standing?.takeIf { it in geometry.chunks } ?: geometry.chunks.first()
+        if (fixedRequestedTarget != null) {
+            val expansion = geometry.expansionTo(fixedRequestedTarget) ?: return null
             source = expansion.source
             direction = expansion.direction
             target = expansion.target
@@ -138,16 +139,21 @@ inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
             plugin.cacheManager.getPlot(plotId)?.let { Helpers(plugin).visualizePlotBorder3D(player, it, Helpers(plugin).borderDurationSeconds(), 2, 4) }
             return
         }
-        if (event.rawSlot !in setOf(confirmIndex, cancelIndex)) return
-        if (event.rawSlot == confirmIndex && target == null) { player.sendMessage(text("expand.map_choose")); return }
-        if (event.rawSlot == confirmIndex && !refreshSelectedOffer(player)) return
+        if (event.rawSlot == cancelIndex) {
+            submitted = true
+            player.scheduler.run(plugin, {
+                if (player.openInventory.topInventory !== inventory) return@run
+                player.closeInventory()
+                plugin.guiHandler.unregisterGui(player)
+            }, null)
+            return
+        }
+        if (event.rawSlot != confirmIndex) return
+        if (target == null) { player.sendMessage(text("expand.map_choose")); return }
+        if (!refreshSelectedOffer(player)) return
         submitted = true
-        val confirm = event.rawSlot == confirmIndex
-        player.scheduler.run(plugin, {
-            if (player.openInventory.topInventory !== inventory) return@run
-            player.closeInventory(); plugin.guiHandler.unregisterGui(player)
-            if (confirm) submit(player)
-        }, null)
+        inventory.setItem(confirmIndex, item(Material.CLOCK, "expand.processing"))
+        submit(player)
     }
 
     /** Refreshes the quote immediately before closing the GUI, so map navigation cannot submit stale data. */
@@ -222,13 +228,25 @@ inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
             }
             if (plugin.isEnabled) plugin.server.scheduler.runTask(plugin, Runnable {
                 if (!player.isOnline) return@Runnable
+                submitted = false
                 when (result) {
                     ChunkPurchaseService.Result.SUCCESS -> {
                         plugin.logger.debug(
                             "Chunk purchase completed: operation=${operation.id}, player=${player.name}, " +
                                 "plot=$plotId, target=${to.x},${to.z}"
                         )
-                        plugin.cacheManager.getPlot(plotId)?.let { Helpers(plugin).visualizePlotBorder3D(player, it, Helpers(plugin).borderDurationSeconds(), 2, 4) }
+                        requestedTarget = null
+                        target = null
+                        source = null
+                        viewCenter = to
+                        player.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                            "plots", "chunk_expand_success", mapOf("x" to to.x.toString(), "z" to to.z.toString())))
+                        plugin.cacheManager.getPlot(plotId)?.let { current ->
+                            Helpers(plugin).visualizePlotBorder3D(player, current, Helpers(plugin).borderDurationSeconds(), 2, 4)
+                            if (player.openInventory.topInventory === inventory) {
+                                prepareOffer(player)?.let { renderInventory(player, it) }
+                            }
+                        }
                     }
                     ChunkPurchaseService.Result.AREA_LIMIT -> error(player, "expand_area_limit")
                     ChunkPurchaseService.Result.CHUNK_LIMIT -> error(player, "claim_chunk_limit")
@@ -239,6 +257,14 @@ inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
                     ChunkPurchaseService.Result.REJECTED, ChunkPurchaseService.Result.DUPLICATE -> error(player, "expand_quote_changed")
                     ChunkPurchaseService.Result.REVIEW_REQUIRED -> player.sendMessage(plugin.messageHandler.stringMessageToComponent(
                         "error", "chunk_purchase_review", mapOf("operation" to operation.id.toString())))
+                }
+                if (result != ChunkPurchaseService.Result.SUCCESS && player.openInventory.topInventory === inventory) {
+                    val current = plugin.cacheManager.getPlot(plotId)
+                    if (current != null) {
+                        offered = current
+                        price = ExpansionEconomy.chunkPrice(plugin, current.expansionLevel)
+                        renderInventory(player, current)
+                    }
                 }
             })
         })
