@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "pl.syntaxdevteam"
-version = "1.0.0-Beta-1"
+version = "1.0.0-Beta-2"
 description = "Lightweight and versatile player plot protection plugin"
 
 val paperApiVersion = providers.gradleProperty("paperApiVersion")
