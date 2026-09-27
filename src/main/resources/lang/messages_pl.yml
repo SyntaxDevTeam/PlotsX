@@ -359,6 +359,9 @@ flags:
     name: "Zezwolenie na użycie redstone"
     description: "Pozwala obcym korzystać z redstone (nie wliczając dźwigni, przycisków i płytek naciskowych)."
     not_allowed: "<red>Nie możesz używać redstone na tej działce.</red>"
+  pistons:
+    name: "Zezwolenie na działanie tłoków"
+    description: "Pozwala tłokom przesuwać i niszczyć bloki wewnątrz działki. Przekraczanie granicy działki jest zawsze blokowane."
   utility:
     name: "Zezwolenie na użycie bloków użytkowych"
     description: "Pozwala obcym używać bloków użytkowych (np. pieców i kowadeł)."

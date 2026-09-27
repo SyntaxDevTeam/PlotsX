@@ -443,6 +443,9 @@ flags:
     name: "Redstone Use"
     description: "Allows non-members to use redstone (excluding levers, buttons, and pressure plates)."
     not_allowed: "<red>You can't use redstone on this plot.</red>"
+  pistons:
+    name: "Allow Pistons"
+    description: "Allows pistons to move and destroy blocks within the plot. Crossing a plot boundary is always blocked."
   utility:
     name: "Utility Block Use"
     description: "Allows non-members to use utility blocks (e.g., furnaces and anvils)."

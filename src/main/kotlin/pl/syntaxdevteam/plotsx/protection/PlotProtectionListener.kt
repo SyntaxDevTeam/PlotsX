@@ -584,26 +584,13 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     }
 
     /**
-    * Zablokuj wpychanie/przesuwanie bloków na lub z działek.
-    */
+     * Zezwala na pracę tłoka wewnątrz jednej działki zgodnie z flagą `pistons`.
+     * Przekraczanie granicy działki pozostaje zawsze zablokowane, aby tłok nie mógł
+     * wynosić bloków z chronionego terenu ani wpychać ich z zewnątrz.
+     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onPistonExtend(event: BlockPistonExtendEvent) {
-
-        val dx = event.direction.modX
-        val dy = event.direction.modY
-        val dz = event.direction.modZ
-
-        for (block in event.blocks) {
-            val from = block.location
-            val to   = from.clone().add(dx.toDouble(), dy.toDouble(), dz.toDouble())
-
-            if (getPlotAtLocation(from.world.name, from.blockX, from.blockZ) != null ||
-                getPlotAtLocation(to.world.name,   to.blockX,   to.blockZ)   != null
-            ) {
-                event.isCancelled = true
-                return
-            }
-        }
+        if (!isPistonMovementAllowed(event.block, event.direction, event.blocks)) event.isCancelled = true
     }
 
     /**
@@ -612,18 +599,25 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onPistonRetract(event: BlockPistonRetractEvent) {
         if (!event.isSticky) return
+        if (!isPistonMovementAllowed(event.block, event.direction, event.blocks)) event.isCancelled = true
+    }
 
-        for (block in event.blocks) {
-            val from = block.location
-            val to   = event.block.location
-
-            if (getPlotAtLocation(from.world.name, from.blockX, from.blockZ) != null ||
-                getPlotAtLocation(to.world.name,   to.blockX,   to.blockZ)   != null
-            ) {
-                event.isCancelled = true
-                return
+    private fun isPistonMovementAllowed(piston: Block, direction: BlockFace, movedBlocks: List<Block>): Boolean {
+        // The block directly in front is significant even when Bukkit reports no moved blocks:
+        // fragile blocks (for example pumpkins) can be destroyed rather than included in the list.
+        val affected = buildList {
+            add(piston)
+            add(piston.getRelative(direction))
+            movedBlocks.forEach { block ->
+                add(block)
+                add(block.getRelative(direction))
             }
         }
+        val plotIds = affected.mapTo(linkedSetOf()) { block ->
+            getPlotAtLocation(block.world.name, block.x, block.z)?.id
+        }
+
+        return PistonMovementPolicy.isAllowed(plotIds) { plotId -> isFlagAllowed(plotId, "pistons") }
     }
 
     /**

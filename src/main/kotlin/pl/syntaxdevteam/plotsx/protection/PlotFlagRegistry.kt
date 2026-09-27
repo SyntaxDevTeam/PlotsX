@@ -17,6 +17,7 @@ object PlotFlagRegistry {
         FlagMeta("smart-door", false, FlagType.WHITELIST, Material.IRON_DOOR, "smart-door.name", "smart-door.description"),
         FlagMeta("minecart", true, FlagType.BLACKLIST, Material.MINECART, "minecart.name", "minecart.description"),
         FlagMeta("redstone", false, FlagType.WHITELIST, Material.REDSTONE, "redstone.name", "redstone.description"),
+        FlagMeta("pistons", false, FlagType.WHITELIST, Material.PISTON, "pistons.name", "pistons.description"),
         FlagMeta("utility", false, FlagType.WHITELIST, Material.FURNACE, "utility.name", "utility.description"),
         FlagMeta("spawn-monsters", false, FlagType.WHITELIST, Material.CARVED_PUMPKIN, "spawn-monsters.name", "spawn-monsters.description"),
         FlagMeta("spawn-animals", true, FlagType.WHITELIST, Material.EGG, "spawn-animals.name", "spawn-animals.description"),

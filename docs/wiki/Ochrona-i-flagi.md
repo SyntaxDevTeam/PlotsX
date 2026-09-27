@@ -48,6 +48,7 @@ Zasady dostępu graczy dotyczą głównie gości. Właściciel i członkowie maj
 | `smart-door` | Goście mogą korzystać ze wspólnego otwierania sąsiednich drzwi tego samego rodzaju. | NIE |
 | `utility` | Goście mogą używać bloków użytkowych, np. pieców. | NIE |
 | `redstone` | Goście mogą zmieniać obsługiwane elementy redstone, np. przekaźniki. | NIE |
+| `pistons` | Tłoki mogą przesuwać i niszczyć bloki wewnątrz działki. Ruch przez granicę jest zawsze blokowany. | NIE |
 | `decorations` | Zezwolenie na działania związane z dekoracjami, np. stojakami i ramkami. | NIE |
 | `bed-use` | Goście mogą korzystać z łóżek. | NIE |
 | `crafting` | Goście mogą korzystać ze stołów rzemieślniczych i crafterów. | NIE |
