@@ -300,7 +300,7 @@ flags:
     not_allowed: "<red>You can't interact with mobs on this plot.</red>"
   flow:
     name: "Liquid Flow"
-    description: "Blocks the flow of water and lava."
+    description: "Blocks fluid flow and dispensers collecting or dispensing fluids and powder snow."
     not_allowed: "<red>You can't use water or lava on this plot.</red>"
     bucket_not_allowed: "<red>You can't use buckets on this plot.</red>"
   fire:

@@ -103,7 +103,7 @@ Podstawowe komendy `/plotsx`, `/ptx`, `/plot`, `/claim` i `/unclaim` są wyjątk
 | `spawn-monsters` | Zezwolenie na pojawianie się potworów. | NIE |
 | `spawn-animals` | Zezwolenie na pojawianie się zwierząt. | TAK |
 | `allow-spawners` | Zezwolenie na stawianie i niszczenie spawnerów przy sprawdzaniu dostępu gracza. | NIE |
-| `flow` | Blokada przepływu płynów. | TAK |
+| `flow` | Blokada przepływu płynów oraz ich pobierania i wylewania przez dyspensery. | TAK |
 | `flow-damage` | Zezwolenie na niszczenie podatnych bloków przez płyny. | NIE |
 | `fire` | Blokada obsługiwanych zdarzeń zapłonu, rozchodzenia się ognia i spalania. | TAK |
 | `iceform-player` | Goście mogą zamrażać wodę efektem Mroźnego Piechura. | NIE |

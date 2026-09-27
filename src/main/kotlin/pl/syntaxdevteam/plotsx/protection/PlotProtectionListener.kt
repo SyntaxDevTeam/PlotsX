@@ -620,9 +620,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         return PistonMovementPolicy.isAllowed(plotIds) { plotId -> isFlagAllowed(plotId, "pistons") }
     }
 
-    /**
-     * Zablokuj wylewanie płynów i powder_snow przez dyspensery na lub z działek.
-     */
+    /** Kontroluje pobieranie i wylewanie płynów przez dyspensery flagą `flow`. */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     fun onDispenserDispense(event: BlockDispenseEvent) {
         val state = event.block.state
@@ -640,18 +638,15 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val plotFrom = getPlotAtLocation(fromLoc.world.name, fromLoc.blockX, fromLoc.blockZ)
         val plotTo   = getPlotAtLocation(toLoc.world.name, toLoc.blockX, toLoc.blockZ)
 
-        if (plotFrom != null || plotTo != null) {
-            if (mat == Material.BUCKET) {
-                val type = toBlock.type
-                if (type == Material.WATER || type == Material.LAVA || type == Material.POWDER_SNOW) {
-                    event.isCancelled = true
-                    logger.debug("Dispenser próbuje zabrać $type pustym wiadrem z lub na działkę – anulowane")
-                    return
-                }
-            } else {
-                event.isCancelled = true
-                logger.debug("Dispenser próbuje wylać $mat na lub z działki – anulowane")
-            }
+        val takesLiquid = mat == Material.BUCKET &&
+            toBlock.type in setOf(Material.WATER, Material.LAVA, Material.POWDER_SNOW)
+        val dispensesLiquid = mat != Material.BUCKET
+        if (!takesLiquid && !dispensesLiquid) return
+
+        val affectedPlotIds = listOfNotNull(plotFrom?.id, plotTo?.id)
+        if (!AffectedPlotsPolicy.isAllowed(affectedPlotIds) { isFlagAllowed(it, "flow") }) {
+            event.isCancelled = true
+            logger.debug("Dyspenser próbuje przenieść $mat przez obszar z zablokowanym flow")
         }
     }
 

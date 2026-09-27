@@ -301,7 +301,7 @@ flags:
     not_allowed: "<red>Nie możesz wchodzić w interakcję z mobami na tej działce.</red>"
   flow:
     name: "Blokowanie przepływu cieczy"
-    description: "Blokuje przepływ wody i lawy."
+    description: "Blokuje przepływ oraz pobieranie i wylewanie cieczy lub sypkiego śniegu przez dyspensery."
     not_allowed: "<red>Nie możesz używać wody i lawy na tej działce.</red>"
     bucket_not_allowed: "<red>Nie możesz używać wiader na tej działce.</red>"
   fire:
