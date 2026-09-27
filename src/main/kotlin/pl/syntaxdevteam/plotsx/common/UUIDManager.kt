@@ -15,6 +15,8 @@ class UUIDManager(private val plugin: PlotsX) {
     private val activeUUIDs: MutableMap<String, UUID> = HashMap()
     private val gson = Gson()
 
+    fun close() { activeUUIDs.clear() }
+
     fun getUUID(playerName: String): UUID {
         val player: Player? = Bukkit.getPlayer(playerName)
         if (player != null) {

@@ -26,6 +26,13 @@ class HookHandler(private val plugin: PlotsX) {
     private var permission: Permission? = null
     private var cleanerXAPI: Any? = null
 
+    fun close() {
+        cleanerXAPI = null
+        luckPerms = null
+        chat = null
+        permission = null
+    }
+
     /**
      * Initializes the HookHandler by checking if the required services are available on the server.
      * If the services are found, they are hooked into, and success messages are logged.

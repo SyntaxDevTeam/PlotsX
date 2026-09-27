@@ -11,7 +11,7 @@ import org.bukkit.inventory.ItemStack
 import pl.syntaxdevteam.plotsx.PlotsX
 import java.util.*
 
-class GUIHandler(@Suppress("UNUSED_PARAMETER") plugin: PlotsX) : Listener {
+class GUIHandler(private val plugin: PlotsX) : Listener {
 
     private val openGuis: MutableMap<UUID, GUI> = mutableMapOf()
 
@@ -22,6 +22,13 @@ class GUIHandler(@Suppress("UNUSED_PARAMETER") plugin: PlotsX) : Listener {
 
     fun unregisterGui(player: Player) {
         openGuis.remove(player.uniqueId)
+    }
+
+    /** Releases inventories and GUI instances which otherwise retain the old plugin classloader. */
+    fun close() {
+        val players = openGuis.keys.mapNotNull(plugin.server::getPlayer)
+        openGuis.clear()
+        players.forEach(Player::closeInventory)
     }
 
     fun openLegacy(player: Player, gui: GUI) {

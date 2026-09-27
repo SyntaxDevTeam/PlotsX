@@ -33,7 +33,6 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     fun onDisable() {
-        plugin.databaseHandler.closeConnection()
         plugin.logger.err(plugin.pluginMeta.name + " " + plugin.pluginMeta.version + " has been disabled ☹️")
     }
 

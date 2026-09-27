@@ -69,6 +69,10 @@ class CacheManager(private val plugin: PlotsX) {
         }
     }
     fun clearAllCaches() { snapshots.clear(PlotCacheSnapshot.create()) }
+    fun close() {
+        decisionSnapshot.remove()
+        clearAllCaches()
+    }
     fun reloadAllCachesSync() {
         snapshots.reload {
             val loaded = databaseHandler.loadPlotCacheData()

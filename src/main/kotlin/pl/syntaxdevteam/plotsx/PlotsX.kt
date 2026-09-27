@@ -1,6 +1,7 @@
 package pl.syntaxdevteam.plotsx
 
 import org.bukkit.plugin.java.JavaPlugin
+import org.bukkit.event.HandlerList
 import org.bukkit.configuration.file.FileConfiguration
 import pl.syntaxdevteam.core.SyntaxCore
 import pl.syntaxdevteam.core.manager.PluginManagerX
@@ -23,8 +24,10 @@ import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
 import pl.syntaxdevteam.plotsx.loader.VersionChecker
 import pl.syntaxdevteam.plotsx.protection.PrivateChestManager
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 class PlotsX : JavaPlugin() {
+    private val stopping = AtomicBoolean(false)
     val protectionCoordinator = pl.syntaxdevteam.plotsx.protection.ProtectionCoordinator()
     var claimMode = pl.syntaxdevteam.plotsx.claiming.ClaimMode.CLASSIC
         private set
@@ -67,6 +70,7 @@ class PlotsX : JavaPlugin() {
     lateinit var versionChecker: VersionChecker
 
     override fun onEnable() {
+        stopping.set(false)
         SyntaxCore.registerUpdateSources(
             GitHubSource("SyntaxDevTeam/PlotsX"),
             ModrinthSource("")
@@ -84,12 +88,30 @@ class PlotsX : JavaPlugin() {
     }
 
     override fun onDisable() {
-        if (::interactions.isInitialized) interactions.close()
-        if (::renamePlotChatListener.isInitialized) renamePlotChatListener.close()
+        // PlugManX calls the normal Paper disable path, but doing the teardown here explicitly
+        // keeps callbacks from the old classloader from racing the newly loaded instance.
+        if (!stopping.compareAndSet(false, true)) return
+
         server.servicesManager.unregisterAll(this)
         apiImplementation?.close()
-        databaseHandler.closeConnection()
-        pluginInitializer.onDisable()
+        apiImplementation = null
+        HandlerList.unregisterAll(this)
+
+        server.scheduler.cancelTasks(this)
+        server.globalRegionScheduler.cancelTasks(this)
+        server.asyncScheduler.cancelTasks(this)
+
+        if (::interactions.isInitialized) interactions.close()
+        if (::renamePlotChatListener.isInitialized) renamePlotChatListener.close()
+        if (::guiHandler.isInitialized) guiHandler.close()
+        if (::cacheManager.isInitialized) cacheManager.close()
+        if (::uuidManager.isInitialized) uuidManager.close()
+        if (::hookHandler.isInitialized) hookHandler.close()
+        if (::coreProtectHook.isInitialized) coreProtectHook.close()
+        regionProtectionHook = null
+
+        if (::databaseHandler.isInitialized) databaseHandler.closeConnection()
+        if (::pluginInitializer.isInitialized) pluginInitializer.onDisable()
     }
     fun onReload() {
         val candidate = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(dataFolder, "config.yml"))

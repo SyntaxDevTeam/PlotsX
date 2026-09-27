@@ -7,6 +7,8 @@ import java.io.File
 import java.sql.*
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
@@ -16,6 +18,8 @@ class DatabaseHandler(private val plugin: PlotsX) {
     private var logger = plugin.logger
     private val dbType = plugin.config.getString("database.type")?.lowercase() ?: "sqlite"
     private val claimLocks = ConcurrentHashMap<String, ReentrantLock>()
+    private val closing = AtomicBoolean(false)
+    private val pendingServerCalls = ConcurrentHashMap.newKeySet<CompletableFuture<*>>()
 
     sealed interface ClaimResult {
         data class Success(val plotId: Int) : ClaimResult
@@ -127,6 +131,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
      * to configure and start the connection pool.
      */
     fun openConnection() {
+        closing.set(false)
         if (dataSource == null) {
             setupDataSource()
         }
@@ -141,10 +146,18 @@ class DatabaseHandler(private val plugin: PlotsX) {
      * Any errors encountered during shutdown are logged but do not interrupt the process.
      */
     fun closeConnection() {
+        if (!closing.compareAndSet(false, true)) return
+        pendingServerCalls.forEach { it.completeExceptionally(IllegalStateException("PlotsX is shutting down")) }
+        pendingServerCalls.clear()
+        claimLocks.clear()
+        val source = dataSource
+        dataSource = null
         try {
-            dataSource?.close()
-            logger.info("HikariCP pool shut down. Total=${dataSource?.hikariPoolMXBean?.totalConnections}, Active=${dataSource?.hikariPoolMXBean?.activeConnections}, Idle=${dataSource?.hikariPoolMXBean?.idleConnections}")
-        } catch (e: SQLException) {
+            val pool = source?.hikariPoolMXBean
+            val totals = "Total=${pool?.totalConnections}, Active=${pool?.activeConnections}, Idle=${pool?.idleConnections}"
+            source?.close()
+            logger.info("HikariCP pool shut down. $totals")
+        } catch (e: Exception) {
             logger.err("Error while closing HikariCP pool: ${e.message}")
         }
     }
@@ -160,6 +173,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
      * @return A valid `Connection` object, or `null` if the connection could not be established.
      */
     private fun getConnection(): Connection? {
+        if (closing.get()) return null
         return try {
             val connection = dataSource?.connection
             if (connection != null && dbType == "sqlite") {
@@ -353,13 +367,16 @@ class DatabaseHandler(private val plugin: PlotsX) {
         check(!org.bukkit.Bukkit.isPrimaryThread()) { "Chunk purchases must run off the server thread" }
         val calls = object : ChunkPurchaseService.ServerCalls {
             override fun <T> call(action: () -> T): T {
-                val future = java.util.concurrent.CompletableFuture<T>()
+                check(!closing.get()) { "PlotsX is shutting down" }
+                val future = CompletableFuture<T>()
+                pendingServerCalls.add(future)
                 plugin.server.scheduler.runTask(plugin, Runnable {
-                    if (!future.isDone) try { future.complete(action()) }
+                    if (!future.isDone && !closing.get()) try { future.complete(action()) }
                     catch (failure: Throwable) { future.completeExceptionally(failure) }
                 })
                 try { return future.get(30, java.util.concurrent.TimeUnit.SECONDS) }
                 catch (failure: Exception) { future.cancel(false); throw failure }
+                finally { pendingServerCalls.remove(future) }
             }
         }
         return ChunkPurchaseService({ getConnection() ?: error("No purchase database connection") },

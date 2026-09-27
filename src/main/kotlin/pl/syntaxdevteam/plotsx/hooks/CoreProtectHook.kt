@@ -71,6 +71,8 @@ class CoreProtectHook(private val plugin: PlotsX) : Listener {
 
     fun isEnabled(): Boolean = coreProtectAPI != null
 
+    fun close() { coreProtectAPI = null }
+
     /** Logowanie stawiania bloku */
     fun logBlockPlace(player: Player, block: Block) {
         coreProtectAPI?.logPlacement(
