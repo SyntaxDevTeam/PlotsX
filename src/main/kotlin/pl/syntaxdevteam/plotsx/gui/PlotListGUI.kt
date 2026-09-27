@@ -14,13 +14,15 @@ import java.util.UUID
 
 class PlotListGUI(
     private val plugin: PlotsX,
-    private val plots: List<PlotData>,
-    private val ownerUuid: UUID,
+    plots: List<PlotData>,
+    private val viewerUuid: UUID,
     private val backPlot: PlotData? = null
 ) : AbstractGUI(
     title = plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "plot.list_title"),
     size  = calculateSize(plots.size)
 ) {
+
+    private val plots = orderPlots(plots, viewerUuid)
 
     private val footerStart = inventory.size - 9
     private val backIndex = footerStart + 4
@@ -61,7 +63,7 @@ class PlotListGUI(
         if (event.slot == backIndex) {
             plugin.guiHandler.unregisterGui(player)
             player.closeInventory()
-            backPlot?.let { plugin.guiHandler.registerGui(player, PlotGUI(plugin, it, ownerUuid)) }
+            backPlot?.let { plugin.guiHandler.registerGui(player, PlotGUI(plugin, it)) }
             return
         }
         if (event.slot >= footerStart) return
@@ -69,7 +71,7 @@ class PlotListGUI(
         plugin.guiHandler.unregisterGui(player)
         player.closeInventory()
         plots.getOrNull(event.slot)
-            ?.let { plugin.guiHandler.registerGui(player, PlotGUI(plugin, it, ownerUuid)) }
+            ?.let { plugin.guiHandler.registerGui(player, PlotGUI(plugin, it)) }
     }
 
     private fun createPlotItem(plot: PlotData, index: Int): ItemStack {
@@ -81,15 +83,24 @@ class PlotListGUI(
             Material.ROOTED_DIRT,
             Material.MYCELIUM
         )
-        val material = dirtVariants[index % dirtVariants.size]
+        val owned = plot.ownerUuid == viewerUuid
+        val material = if (owned) dirtVariants[index % dirtVariants.size] else Material.OAK_FENCE
         val item     = ItemStack(material)
         val meta     = item.itemMeta!!
 
-        meta.displayName(Component.text(plot.name, NamedTextColor.GREEN))
+        meta.displayName(Component.text(plot.name, if (owned) NamedTextColor.GREEN else NamedTextColor.AQUA))
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm")
         val created    = dateFormat.format(Date(plot.creationTime))
         meta.lore(listOf(
+            if (owned) {
+                plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "plot.list_owned")
+            } else {
+                val owner = plugin.uuidManager.getPlayerName(plot.ownerUuid) ?: plot.ownerUuid.toString()
+                plugin.messageHandler.stringMessageToComponentNoPrefix(
+                    "GUI", "plot.list_shared", mapOf("owner" to owner)
+                )
+            },
             Component.text("Location: ${plot.x}, ${plot.z} (${plot.world})"),
             Component.text("Created: $created"),
             plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "plot.list_click_hint")
@@ -100,6 +111,9 @@ class PlotListGUI(
     }
 
     companion object {
+        internal fun orderPlots(plots: List<PlotData>, viewerUuid: UUID): List<PlotData> =
+            plots.sortedWith(compareBy<PlotData>({ it.ownerUuid != viewerUuid }, { it.id }))
+
         private fun calculateSize(amount: Int): Int {
             val contentRows = ((amount + 8) / 9).coerceIn(1, 5)
             return (contentRows + 1) * 9

@@ -68,9 +68,9 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         }
         if (plot != null) {
             if (!access.canOpen(player, plot)) { members.reply(player, "denied"); return }
-            plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot, plot.ownerUuid))
+            plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot))
         } else if (args.isEmpty()) {
-            val plots = plugin.databaseHandler.getPlotsByOwner(player.uniqueId)
+            val plots = plugin.databaseHandler.getPlayerPlots(player.uniqueId)
             if (plots.isEmpty()) members.reply(player, "stand_on_plot")
             else plugin.guiHandler.registerGui(player, PlotListGUI(plugin, plots, player.uniqueId))
         } else player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "plot_not_found"))

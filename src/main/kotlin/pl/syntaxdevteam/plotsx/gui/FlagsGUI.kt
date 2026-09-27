@@ -88,7 +88,7 @@ class FlagsGUI(
         }
 
         if (event.slot == 49) {
-            plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot, plot.ownerUuid))
+            plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot))
             return
         }
 

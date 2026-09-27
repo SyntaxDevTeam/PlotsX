@@ -17,8 +17,7 @@ import java.util.*
 
 class PlotGUI(
     private val plugin: PlotsX,
-    private val plot: PlotData? = null,
-    private val ownerUuid: UUID
+    private val plot: PlotData? = null
 ) : AbstractGUI(
     title = plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "plot.title_plot"),
     size = 45
@@ -154,9 +153,9 @@ class PlotGUI(
             }
 
             listIndex -> {
-                val playerPlots = plugin.databaseHandler.getPlotsByOwner(player.uniqueId)
+                val playerPlots = plugin.databaseHandler.getPlayerPlots(player.uniqueId)
                 if (playerPlots.isNotEmpty()) {
-                    plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, ownerUuid, pd))
+                    plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, player.uniqueId, pd))
                 } else {
                     player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_plot_found"))
                     player.closeInventory()

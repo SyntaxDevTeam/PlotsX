@@ -153,7 +153,7 @@ class MembersGUI(
         }
         button(49, Material.BARRIER, "back") {
             when (screen) {
-                "members" -> plugin.guiHandler.registerGui(it, PlotGUI(plugin, plot, plot.ownerUuid))
+                "members" -> plugin.guiHandler.registerGui(it, PlotGUI(plugin, plot))
                 "permissions" -> show(it, "roles")
                 "rank", "remove", "transfer" -> show(it, "member", target)
                 else -> show(it)
