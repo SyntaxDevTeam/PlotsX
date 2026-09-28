@@ -17,6 +17,12 @@ internal object IdentityMigrationStore {
     private const val COMPLETED = "COMPLETED"
     private const val ROLLED_BACK = "ROLLED_BACK"
 
+    fun aliasSchema(): String = """CREATE TABLE IF NOT EXISTS plotsx_uuid_aliases (
+        source_uuid VARCHAR(36) PRIMARY KEY,
+        target_uuid VARCHAR(36) NOT NULL,
+        migration_id VARCHAR(36) NOT NULL
+    )""".trimIndent()
+
     fun schema(): List<String> = listOf(
         """CREATE TABLE IF NOT EXISTS plotsx_identity_migrations (
             migration_id VARCHAR(36) PRIMARY KEY,
@@ -31,11 +37,7 @@ internal object IdentityMigrationStore {
             payload VARCHAR(255),
             PRIMARY KEY (migration_id, entity_type, entity_key)
         )""".trimIndent(),
-        """CREATE TABLE IF NOT EXISTS plotsx_uuid_aliases (
-            source_uuid VARCHAR(36) PRIMARY KEY,
-            target_uuid VARCHAR(36) NOT NULL,
-            migration_id VARCHAR(36) NOT NULL
-        )""".trimIndent(),
+        aliasSchema(),
     )
 
     fun migrateSchema(connection: Connection) {
