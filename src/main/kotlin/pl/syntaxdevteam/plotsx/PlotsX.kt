@@ -19,6 +19,8 @@ import pl.syntaxdevteam.plotsx.common.ConfigHandler
 import pl.syntaxdevteam.plotsx.common.UUIDManager
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.gui.GUIHandler
+import pl.syntaxdevteam.plotsx.identity.IdentityAliasRegistry
+import pl.syntaxdevteam.plotsx.identity.PlotsXIdentityMigrationService
 import pl.syntaxdevteam.plotsx.loader.PluginInitializer
 import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
 import pl.syntaxdevteam.plotsx.loader.VersionChecker
@@ -62,6 +64,7 @@ class PlotsX : JavaPlugin() {
     lateinit var guiHandler: GUIHandler
     lateinit var cacheManager: CacheManager
     lateinit var privateChestManager: PrivateChestManager
+    val identityAliasRegistry = IdentityAliasRegistry()
     //lateinit var invitationManager: InvitationManager
     lateinit var renamePlotChatListener: RenamePlotChatListener
     lateinit var interactions: pl.syntaxdevteam.plotsx.interaction.PlotInteractions
@@ -83,6 +86,12 @@ class PlotsX : JavaPlugin() {
         api = service
         server.servicesManager.register(pl.syntaxdevteam.plotsx.api.PlotsXApi::class.java, service, this,
             org.bukkit.plugin.ServicePriority.Normal)
+        server.servicesManager.register(
+            PlotsXIdentityMigrationService::class.java,
+            PlotsXIdentityMigrationService(this),
+            this,
+            org.bukkit.plugin.ServicePriority.Normal,
+        )
         server.pluginManager.registerEvents(service, this)
         versionChecker.checkAndLog()
     }
