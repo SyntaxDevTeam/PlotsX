@@ -12,6 +12,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
+import pl.syntaxdevteam.plotsx.identity.IdentityMigrationBridgeResult
+import pl.syntaxdevteam.plotsx.identity.IdentityMigrationBridgeStatus
+import pl.syntaxdevteam.plotsx.identity.IdentityMigrationStore
 
 class DatabaseHandler(private val plugin: PlotsX) {
     private var dataSource: HikariDataSource? = null
@@ -218,6 +221,8 @@ class DatabaseHandler(private val plugin: PlotsX) {
             }
             DatabaseMigrations.migrate(conn, dbType)
             OperationJournal.migrate(conn)
+            IdentityMigrationStore.migrateSchema(conn)
+            plugin.identityAliasRegistry.replaceAll(IdentityMigrationStore.loadAliases(conn))
             reportInterruptedOperations(conn)
         } ?: error("No database connection.")
     }
@@ -231,6 +236,43 @@ class DatabaseHandler(private val plugin: PlotsX) {
 
     internal fun loadPlotCacheData(plotId: Int? = null): PlotCacheData =
         (getConnection() ?: error("No database connection for protection cache.")).use { PlotCacheLoader.load(it, plotId) }
+
+    internal fun inspectIdentityMigration(
+        migrationId: UUID,
+        sourceUuid: UUID,
+        targetUuid: UUID,
+    ): IdentityMigrationBridgeResult =
+        (getConnection() ?: error("No database connection for identity migration inspection.")).use {
+            IdentityMigrationStore.inspect(it, migrationId, sourceUuid, targetUuid)
+        }
+
+    internal fun migrateIdentity(
+        migrationId: UUID,
+        sourceUuid: UUID,
+        targetUuid: UUID,
+    ): IdentityMigrationBridgeResult = protectedMutation {
+        (getConnection() ?: error("No database connection for identity migration.")).use { connection ->
+            val result = IdentityMigrationStore.migrate(connection, migrationId, sourceUuid, targetUuid)
+            if (result.status == IdentityMigrationBridgeStatus.SUCCESS) {
+                plugin.identityAliasRegistry.put(sourceUuid, targetUuid)
+            }
+            result
+        }
+    }
+
+    internal fun rollbackIdentityMigration(
+        migrationId: UUID,
+        sourceUuid: UUID,
+        targetUuid: UUID,
+    ): IdentityMigrationBridgeResult = protectedMutation {
+        (getConnection() ?: error("No database connection for identity migration rollback.")).use { connection ->
+            val result = IdentityMigrationStore.rollback(connection, migrationId, sourceUuid, targetUuid)
+            if (result.status == IdentityMigrationBridgeStatus.ROLLED_BACK) {
+                plugin.identityAliasRegistry.remove(sourceUuid, targetUuid)
+            }
+            result
+        }
+    }
 
     fun claimPlotAtomically(ownerUuid: UUID, actorUuid: UUID, world: String, x: Int, z: Int, y: Int,
                             radius: Int, maxPlots: Int, maxTotalArea: Long, namePrefix: String,
