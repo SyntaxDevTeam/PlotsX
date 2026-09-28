@@ -13,7 +13,7 @@ import pl.syntaxdevteam.plotsx.PlotsX
 import java.util.UUID
 
 /** Stores private-container ownership in the block itself, so it follows normal chunk persistence. */
-class PrivateChestManager(plugin: PlotsX) {
+class PrivateChestManager(private val plugin: PlotsX) {
     private val ownerKey = NamespacedKey(plugin, "private_chest_owner")
     private val trustedKey = NamespacedKey(plugin, "private_chest_trusted")
     private val plotKey = NamespacedKey(plugin, "private_chest_plot")
@@ -73,12 +73,13 @@ class PrivateChestManager(plugin: PlotsX) {
         val data = state.persistentDataContainer
         val owner = data.get(ownerKey, PersistentDataType.STRING)?.let {
             runCatching { UUID.fromString(it) }.getOrNull()
-        } ?: return null
+        }?.let(plugin.identityAliasRegistry::resolve) ?: return null
         val plotId = data.get(plotKey, PersistentDataType.INTEGER) ?: return null
         val trusted = data.get(trustedKey, PersistentDataType.STRING)
             .orEmpty()
             .split(',')
             .mapNotNull { value -> runCatching { UUID.fromString(value) }.getOrNull() }
+            .map(plugin.identityAliasRegistry::resolve)
             .toSet()
         return Protection(plotId, owner, trusted)
     }
