@@ -974,6 +974,8 @@ class DatabaseHandler(private val plugin: PlotsX) {
     private fun performImportDatabase() {
         (getConnection() ?: error("No database connection.")).use { conn ->
             SqlBackup.restore(conn, SqlBackup.dialect(dbType), File(plugin.dataFolder, "dump/backup.sql"), allowChunkPlots = true)
+            IdentityMigrationStore.migrateSchema(conn)
+            plugin.identityAliasRegistry.replaceAll(IdentityMigrationStore.loadAliases(conn))
             if (OperationJournal.exists(conn)) reportInterruptedOperations(conn)
         }
         plugin.cacheManager.reloadAllCachesSync()
