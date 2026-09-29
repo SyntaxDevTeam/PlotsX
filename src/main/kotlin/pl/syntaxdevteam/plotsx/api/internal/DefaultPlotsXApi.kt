@@ -142,7 +142,6 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
             if (role !in access.roles) return MemberUpdateResult.UNKNOWN_ROLE
             if (action !in access.actions) return MemberUpdateResult.UNKNOWN_ACTION
             if (!plugin.databaseHandler.updatePlotFlag(plotId, access.key(role, action), allowed)) return MemberUpdateResult.DATABASE_ERROR
-            plugin.cacheManager.reloadFlagsSync(plotId)
             plugin.databaseHandler.logPlotAction(PlotLogEntry(plotId, "RolePermission:$role:$action:$allowed",
                 (actor as? Player)?.uniqueId ?: UUID(0, 0), System.currentTimeMillis()))
             return MemberUpdateResult.UPDATED
@@ -160,7 +159,6 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
             val previous = plugin.databaseHandler.getPlotFlag(plotId, flag)?.value?.toBooleanStrictOrNull() ?: definition.defaultValue
             if (previous == value) return FlagUpdateResult.UNCHANGED
             if (!plugin.databaseHandler.updatePlotFlag(plotId, flag, value)) return FlagUpdateResult.DATABASE_ERROR
-            plugin.cacheManager.reloadFlagsSync(plotId)
             val actorId = (actor as? Player)?.uniqueId
             plugin.databaseHandler.logPlotAction(PlotLogEntry(plotId, "UpdateFlag:$flag:$value", actorId ?: UUID(0, 0), System.currentTimeMillis()))
             plugin.server.pluginManager.callEvent(PlotFlagChangedEvent(plot.snapshot(), flag, previous, value, actorId))

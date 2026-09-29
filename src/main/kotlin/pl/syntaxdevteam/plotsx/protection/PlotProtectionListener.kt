@@ -717,6 +717,34 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             return
         }
 
+        // Doors are Openable/Powerable and may also be classified by broader compatibility
+        // groups. Resolve their dedicated flags first. smart-door augments an allowed door;
+        // it must never bypass the door flag on its own.
+        if (mat in doorsAndGates) {
+            if (!hasPlotPermission(player, plot, "door")) {
+                event.isCancelled = true
+                player.sendMessage(message.stringMessageToComponent("flags", "door.not_allowed"))
+                return
+            }
+
+            val data = block.blockData
+            if (data is Openable && hasPlotPermission(player, plot, "smart-door")) {
+                if (!toggling.add(block)) return
+                plugin.server.scheduler.runTaskLater(plugin, Runnable { toggling.remove(block) }, 20L)
+
+                toggleOpenState(block)
+                for (face in listOf(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)) {
+                    val neighbour = block.getRelative(face)
+                    if (neighbour.type == mat) {
+                        toggleOpenState(neighbour)
+                        break
+                    }
+                }
+                event.isCancelled = true
+            }
+            return
+        }
+
         when (mat) {
             in containers -> {
                 val privateChest = plugin.privateChestManager.getProtection(block, plot.id)
@@ -775,34 +803,6 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             }
         }
 
-        if (mat in doorsAndGates) {
-            val data = block.blockData
-            if (data is Openable && hasPlotPermission(player, plot, "smart-door")) {
-                if (!toggling.add(block)) return
-                plugin.server.scheduler.runTaskLater(plugin, Runnable { toggling.remove(block) }, 20L)
-
-                toggleOpenState(block)
-                for (face in listOf(
-                    BlockFace.NORTH, BlockFace.SOUTH,
-                    BlockFace.EAST,  BlockFace.WEST
-                )) {
-                    val neighbour = block.getRelative(face)
-                    if (neighbour.type == mat) {
-                        toggleOpenState(neighbour)
-                        break
-                    }
-                }
-
-                event.isCancelled = true
-                return
-            }
-
-            if (!hasPlotPermission(player, plot, "door")) {
-                event.isCancelled = true
-                player.sendMessage(message.stringMessageToComponent("flags", "door.not_allowed"))
-            }
-            return
-        }
     }
 
     private fun toggleOpenState(block: Block) {

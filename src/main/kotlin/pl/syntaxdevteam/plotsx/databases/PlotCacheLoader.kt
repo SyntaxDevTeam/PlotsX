@@ -29,7 +29,7 @@ internal object PlotCacheLoader {
             } }
             val plots = mutableListOf<PlotData>()
             if (chunkSchema) {
-                plots.addAll(PlotRepository.readAll(conn).filter { plotId == null || it.id == plotId }.map { it.toPlotData() })
+                plots.addAll(PlotRepository.readAll(conn, plotId).map { it.toPlotData() })
             } else {
             query("plots") { rows ->
                 while (rows.next()) {

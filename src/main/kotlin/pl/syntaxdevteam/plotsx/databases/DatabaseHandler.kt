@@ -429,7 +429,9 @@ class DatabaseHandler(private val plugin: PlotsX) {
         val result = ChunkPurchaseService({ getConnection() ?: error("No purchase database connection") },
             plugin.protectionCoordinator, {
                 val publicationStarted = System.nanoTime()
-                try { plugin.cacheManager.reloadAllCachesSync() }
+                // A chunk purchase changes one plot only. Do not re-read every plot, chunk,
+                // flag and member row just to publish that one changed geometry.
+                try { plugin.cacheManager.reloadPlotSync(operation.plotId) }
                 finally { cachePublicationNanos.addAndGet(System.nanoTime() - publicationStarted) }
             }, calls, { logger.err(it) }).purchase(operation, level, limits, account, validate)
         logger.debug(
@@ -610,7 +612,10 @@ class DatabaseHandler(private val plugin: PlotsX) {
      *
      * `updatePlotFlag(plotId = 42, flagName = "pvp", flagValue = true)`
      **/
-    fun updatePlotFlag(plotId: Int, flagName: String, flagValue: Boolean): Boolean = protectedMutation { performUpdatePlotFlag(plotId, flagName, flagValue) }
+    fun updatePlotFlag(plotId: Int, flagName: String, flagValue: Boolean): Boolean =
+        plugin.protectionCoordinator.mutate({ plugin.cacheManager.reloadPlotSync(plotId) }) {
+            performUpdatePlotFlag(plotId, flagName, flagValue)
+        }
 
     private fun performUpdatePlotFlag(plotId: Int, flagName: String, flagValue: Boolean): Boolean {
         val connection = getConnection() ?: run {

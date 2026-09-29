@@ -62,10 +62,13 @@ internal object PlotRepository {
     }
 
     /** Bulk loading preserves the saved type. Caller supplies a snapshot transaction or quiescent database. */
-    fun readAll(conn: Connection): List<StoredPlot> {
-        val geometries = PlotGeometryRepository.readAll(conn).associateBy { it.plotId }
-        return conn.createStatement().use { stmt ->
-            stmt.executeQuery("SELECT plot_id, owner_uuid, world, name, x, y, z, creation_time FROM plots ORDER BY plot_id").use { rows ->
+    fun readAll(conn: Connection, plotId: Int? = null): List<StoredPlot> {
+        val geometries = PlotGeometryRepository.readAll(conn, plotId).associateBy { it.plotId }
+        val sql = "SELECT plot_id, owner_uuid, world, name, x, y, z, creation_time FROM plots" +
+            if (plotId == null) " ORDER BY plot_id" else " WHERE plot_id = ?"
+        return conn.prepareStatement(sql).use { stmt ->
+            if (plotId != null) stmt.setInt(1, plotId)
+            stmt.executeQuery().use { rows ->
                 buildList {
                     while (rows.next()) {
                         val id = rows.getInt(1)

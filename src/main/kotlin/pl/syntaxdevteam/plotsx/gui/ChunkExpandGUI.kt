@@ -49,8 +49,7 @@ internal class ChunkExpandGUI(
         val plot = plugin.cacheManager.getPlot(plotId) ?: return null
         val geometry = plot.geometry as? ChunkGeometry ?: return null
         offered = plot
-        val standing = if (player.world.name == plot.world)
-            ChunkPosition.atBlock(player.location.blockX, player.location.blockZ) else null
+        val standing = playerChunk(player, plot.world)
         val fixedRequestedTarget = requestedTarget
         if (viewCenter == null) viewCenter = fixedRequestedTarget ?: standing?.takeIf { it in geometry.chunks } ?: geometry.chunks.first()
         if (fixedRequestedTarget != null) {
@@ -75,7 +74,7 @@ internal class ChunkExpandGUI(
         inventory.clear()
         val geometry = plot.geometry as ChunkGeometry
         val center = requireNotNull(viewCenter)
-        val standing = ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
+        val standing = playerChunk(player, plot.world)
         val cells = mapSlots.mapNotNull { slot ->
             val position = offset(center, slot % 9 - 4, slot / 9 - 3) ?: return@mapNotNull null
             MapCell(slot, position, geometry.expansionTo(position), isOccupied(plot, position))
@@ -181,7 +180,7 @@ internal class ChunkExpandGUI(
         val current = plugin.cacheManager.getPlot(plotId)
         val geometry = current?.geometry as? ChunkGeometry
         val expansion = geometry?.expansionTo(selected)
-        val standing = ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
+        val standing = current?.let { playerChunk(player, it.world) }
         if (current == null || current.ownerUuid != player.uniqueId || player.world.name != current.world ||
             expansion == null || (requestedTarget == null && standing !in geometry.chunks) ||
             (requestedTarget != null && standing != selected)) {
@@ -222,7 +221,7 @@ internal class ChunkExpandGUI(
             val current = plugin.cacheManager.getPlot(plotId) ?: return false
             if (current.ownerUuid != owner || current.geometryRevision != plot.geometryRevision || current.radius != null ||
                 current.expansionLevel != plot.expansionLevel || player.world.name != plot.world) return false
-            val standing = ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
+            val standing = playerChunk(player, plot.world) ?: return false
             val currentGeometry = current.geometry as? ChunkGeometry ?: return false
             if ((requestedTarget == null && standing !in currentGeometry.chunks) ||
                 (requestedTarget != null && standing != to)) return false
@@ -295,6 +294,11 @@ internal class ChunkExpandGUI(
 
     private fun limits(player: Player) = ChunkExpansionTransaction.Limits(plugin.hookHandler.getPlotLimits(player).maxTotalArea,
         plugin.hookHandler.getMaxChunksPerPlot(player), plugin.hookHandler.getMaxOwnedChunks(player))
+    private fun playerChunk(player: Player, world: String): ChunkPosition? {
+        if (!player.world.name.equals(world, ignoreCase = true)) return null
+        val chunk = player.location.chunk
+        return ChunkPosition(chunk.x, chunk.z)
+    }
     private fun error(player: Player, key: String) { player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", key)) }
     private fun text(key: String, replacements: Map<String, String> = emptyMap()) =
         plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", key, replacements)

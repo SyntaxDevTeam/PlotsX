@@ -14,27 +14,29 @@ internal object PlotGeometryRepository {
     fun worldKey(world: String): String = world.lowercase(Locale.ROOT)
 
     /** Batch reads also reject orphan rows, mixed types, invalid world keys and disconnected chunks. */
-    fun readAll(conn: Connection): List<StoredPlotGeometry> {
+    fun readAll(conn: Connection, plotId: Int? = null): List<StoredPlotGeometry> {
+        val filter = if (plotId == null) "" else " WHERE plot_id = ?"
+        fun query(sql: String, consume: (java.sql.ResultSet) -> Unit) {
+            conn.prepareStatement(sql).use { stmt ->
+                if (plotId != null) stmt.setInt(1, plotId)
+                stmt.executeQuery().use(consume)
+            }
+        }
         val segments = mutableMapOf<Int, MutableList<PlotSegment>>()
-        conn.createStatement().use { stmt ->
-            stmt.executeQuery("SELECT plot_id, x, z, radius FROM plot_segments ORDER BY plot_id, x, z").use { rows ->
+        query("SELECT plot_id, x, z, radius FROM plot_segments$filter ORDER BY plot_id, x, z") { rows ->
                 while (rows.next()) {
                     val radius = rows.getInt(4)
                     require(radius >= 0) { "Invalid segment radius for plot ${rows.getInt(1)}" }
                     segments.getOrPut(rows.getInt(1)) { mutableListOf() }.add(PlotSegment(rows.getInt(2), rows.getInt(3), radius))
                 }
-            }
         }
         val chunks = mutableMapOf<Int, MutableList<Pair<String, ChunkPosition>>>()
-        conn.createStatement().use { stmt ->
-            stmt.executeQuery("SELECT plot_id, world_key, chunk_x, chunk_z FROM plot_chunks ORDER BY plot_id, chunk_x, chunk_z").use { rows ->
+        query("SELECT plot_id, world_key, chunk_x, chunk_z FROM plot_chunks$filter ORDER BY plot_id, chunk_x, chunk_z") { rows ->
                 while (rows.next()) chunks.getOrPut(rows.getInt(1)) { mutableListOf() }
                     .add(rows.getString(2) to ChunkPosition(rows.getInt(3), rows.getInt(4)))
-            }
         }
         val plots = mutableListOf<StoredPlotGeometry>()
-        conn.createStatement().use { stmt ->
-            stmt.executeQuery("SELECT plot_id, world, x, z, radius, geometry_type, geometry_revision FROM plots ORDER BY plot_id").use { rows ->
+        query("SELECT plot_id, world, x, z, radius, geometry_type, geometry_revision FROM plots$filter ORDER BY plot_id") { rows ->
                 while (rows.next()) {
                     val id = rows.getInt(1)
                     val world = rows.getString(2)
@@ -58,7 +60,6 @@ internal object PlotGeometryRepository {
                     }
                     plots.add(StoredPlotGeometry(id, world, revision, geometry))
                 }
-            }
         }
         require(segments.isEmpty() && chunks.isEmpty()) { "Orphan plot geometry records" }
         return plots
