@@ -455,7 +455,11 @@ class DatabaseHandler(private val plugin: PlotsX) {
         maxRadius: Int,
         maxTotalArea: Long,
         expectedSegmentCount: Int
-    ): ExpandResult = protectedMutation { performExpandPlotAtomically(plotId, ownerUuid, actorUuid, direction, sourceSegment, expectedSegment, maxRadius, maxTotalArea, expectedSegmentCount) }
+    ): ExpandResult = plugin.protectionCoordinator.mutate(
+        { plugin.cacheManager.reloadPlotSync(plotId) },
+        { performExpandPlotAtomically(plotId, ownerUuid, actorUuid, direction, sourceSegment, expectedSegment,
+            maxRadius, maxTotalArea, expectedSegmentCount) }
+    )
 
     private fun performExpandPlotAtomically(
         plotId: Int,

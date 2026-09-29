@@ -55,6 +55,17 @@ internal class SpatialPlotIndex<T>(
             ?: largeClassicPlots[key]?.firstOrNull { geometry(it).contains(x, z) }
     }
 
+    /** Finds geometry occupying any part of a chunk without constructing a temporary geometry. */
+    fun atChunk(world: String, position: ChunkPosition): T? {
+        val key = worldKey(world)
+        fun occupies(plot: T): Boolean = when (val shape = geometry(plot)) {
+            is ChunkGeometry -> position in shape.chunks
+            is ClassicGeometry -> shape.regions().any { it.intersects(position.bounds) }
+        }
+        return buckets[key]?.get(position).orEmpty().firstOrNull(::occupies)
+            ?: largeClassicPlots[key]?.firstOrNull(::occupies)
+    }
+
     companion object {
         fun worldKey(world: String): String = world.lowercase(Locale.ROOT)
     }

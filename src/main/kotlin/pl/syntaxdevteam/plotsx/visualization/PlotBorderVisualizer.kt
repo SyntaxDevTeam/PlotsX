@@ -16,12 +16,13 @@ class PlotBorderVisualizer(private val plugin: PlotsX) : Listener {
     private val sessions = ConcurrentHashMap<UUID, BukkitTask>()
 
     fun show(player: Player, plot: PlotData, durationSeconds: Int, spacing: Int = 2) {
-        if (player.world.name != plot.world) return
         cancel(player.uniqueId)
+        if (player.world.name != plot.world) return
         val horizontal = BorderOutline.create(plot, spacing.coerceAtLeast(1))
         // Height lookups are intentionally completed once, before the repeating sender starts.
         val points = horizontal.map { point -> Triple(point.x + .5, player.world.getHighestBlockYAt(point.x, point.z) + 1.25, point.z + .5) }
         if (points.isEmpty()) return
+        var sendsRemaining = durationSeconds.coerceAtLeast(1)
         lateinit var task: BukkitTask
         task = plugin.server.scheduler.runTaskTimer(plugin, Runnable {
             if (!player.isOnline || player.world.name != plot.world) {
@@ -29,11 +30,10 @@ class PlotBorderVisualizer(private val plugin: PlotsX) : Listener {
                 return@Runnable
             }
             points.forEach { (x, y, z) -> player.spawnParticle(Particle.END_ROD, x, y, z, 1, 0.0, 0.0, 0.0, 0.0, null, true) }
+            sendsRemaining--
+            if (sendsRemaining == 0 && sessions.remove(player.uniqueId, task)) task.cancel()
         }, 0L, 20L)
         sessions[player.uniqueId] = task
-        plugin.server.scheduler.runTaskLater(plugin, Runnable {
-            if (sessions.remove(player.uniqueId, task)) task.cancel()
-        }, durationSeconds.coerceAtLeast(1) * 20L)
     }
 
     fun cancel(playerId: UUID) { sessions.remove(playerId)?.cancel() }

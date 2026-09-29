@@ -49,4 +49,31 @@ class WorldGuardHook(private val plugin: PlotsX) : RegionProtectionHook {
         )
         true
     }
+
+    override fun overlappingBounds(
+        world: World,
+        bounds: Collection<pl.syntaxdevteam.plotsx.geometry.BlockBounds>
+    ): Set<pl.syntaxdevteam.plotsx.geometry.BlockBounds> {
+        if (bounds.isEmpty()) return emptySet()
+        return try {
+            val regionManager = WorldGuard.getInstance().platform.regionContainer.get(BukkitAdapter.adapt(world))
+            if (regionManager == null) {
+                plugin.logger.warning("WorldGuard RegionManager unavailable for ${world.name}; blocking preview for safety.")
+                return bounds.toSet()
+            }
+            val regions = regionManager.regions.values.filter { it.id != "__global__" }
+            bounds.filterTo(linkedSetOf()) { candidateBounds ->
+                val candidate = ProtectedCuboidRegion(
+                    "__plotsx_preview_check__",
+                    true,
+                    BlockVector3.at(Math.toIntExact(candidateBounds.minX), world.minHeight, Math.toIntExact(candidateBounds.minZ)),
+                    BlockVector3.at(Math.toIntExact(candidateBounds.maxX), world.maxHeight - 1, Math.toIntExact(candidateBounds.maxZ))
+                )
+                candidate.getIntersectingRegions(regions).isNotEmpty()
+            }
+        } catch (exception: RuntimeException) {
+            plugin.logger.err("WorldGuard preview check failed in ${world.name}; blocking preview for safety: ${exception.message}")
+            bounds.toSet()
+        }
+    }
 }

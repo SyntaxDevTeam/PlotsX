@@ -68,47 +68,57 @@ internal class ChunkExpandGUI(
         return plot
     }
 
-private fun renderInventory(player: Player, plot: PlotData) {
-inventory.clear()
-val geometry = plot.geometry as ChunkGeometry
-val center = requireNotNull(viewCenter)
-val standing = ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
-mapSlots.forEach { slot ->
-    val row = slot / 9
-    val column = slot % 9
-    val position = offset(center, column - 4, row - 3) ?: return@forEach
-    val expansion = geometry.expansionTo(position)
-    val blocked = expansion != null && isBlocked(player, plot, position)
-    val material = when {
-        position == target -> Material.EMERALD_BLOCK
-        position in geometry.chunks && position == standing -> Material.PLAYER_HEAD
-        position in geometry.chunks -> Material.WHITE_CONCRETE
-        blocked -> Material.RED_STAINED_GLASS_PANE
-        expansion != null -> Material.LIME_STAINED_GLASS_PANE
-        else -> Material.GRAY_STAINED_GLASS_PANE
+    private fun renderInventory(player: Player, plot: PlotData) {
+        inventory.clear()
+        val geometry = plot.geometry as ChunkGeometry
+        val center = requireNotNull(viewCenter)
+        val standing = ChunkPosition.atBlock(player.location.blockX, player.location.blockZ)
+        val cells = mapSlots.mapNotNull { slot ->
+            val position = offset(center, slot % 9 - 4, slot / 9 - 3) ?: return@mapNotNull null
+            MapCell(slot, position, geometry.expansionTo(position), isOccupied(plot, position))
+        }
+        val protected = protectedPreview(player, cells.asSequence()
+            .filter { it.expansion != null && !it.occupied }.map { it.position }.toSet())
+        cells.forEach { cell ->
+            val position = cell.position
+            val blocked = cell.expansion != null && (cell.occupied || position in protected)
+            val material = when {
+                position == target -> Material.EMERALD_BLOCK
+                position in geometry.chunks && position == standing -> Material.PLAYER_HEAD
+                position in geometry.chunks -> Material.WHITE_CONCRETE
+                blocked -> Material.RED_STAINED_GLASS_PANE
+                cell.expansion != null -> Material.LIME_STAINED_GLASS_PANE
+                else -> Material.GRAY_STAINED_GLASS_PANE
+            }
+            val key = when {
+                position == target -> "expand.map_selected"
+                position in geometry.chunks && position == standing -> "expand.map_player"
+                position in geometry.chunks -> "expand.map_claimed"
+                blocked -> "expand.map_blocked"
+                cell.expansion != null -> "expand.map_available"
+                else -> "expand.map_empty"
+            }
+            inventory.setItem(cell.slot, mapItem(material, key, position))
+        }
+        panButtons.forEach { (slot, value) -> inventory.setItem(slot,
+            item(Material.ARROW, "expand.map_pan_${value.name.lowercase()}")) }
+        inventory.setItem(bordersIndex, item(Material.ENDER_EYE, "expand.show_borders"))
+        val lore = listOf(
+            if (target == null) text("expand.map_choose") else text("expand.chunk_target", mapOf("x" to target!!.x.toString(), "z" to target!!.z.toString())),
+            text("expand.chunk_count", mapOf("count" to plot.chunks.size.toString(), "max" to plugin.hookHandler.getMaxChunksPerPlot(player).toString())),
+            text("expand.price", mapOf("price" to (price?.toPlainString() ?: "?")))
+        )
+        inventory.setItem(confirmIndex, item(if (target == null) Material.GRAY_DYE else Material.EMERALD_BLOCK,
+            "expand.confirm").apply { itemMeta = itemMeta.apply { lore(lore) } })
+        inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
     }
-    val key = when {
-        position == target -> "expand.map_selected"
-        position in geometry.chunks && position == standing -> "expand.map_player"
-        position in geometry.chunks -> "expand.map_claimed"
-        blocked -> "expand.map_blocked"
-        expansion != null -> "expand.map_available"
-        else -> "expand.map_empty"
-    }
-    inventory.setItem(slot, mapItem(material, key, position))
-}
-panButtons.forEach { (slot, value) -> inventory.setItem(slot,
-    item(Material.ARROW, "expand.map_pan_${value.name.lowercase()}")) }
-inventory.setItem(bordersIndex, item(Material.ENDER_EYE, "expand.show_borders"))
-val lore = listOf(
-    if (target == null) text("expand.map_choose") else text("expand.chunk_target", mapOf("x" to target!!.x.toString(), "z" to target!!.z.toString())),
-    text("expand.chunk_count", mapOf("count" to plot.chunks.size.toString(), "max" to plugin.hookHandler.getMaxChunksPerPlot(player).toString())),
-    text("expand.price", mapOf("price" to (price?.toPlainString() ?: "?")))
-)
-inventory.setItem(confirmIndex, item(if (target == null) Material.GRAY_DYE else Material.EMERALD_BLOCK,
-    "expand.confirm").apply { itemMeta = itemMeta.apply { lore(lore) } })
-inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
-}
+
+    private data class MapCell(
+        val slot: Int,
+        val position: ChunkPosition,
+        val expansion: ChunkGeometry.Expansion?,
+        val occupied: Boolean
+    )
 
     private fun openLegacy(player: Player) { plugin.guiHandler.openLegacy(player, this) }
 
@@ -289,15 +299,28 @@ inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
         return ChunkPosition(x.toInt(), z.toInt())
     }
     private fun isBlocked(player: Player, plot: PlotData, position: ChunkPosition, freshProtectionCheck: Boolean = false): Boolean {
-        val occupied = plugin.cacheManager.getPlotAtChunk(plot.world, position.x, position.z)?.id?.let { it != plot.id } == true
-        if (occupied) return true
+        if (isOccupied(plot, position)) return true
         val hook = plugin.regionProtectionHook ?: return false
         if (freshProtectionCheck) return hook.overlapsBounds(player.world, position.bounds)
+        return position in protectedPreview(player, setOf(position))
+    }
+
+    private fun isOccupied(plot: PlotData, position: ChunkPosition): Boolean =
+        plugin.cacheManager.getPlotAtChunk(plot.world, position.x, position.z)?.id?.let { it != plot.id } == true
+
+    /** Resolves all cache misses through one hook invocation for this render. */
+    private fun protectedPreview(player: Player, positions: Set<ChunkPosition>): Set<ChunkPosition> {
+        val hook = plugin.regionProtectionHook ?: return emptySet()
         val now = System.currentTimeMillis()
-        protectionPreview[position]?.takeIf { it.expiresAt >= now }?.let { return it.blocked }
-        val blocked = hook.overlapsBounds(player.world, position.bounds)
-        protectionPreview[position] = ProtectionPreview(blocked, now + 1_000L)
-        if (protectionPreview.size > 128) protectionPreview.entries.removeIf { it.value.expiresAt < now }
-        return blocked
+        val missing = positions.filterTo(linkedSetOf()) { protectionPreview[it]?.expiresAt?.let { expiry -> expiry < now } != false }
+        if (missing.isNotEmpty()) {
+            val byBounds = missing.associateBy { it.bounds }
+            val blockedBounds = hook.overlappingBounds(player.world, byBounds.keys)
+            missing.forEach { position ->
+                protectionPreview[position] = ProtectionPreview(position.bounds in blockedBounds, now + 1_000L)
+            }
+        }
+        protectionPreview.entries.removeIf { it.value.expiresAt < now && it.key !in positions }
+        return positions.filterTo(linkedSetOf()) { protectionPreview[it]?.blocked == true }
     }
 }

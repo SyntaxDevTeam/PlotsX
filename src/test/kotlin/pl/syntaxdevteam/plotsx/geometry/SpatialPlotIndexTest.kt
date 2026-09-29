@@ -50,6 +50,22 @@ class SpatialPlotIndexTest {
         assertNull(index.at("world", 7, 7))
     }
 
+    @Test fun `chunk lookup detects classic geometry touching only part of chunk`() {
+        val plot = Entry(1, "world", ClassicGeometry(PlotSegment(15, 8, 1)))
+        val index = index(listOf(plot))
+
+        assertEquals(1, index.atChunk("world", ChunkPosition(1, 0))?.id)
+        assertNull(index.at("world", 16, 0))
+    }
+
+    @Test fun `chunk lookup uses direct membership for chunk geometry`() {
+        val plot = Entry(1, "world", ChunkGeometry(listOf(ChunkPosition(-2, 3))))
+        val index = index(listOf(plot))
+
+        assertEquals(1, index.atChunk("WORLD", ChunkPosition(-2, 3))?.id)
+        assertNull(index.atChunk("world", ChunkPosition(-1, 3)))
+    }
+
     @Test fun `world identity does not fold accents and clearing input does not erase the index`() {
         val plots = mutableListOf(Entry(1, "world", ChunkGeometry(listOf(ChunkPosition(-1, -1)))),
             Entry(2, "wórld", ChunkGeometry(listOf(ChunkPosition(-1, -1)))))

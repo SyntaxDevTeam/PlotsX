@@ -14,6 +14,8 @@ internal class PlotCacheSnapshot private constructor(
     private val index: SpatialPlotIndex<PlotData>
 ) {
     fun at(world: String, x: Int, z: Int): PlotData? = index.at(world, x, z)
+    fun atChunk(world: String, position: pl.syntaxdevteam.plotsx.geometry.ChunkPosition): PlotData? =
+        index.atChunk(world, position)
 
     fun withMetadata(flags: Map<Int, List<PlotFlagData>>, members: Map<Int, List<PlotMemberData>>): PlotCacheSnapshot =
         PlotCacheSnapshot(plots, freeze(flags, plots.keys), freeze(members, plots.keys), index)

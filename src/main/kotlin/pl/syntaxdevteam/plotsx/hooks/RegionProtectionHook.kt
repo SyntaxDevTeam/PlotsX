@@ -13,4 +13,10 @@ fun interface RegionProtectionHook {
         return overlapsProtectedRegion(world, ((bounds.minX + bounds.maxX) / 2).toInt(),
             ((bounds.minZ + bounds.maxZ) / 2).toInt(), (side / 2).toInt())
     }
+
+    /** Batch preview API. Implementations may resolve all bounds from one region snapshot. */
+    fun overlappingBounds(
+        world: World,
+        bounds: Collection<pl.syntaxdevteam.plotsx.geometry.BlockBounds>
+    ): Set<pl.syntaxdevteam.plotsx.geometry.BlockBounds> = bounds.filterTo(linkedSetOf()) { overlapsBounds(world, it) }
 }
