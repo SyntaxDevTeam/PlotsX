@@ -14,6 +14,7 @@ import pl.syntaxdevteam.plotsx.cache.CacheManager
 import pl.syntaxdevteam.plotsx.commands.CommandsManager
 import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.hooks.CoreProtectHook
+import pl.syntaxdevteam.plotsx.hooks.EconomyHook
 import pl.syntaxdevteam.plotsx.hooks.RegionProtectionHook
 import pl.syntaxdevteam.plotsx.common.ConfigHandler
 import pl.syntaxdevteam.plotsx.common.UUIDManager
@@ -61,6 +62,7 @@ class PlotsX : JavaPlugin() {
     lateinit var databaseHandler: DatabaseHandler
     lateinit var commandsManager: CommandsManager
     lateinit var hookHandler: HookHandler
+    lateinit var economyHook: EconomyHook
     lateinit var guiHandler: GUIHandler
     lateinit var cacheManager: CacheManager
     lateinit var borderVisualizer: pl.syntaxdevteam.plotsx.visualization.PlotBorderVisualizer
@@ -121,6 +123,7 @@ class PlotsX : JavaPlugin() {
         if (::cacheManager.isInitialized) cacheManager.close()
         if (::uuidManager.isInitialized) uuidManager.close()
         if (::hookHandler.isInitialized) hookHandler.close()
+        if (::economyHook.isInitialized) economyHook.close()
         if (::coreProtectHook.isInitialized) coreProtectHook.close()
         regionProtectionHook = null
 

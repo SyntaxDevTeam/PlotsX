@@ -11,6 +11,7 @@ import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.gui.GUIHandler
 import pl.syntaxdevteam.plotsx.hooks.CoreProtectHook
+import pl.syntaxdevteam.plotsx.hooks.EconomyHook
 import pl.syntaxdevteam.plotsx.hooks.WorldGuardHook
 import pl.syntaxdevteam.plotsx.protection.AnimalFlagMigration
 import pl.syntaxdevteam.plotsx.protection.AnimalProtectionListener
@@ -64,6 +65,8 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.messageHandler = SyntaxMessages.messages
         plugin.pluginsManager = SyntaxCore.pluginManagerx
         plugin.hookHandler = HookHandler(plugin)
+        plugin.economyHook = EconomyHook(plugin)
+        plugin.server.pluginManager.registerEvents(plugin.economyHook, plugin)
         plugin.guiHandler = GUIHandler(plugin)
         plugin.cacheManager = CacheManager(plugin)
         plugin.privateChestManager = PrivateChestManager(plugin)
