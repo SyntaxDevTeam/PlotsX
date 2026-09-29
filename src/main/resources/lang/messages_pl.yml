@@ -345,6 +345,7 @@ flags:
   cant-grow:
     name: "Blokowanie wzrostu roślin"
     description: "Blokuje wzrost roślin i farm."
+    not_allowed: "<red>Nie możesz powodować wzrostu ani zmieniać roślin na tej działce.</red>"
   allow-spawners:
     name: "Zezwolenie na spawnery"
     description: "Pozwala obcym stawiać i niszczyć spawnery."
@@ -405,6 +406,15 @@ flags:
     name: "Deptanie upraw"
     description: "Pozwala obcym deptać pola uprawne na działce."
     not_allowed: "<red>Nie możesz deptać upraw na tej działce.</red>"
+  animal-leash:
+    name: "Prowadzenie zwierząt"
+    description: "Pozwala obcym zakładać i zdejmować smycze zwierzętom na działce."
+  animal-ride:
+    name: "Dosiadanie zwierząt"
+    description: "Pozwala obcym dosiadać zwierząt i innych wierzchowców na działce."
+  animal-breed:
+    name: "Rozmnażanie zwierząt"
+    description: "Pozwala obcym rozmnażać zwierzęta oraz zapładniać ich jaja na działce."
   animal-interact:
     name: "Interakcje ze zwierzętami"
     description: "Pozwala obcym prowadzić i rozmnażać zwierzęta oraz ich dosiadać."

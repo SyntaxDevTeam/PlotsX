@@ -344,6 +344,7 @@ flags:
   cant-grow:
     name: "Plant Growth"
     description: "Prevents crop and plant growth."
+    not_allowed: "<red>You cannot grow or modify plants on this plot.</red>"
   allow-spawners:
     name: "Spawner Access"
     description: "Allows non-members to place and break spawners."
@@ -390,6 +391,15 @@ flags:
     name: "Crop Trampling"
     description: "Allows non-members to trample farmland on the plot."
     not_allowed: "<red>You cannot trample crops on this plot.</red>"
+  animal-leash:
+    name: "Animal Leashing"
+    description: "Allows non-members to leash and unleash animals on the plot."
+  animal-ride:
+    name: "Animal Riding"
+    description: "Allows non-members to mount animals and other rideable entities on the plot."
+  animal-breed:
+    name: "Animal Breeding"
+    description: "Allows non-members to breed animals and fertilize their eggs on the plot."
   animal-interact:
     name: "Animal Interaction"
     description: "Allows non-members to leash, breed and mount animals."
