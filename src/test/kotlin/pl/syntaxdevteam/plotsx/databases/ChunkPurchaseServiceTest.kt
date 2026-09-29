@@ -11,6 +11,7 @@ import java.sql.DriverManager
 import java.sql.SQLException
 import java.util.UUID
 import java.util.concurrent.Executors
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class ChunkPurchaseServiceTest {
@@ -160,5 +161,30 @@ class ChunkPurchaseServiceTest {
         assertEquals(ChunkPurchaseService.Result.REJECTED, f.buy(f.op.copy(provider = "different-provider")))
         assertEquals(ChunkPurchaseService.Result.REJECTED, f.buy(f.op.copy(currency = "different-currency")))
         assertEquals(0, f.withdrawals)
+    }
+
+    @Test fun `rapid concurrent purchases admit only one workflow`() = Fixture().use { f ->
+        val validationEntered = CountDownLatch(1)
+        val releaseValidation = CountDownLatch(1)
+        val workers = Executors.newFixedThreadPool(2)
+        try {
+            val first = workers.submit<ChunkPurchaseService.Result> {
+                f.buy {
+                    validationEntered.countDown()
+                    releaseValidation.await(5, TimeUnit.SECONDS)
+                }
+            }
+            assertTrue(validationEntered.await(5, TimeUnit.SECONDS))
+            val secondOperation = f.op.copy(id = UUID.randomUUID())
+            assertEquals(ChunkPurchaseService.Result.BUSY, workers.submit<ChunkPurchaseService.Result> {
+                f.buy(secondOperation)
+            }.get(5, TimeUnit.SECONDS))
+            releaseValidation.countDown()
+            assertEquals(ChunkPurchaseService.Result.SUCCESS, first.get(5, TimeUnit.SECONDS))
+            assertEquals(1, f.withdrawals)
+        } finally {
+            releaseValidation.countDown()
+            workers.shutdownNow()
+        }
     }
 }

@@ -45,6 +45,7 @@ internal class ChunkExpandGUI(
     }
 
     private fun prepareOffer(player: Player): PlotData? {
+        val started = System.nanoTime()
         val plot = plugin.cacheManager.getPlot(plotId) ?: return null
         val geometry = plot.geometry as? ChunkGeometry ?: return null
         offered = plot
@@ -65,10 +66,12 @@ internal class ChunkExpandGUI(
         }
         price = ExpansionEconomy.chunkPrice(plugin, plot.expansionLevel)
         operationId = UUID.randomUUID()
+        plugin.logger.debug("PlotsX expansion timings: offer preparation=${millisSince(started)} ms [main]")
         return plot
     }
 
     private fun renderInventory(player: Player, plot: PlotData) {
+        val renderStarted = System.nanoTime()
         inventory.clear()
         val geometry = plot.geometry as ChunkGeometry
         val center = requireNotNull(viewCenter)
@@ -77,11 +80,11 @@ internal class ChunkExpandGUI(
             val position = offset(center, slot % 9 - 4, slot / 9 - 3) ?: return@mapNotNull null
             MapCell(slot, position, geometry.expansionTo(position), isOccupied(plot, position))
         }
-        val protected = protectedPreview(player, cells.asSequence()
+        val preview = protectedPreview(player, cells.asSequence()
             .filter { it.expansion != null && !it.occupied }.map { it.position }.toSet())
         cells.forEach { cell ->
             val position = cell.position
-            val blocked = cell.expansion != null && (cell.occupied || position in protected)
+            val blocked = cell.expansion != null && (cell.occupied || position in preview.blocked)
             val material = when {
                 position == target -> Material.EMERALD_BLOCK
                 position in geometry.chunks && position == standing -> Material.PLAYER_HEAD
@@ -111,6 +114,10 @@ internal class ChunkExpandGUI(
         inventory.setItem(confirmIndex, item(if (target == null) Material.GRAY_DYE else Material.EMERALD_BLOCK,
             "expand.confirm").apply { itemMeta = itemMeta.apply { lore(lore) } })
         inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
+        plugin.logger.debug(
+            "PlotsX expansion timings: GUI render=${millisSince(renderStarted)} ms [main], " +
+                "plot checks=${cells.size}, WorldGuard checks=${preview.checks}, WorldGuard calls=${preview.calls}"
+        )
     }
 
     private data class MapCell(
@@ -239,6 +246,7 @@ internal class ChunkExpandGUI(
                 ChunkPurchaseService.Result.REVIEW_REQUIRED
             }
             if (plugin.isEnabled) plugin.server.scheduler.runTask(plugin, Runnable {
+                val completionStarted = System.nanoTime()
                 if (!player.isOnline) return@Runnable
                 submitted = false
                 when (result) {
@@ -277,6 +285,10 @@ internal class ChunkExpandGUI(
                         renderInventory(player, current)
                     }
                 }
+                plugin.logger.debug(
+                    "PlotsX expansion timings: main-thread completion=${millisSince(completionStarted)} ms, " +
+                        "operation=${operation.id}, result=$result"
+                )
             })
         })
     }
@@ -302,15 +314,17 @@ internal class ChunkExpandGUI(
         if (isOccupied(plot, position)) return true
         val hook = plugin.regionProtectionHook ?: return false
         if (freshProtectionCheck) return hook.overlapsBounds(player.world, position.bounds)
-        return position in protectedPreview(player, setOf(position))
+        return position in protectedPreview(player, setOf(position)).blocked
     }
 
     private fun isOccupied(plot: PlotData, position: ChunkPosition): Boolean =
         plugin.cacheManager.getPlotAtChunk(plot.world, position.x, position.z)?.id?.let { it != plot.id } == true
 
     /** Resolves all cache misses through one hook invocation for this render. */
-    private fun protectedPreview(player: Player, positions: Set<ChunkPosition>): Set<ChunkPosition> {
-        val hook = plugin.regionProtectionHook ?: return emptySet()
+    private data class PreviewResult(val blocked: Set<ChunkPosition>, val checks: Int, val calls: Int)
+
+    private fun protectedPreview(player: Player, positions: Set<ChunkPosition>): PreviewResult {
+        val hook = plugin.regionProtectionHook ?: return PreviewResult(emptySet(), 0, 0)
         val now = System.currentTimeMillis()
         val missing = positions.filterTo(linkedSetOf()) { protectionPreview[it]?.expiresAt?.let { expiry -> expiry < now } != false }
         if (missing.isNotEmpty()) {
@@ -321,6 +335,13 @@ internal class ChunkExpandGUI(
             }
         }
         protectionPreview.entries.removeIf { it.value.expiresAt < now && it.key !in positions }
-        return positions.filterTo(linkedSetOf()) { protectionPreview[it]?.blocked == true }
+        return PreviewResult(
+            positions.filterTo(linkedSetOf()) { protectionPreview[it]?.blocked == true },
+            missing.size,
+            if (missing.isEmpty()) 0 else 1
+        )
     }
+
+    private fun millisSince(started: Long): String = "%.3f".format(java.util.Locale.ROOT,
+        (System.nanoTime() - started) / 1_000_000.0)
 }

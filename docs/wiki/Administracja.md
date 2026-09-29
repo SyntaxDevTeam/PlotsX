@@ -68,6 +68,21 @@ historii dostawcy — niejednoznaczny wynik jest celowo zachowywany w dzienniku.
 
 Przygotuj wersję PlotsX, wersję serwera, opis sytuacji i komunikat błędu. Dopisz, co gracz robił przed problemem. Usuń z udostępnianych plików hasła i adresy webhooków.
 
+### Diagnostyka rozszerzania
+
+Po tymczasowym ustawieniu `debug: diag` log zawiera wpisy `PlotsX expansion timings`
+dla przygotowania oferty, renderu mapy, liczby lookupów działek i kontroli
+WorldGuard, transakcji wykonywanej na workerze, publikacji cache oraz callbacku na
+głównym wątku. `PlotsX border metrics` podaje liczbę punktów i particle na sekundę,
+łączną liczbę particle wysłanych graczowi oraz liczbę aktywnych sesji. Po zebraniu
+danych wyłącz debug — te wpisy są przeznaczone do krótkiej diagnostyki, nie do
+stałego logowania na produkcji.
+
+Lokalny, niewiążący benchmark obrysu można wygenerować poleceniem
+`PLOTSX_BENCHMARK=1 ./gradlew test --tests '*BorderPerformanceTest' --console=plain`.
+Raport trafia do `build/reports/expansion-benchmark.md`. Nie jest to zamiennik testu
+MSPT na docelowym Paper z rzeczywistymi pluginami ekonomii i WorldGuard.
+
 [Zgłoś problem](https://github.com/SyntaxDevTeam/PlotsX/issues) · [Porozmawiaj na Discordzie](https://discord.gg/Zk6mxv7eMh)
 
 Dalej: [pytania i problemy](FAQ.md).

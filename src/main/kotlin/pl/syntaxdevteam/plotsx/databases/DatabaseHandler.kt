@@ -407,24 +407,40 @@ class DatabaseHandler(private val plugin: PlotsX) {
                                account: pl.syntaxdevteam.plotsx.hooks.ExpansionEconomy.Account?,
                                validate: () -> Boolean): ChunkPurchaseService.Result {
         check(!org.bukkit.Bukkit.isPrimaryThread()) { "Chunk purchases must run off the server thread" }
+        val workflowStarted = System.nanoTime()
+        val serverCallbackNanos = java.util.concurrent.atomic.AtomicLong()
+        val cachePublicationNanos = java.util.concurrent.atomic.AtomicLong()
         val calls = object : ChunkPurchaseService.ServerCalls {
             override fun <T> call(action: () -> T): T {
                 check(!closing.get()) { "PlotsX is shutting down" }
                 val future = CompletableFuture<T>()
                 pendingServerCalls.add(future)
                 plugin.server.scheduler.runTask(plugin, Runnable {
+                    val callbackStarted = System.nanoTime()
                     if (!future.isDone && !closing.get()) try { future.complete(action()) }
                     catch (failure: Throwable) { future.completeExceptionally(failure) }
+                    finally { serverCallbackNanos.addAndGet(System.nanoTime() - callbackStarted) }
                 })
                 try { return future.get(30, java.util.concurrent.TimeUnit.SECONDS) }
                 catch (failure: Exception) { future.cancel(false); throw failure }
                 finally { pendingServerCalls.remove(future) }
             }
         }
-        return ChunkPurchaseService({ getConnection() ?: error("No purchase database connection") },
-            plugin.protectionCoordinator, { plugin.cacheManager.reloadAllCachesSync() }, calls,
-            { logger.err(it) }).purchase(operation, level, limits, account, validate)
+        val result = ChunkPurchaseService({ getConnection() ?: error("No purchase database connection") },
+            plugin.protectionCoordinator, {
+                val publicationStarted = System.nanoTime()
+                try { plugin.cacheManager.reloadAllCachesSync() }
+                finally { cachePublicationNanos.addAndGet(System.nanoTime() - publicationStarted) }
+            }, calls, { logger.err(it) }).purchase(operation, level, limits, account, validate)
+        logger.debug(
+            "PlotsX expansion timings: database workflow=${formatMillis(System.nanoTime() - workflowStarted)} ms [worker], " +
+                "cache publication=${formatMillis(cachePublicationNanos.get())} ms [worker], " +
+                "server callbacks=${formatMillis(serverCallbackNanos.get())} ms [main], operation=${operation.id}, result=$result"
+        )
+        return result
     }
+
+    private fun formatMillis(nanos: Long): String = "%.3f".format(Locale.ROOT, nanos / 1_000_000.0)
 
     /** Internal persistence entry point. Do not expose as a paid purchase before journal integration. */
     internal fun expandChunkAtomically(
@@ -455,11 +471,25 @@ class DatabaseHandler(private val plugin: PlotsX) {
         maxRadius: Int,
         maxTotalArea: Long,
         expectedSegmentCount: Int
-    ): ExpandResult = plugin.protectionCoordinator.mutate(
-        { plugin.cacheManager.reloadPlotSync(plotId) },
-        { performExpandPlotAtomically(plotId, ownerUuid, actorUuid, direction, sourceSegment, expectedSegment,
-            maxRadius, maxTotalArea, expectedSegmentCount) }
-    )
+    ): ExpandResult {
+        var transactionNanos = 0L
+        var publicationNanos = 0L
+        val result = plugin.protectionCoordinator.mutate({
+            val started = System.nanoTime()
+            try { plugin.cacheManager.reloadPlotSync(plotId) }
+            finally { publicationNanos = System.nanoTime() - started }
+        }, {
+            val started = System.nanoTime()
+            try { performExpandPlotAtomically(plotId, ownerUuid, actorUuid, direction, sourceSegment, expectedSegment,
+                maxRadius, maxTotalArea, expectedSegmentCount) }
+            finally { transactionNanos = System.nanoTime() - started }
+        })
+        logger.debug(
+            "PlotsX expansion timings: classic database transaction=${formatMillis(transactionNanos)} ms [worker], " +
+                "cache publication=${formatMillis(publicationNanos)} ms [worker], plot=$plotId, result=$result"
+        )
+        return result
+    }
 
     private fun performExpandPlotAtomically(
         plotId: Int,
