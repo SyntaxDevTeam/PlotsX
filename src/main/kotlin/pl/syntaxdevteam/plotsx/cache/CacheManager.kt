@@ -4,6 +4,7 @@ import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.databases.PlotFlagData
 import pl.syntaxdevteam.plotsx.databases.PlotMemberData
+import java.util.UUID
 
 class CacheManager(private val plugin: PlotsX) {
     private val databaseHandler = plugin.databaseHandler
@@ -19,6 +20,13 @@ class CacheManager(private val plugin: PlotsX) {
 
     fun getPlot(plotId: Int): PlotData? = readSnapshot().plots[plotId]
     fun getPlotAt(world: String, x: Int, z: Int): PlotData? = readSnapshot().at(world, x, z)
+    fun getPlayerPlots(playerId: UUID): List<PlotData> {
+        val snapshot = readSnapshot()
+        val playerIdText = playerId.toString()
+        return snapshot.plots.values.filter { plot ->
+            plot.ownerUuid == playerId || snapshot.members[plot.id].orEmpty().any { it.memberUuid == playerIdText }
+        }
+    }
     fun getPlotAtChunk(world: String, chunkX: Int, chunkZ: Int): PlotData? {
         val position = pl.syntaxdevteam.plotsx.geometry.ChunkPosition(chunkX, chunkZ)
         return readSnapshot().atChunk(world, position)

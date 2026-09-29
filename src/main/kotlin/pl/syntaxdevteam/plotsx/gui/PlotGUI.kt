@@ -35,7 +35,7 @@ class PlotGUI(
     private val membersIndex = 13
 
     override fun open(player: Player) {
-        val targetPlot = plot ?: plugin.databaseHandler.getPlotAtLocation(
+        val targetPlot = plot ?: plugin.cacheManager.getPlotAt(
             player.location.world!!.name,
             player.location.blockX,
             player.location.blockZ
@@ -46,7 +46,7 @@ class PlotGUI(
             return
         }
 
-        val current = plugin.databaseHandler.getPlotById(targetPlot.id) ?: return
+        val current = plugin.cacheManager.getPlot(targetPlot.id) ?: return
         if (!PlotAccess(plugin).canOpen(player, current)) {
             player.sendMessage(message.stringMessageToComponent("error", "no_permission"))
             return
@@ -114,7 +114,7 @@ class PlotGUI(
 
         plugin.guiHandler.unregisterGui(player)
         player.closeInventory()
-        val pd = if (plot != null) plugin.databaseHandler.getPlotById(plot.id) else plugin.databaseHandler.getPlotAtLocation(
+        val pd = if (plot != null) plugin.cacheManager.getPlot(plot.id) else plugin.cacheManager.getPlotAt(
             player.location.world!!.name,
             player.location.blockX,
             player.location.blockZ
@@ -153,7 +153,7 @@ class PlotGUI(
             }
 
             listIndex -> {
-                val playerPlots = plugin.databaseHandler.getPlayerPlots(player.uniqueId)
+                val playerPlots = plugin.cacheManager.getPlayerPlots(player.uniqueId)
                 if (playerPlots.isNotEmpty()) {
                     plugin.guiHandler.registerGui(player, PlotListGUI(plugin, playerPlots, player.uniqueId, pd))
                 } else {

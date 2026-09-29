@@ -23,13 +23,13 @@ class FlagsGUI(
     private val keyFlag = NamespacedKey(plugin, "plot_flag_key")
 
     override fun open(player: Player) {
-        val currentPlot = plugin.databaseHandler.getPlotById(plot.id) ?: return
+        val currentPlot = plugin.cacheManager.getPlot(plot.id) ?: return
         val access = pl.syntaxdevteam.plotsx.permissions.PlotAccess(plugin)
         if (!access.canOpen(player, currentPlot)) return
         val allowedActions = access.allowedActions(player, currentPlot)
         inventory.clear()
 
-        val flags = plugin.cacheManager.getFlags(plot.id) ?: plugin.databaseHandler.getPlotFlags(plot.id)
+        val flags = plugin.cacheManager.getFlags(plot.id).orEmpty()
         val visibleFlags = PlotFlagRegistry.visibleFlags
 
         visibleFlags.drop(page * 45).take(45).forEachIndexed { idx: Int, flagMeta ->
@@ -94,13 +94,14 @@ class FlagsGUI(
 
         if (flagKey == null) return
 
-        val currentPlot = plugin.databaseHandler.getPlotById(plot.id) ?: return
+        val currentPlot = plugin.cacheManager.getPlot(plot.id) ?: return
         if (!pl.syntaxdevteam.plotsx.permissions.PlotAccess(plugin).allowed(player, currentPlot, "flag.$flagKey")) {
             player.sendMessage(message.stringMessageToComponent("error", "no_permission"))
             return
         }
         val definition = PlotFlagRegistry.allFlags[flagKey] ?: return
-        val current = plugin.databaseHandler.getPlotFlag(plot.id, flagKey)?.value?.toBooleanStrictOrNull()
+        val current = plugin.cacheManager.getFlags(plot.id).orEmpty()
+            .firstOrNull { it.name == flagKey }?.value?.toBooleanStrictOrNull()
             ?: definition.defaultValue
         val result = plugin.api.setFlag(player, plot.id, flagKey, !current)
         if (result == pl.syntaxdevteam.plotsx.api.FlagUpdateResult.UPDATED ||

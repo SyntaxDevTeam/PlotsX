@@ -22,7 +22,7 @@ private fun styledRoleName(plugin: PlotsX, rank: String): Component =
         .decorate(TextDecoration.BOLD)
         .decoration(TextDecoration.ITALIC, false)
 
-/** All pages carry only identifiers; click authorization uses the current database state. */
+/** All pages carry only identifiers; click authorization uses the current atomic cache snapshot. */
 class MembersGUI(
     private val plugin: PlotsX,
     private val plotId: Int,
@@ -67,9 +67,9 @@ class MembersGUI(
     override fun open(player: Player) {
         inventory.clear()
         clicks.clear()
-        val plot = plugin.databaseHandler.getPlotById(plotId)
+        val plot = plugin.cacheManager.getPlot(plotId)
         if (plot == null || !access.canOpen(player, plot)) { operations.reply(player, "denied"); return }
-        val members = plugin.databaseHandler.getPlotMembers(plotId)
+        val members = plugin.cacheManager.getMembers(plotId).orEmpty()
         fun run(p: Player, args: List<String>) { operations.execute(p, plotId, args); show(p) }
         when (screen) {
             "members" -> {
@@ -173,7 +173,7 @@ class MembersGUI(
         event.isCancelled = true
         if (event.clickedInventory !== inventory) return
         val player = event.whoClicked as? Player ?: return
-        val plot = plugin.databaseHandler.getPlotById(plotId)
+        val plot = plugin.cacheManager.getPlot(plotId)
         if (plot == null || !access.canOpen(player, plot)) {
             player.closeInventory(); operations.reply(player, "denied"); return
         }
