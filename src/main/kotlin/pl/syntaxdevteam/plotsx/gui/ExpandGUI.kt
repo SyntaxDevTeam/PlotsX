@@ -7,12 +7,11 @@ import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.inventory.ItemStack
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
-import pl.syntaxdevteam.plotsx.databases.Helpers
-import pl.syntaxdevteam.plotsx.databases.PlotData
-import pl.syntaxdevteam.plotsx.databases.PlotSegment
 import pl.syntaxdevteam.plotsx.databases.ExpansionDirection
-import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
+import pl.syntaxdevteam.plotsx.databases.Helpers
+import pl.syntaxdevteam.plotsx.databases.PlotSegment
 import pl.syntaxdevteam.plotsx.hooks.ExpansionEconomy
+import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 import java.math.BigDecimal
 
 class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractGUI(
