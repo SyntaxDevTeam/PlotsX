@@ -43,7 +43,8 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         quotedSegment = target
         quotedSource = source
         val limits = plugin.hookHandler.getPlotLimits(player)
-        val currentTotal = plugin.databaseHandler.getPlotsByOwner(plot.ownerUuid).sumOf { it.area }
+        val currentTotal = plugin.cacheManager.getCachedPlots().asSequence()
+            .filter { it.ownerUuid == plot.ownerUuid }.sumOf { it.area }
         val targetTotal = if (target == null || Long.MAX_VALUE - currentTotal < target.area) Long.MAX_VALUE else currentTotal + target.area
         val summary = listOf(
             text("expand.directions.${direction.name.lowercase()}"),
@@ -73,7 +74,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         if (event.rawSlot == bordersIndex) {
             player.scheduler.run(plugin, {
                 if (player.openInventory.topInventory !== inventory || submitted) return@run
-                val plot = plugin.databaseHandler.getPlotById(plotId) ?: return@run
+                val plot = plugin.cacheManager.getPlot(plotId) ?: return@run
                 player.closeInventory()
                 plugin.guiHandler.unregisterGui(player)
                 helpers.visualizePlotBorder3D(player, plot, helpers.borderDurationSeconds(), 2, 4)
@@ -94,12 +95,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         if (event.slot == cancelIndex) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "expand_cancelled"))
         } else {
-            try {
-                plugin.protectionCoordinator.mutate({ plugin.cacheManager.reloadAllCachesSync() }) { expand(player) }
-            } catch (failure: IllegalStateException) {
-                plugin.logger.err("Expansion unavailable: ${failure.message}")
-                player.sendMessage(error("chunk_purchase_busy"))
-            }
+            expand(player)
         }
     }
 
@@ -107,7 +103,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         if (!PermissionChecker.canExpandPlot(player)) {
             player.sendMessage(error("no_permission")); return
         }
-        val plot = plugin.databaseHandler.getPlotById(plotId) ?: run {
+        val plot = plugin.cacheManager.getPlot(plotId) ?: run {
             player.sendMessage(error("plot_not_found")); return
         }
         val ownerUuid = player.uniqueId
@@ -138,8 +134,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         if (plugin.regionProtectionHook?.overlapsProtectedRegion(world, target.x, target.z, target.radius) == true) {
             player.sendMessage(error("worldguard_collision")); return
         }
-        // Economy APIs are synchronous. Finish withdrawal, SQL and compensation in this
-        // callback so disabling the plugin cannot strand an asynchronous refund callback.
+        // Economy APIs remain on the server thread; only the database mutation is dispatched.
         val account = if (price.signum() > 0) {
             try { ExpansionEconomy.account(plugin, player, price) } catch (ex: Exception) {
                 plugin.logger.err("Economy lookup failed: ${ex.message}")
@@ -153,35 +148,39 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
             }
             if (!paid) { player.sendMessage(error("expand_payment_failed")); return }
         }
-        val result = try {
-            plugin.databaseHandler.expandPlotAtomically(
-                plot.id, ownerUuid, player.uniqueId, direction, source, target, limits.maxRadius, limits.maxTotalArea, plot.extensions.size
-            )
-        } catch (ex: Exception) {
-            plugin.logger.err("Expansion failed for plot ${plot.id}: ${ex.message}")
-            DatabaseHandler.ExpandResult.DatabaseError
-        }
-        if (result !is DatabaseHandler.ExpandResult.Success && account != null) {
-            val refunded = try { account.refund() } catch (ex: Exception) {
-                plugin.logger.err("Expansion refund exception: ${ex.message}")
-                false
+        // Only JDBC/cache publication runs here. Economy and every Bukkit call stay on the server thread.
+        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+            val result = try {
+                plugin.databaseHandler.expandPlotAtomically(
+                    plot.id, ownerUuid, ownerUuid, direction, source, target,
+                    limits.maxRadius, limits.maxTotalArea, plot.extensions.size
+                )
+            } catch (ex: Exception) {
+                plugin.logger.err("Expansion failed for plot ${plot.id}: ${ex.message}")
+                DatabaseHandler.ExpandResult.DatabaseError
             }
-            if (!refunded) {
-                plugin.logger.err("REFUND REQUIRED: player=$ownerUuid plot=${plot.id} amount=$price")
-                player.sendMessage(error("expand_refund_failed"))
-            }
-        }
-        showResult(player, plot, result)
+            if (!plugin.isEnabled) return@Runnable
+            plugin.server.scheduler.runTask(plugin, Runnable {
+                if (result !is DatabaseHandler.ExpandResult.Success && account != null) {
+                    val refunded = try { account.refund() } catch (ex: Exception) {
+                        plugin.logger.err("Expansion refund exception: ${ex.message}"); false
+                    }
+                    if (!refunded) {
+                        plugin.logger.err("REFUND REQUIRED: player=$ownerUuid plot=${plot.id} amount=$price")
+                        if (player.isOnline) player.sendMessage(error("expand_refund_failed"))
+                    }
+                }
+                if (player.isOnline) showResult(player, result)
+            })
+        })
     }
 
-    private fun showResult(player: Player, oldPlot: PlotData, result: DatabaseHandler.ExpandResult) {
+    private fun showResult(player: Player, result: DatabaseHandler.ExpandResult) {
         val errorKey = when (result) {
             is DatabaseHandler.ExpandResult.Success -> {
-                plugin.cacheManager.reloadPlotSync(oldPlot.id)
                 player.sendMessage(plugin.messageHandler.stringMessageToComponent(
                     "plots", "expand_success", mapOf("size" to (result.segment.radius.toLong() * 2 + 1).toString())
                 ))
-                helpers.visualizePlotBorder3D(player, oldPlot.copy(extensions = oldPlot.extensions + result.segment), helpers.borderDurationSeconds(), 2, 4)
                 return
             }
             DatabaseHandler.ExpandResult.PlotNotFound -> "plot_not_found"

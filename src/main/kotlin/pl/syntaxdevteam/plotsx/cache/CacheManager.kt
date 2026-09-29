@@ -19,6 +19,10 @@ class CacheManager(private val plugin: PlotsX) {
 
     fun getPlot(plotId: Int): PlotData? = readSnapshot().plots[plotId]
     fun getPlotAt(world: String, x: Int, z: Int): PlotData? = readSnapshot().at(world, x, z)
+    fun getPlotAtChunk(world: String, chunkX: Int, chunkZ: Int): PlotData? {
+        val position = pl.syntaxdevteam.plotsx.geometry.ChunkPosition(chunkX, chunkZ)
+        return readSnapshot().at(world, Math.toIntExact(position.bounds.minX), Math.toIntExact(position.bounds.minZ))
+    }
     fun getFlags(plotId: Int): List<PlotFlagData>? = readSnapshot().flags[plotId]
     fun getMembers(plotId: Int): List<PlotMemberData>? = readSnapshot().members[plotId]
     fun getCachedPlots(): Collection<PlotData> = readSnapshot().plots.values

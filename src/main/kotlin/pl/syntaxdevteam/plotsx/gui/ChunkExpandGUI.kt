@@ -35,6 +35,8 @@ internal class ChunkExpandGUI(
     private var price: BigDecimal? = null
     private var operationId = UUID.randomUUID()
     private var submitted = false
+    private data class ProtectionPreview(val blocked: Boolean, val expiresAt: Long)
+    private val protectionPreview = mutableMapOf<ChunkPosition, ProtectionPreview>()
 
     override fun open(player: Player) {
         val plot = prepareOffer(player) ?: return
@@ -172,7 +174,7 @@ inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
             current?.let { renderInventory(player, it) }
             return false
         }
-        if (isBlocked(player, current, selected)) {
+        if (isBlocked(player, current, selected, freshProtectionCheck = true)) {
             player.sendMessage(text("expand.direction_blocked"))
             target = null
             source = null
@@ -241,8 +243,7 @@ inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
                         viewCenter = to
                         player.sendMessage(plugin.messageHandler.stringMessageToComponent(
                             "plots", "chunk_expand_success", mapOf("x" to to.x.toString(), "z" to to.z.toString())))
-                        plugin.cacheManager.getPlot(plotId)?.let { current ->
-                            Helpers(plugin).visualizePlotBorder3D(player, current, Helpers(plugin).borderDurationSeconds(), 2, 4)
+                        if (plugin.cacheManager.getPlot(plotId) != null) {
                             if (player.openInventory.topInventory === inventory) {
                                 prepareOffer(player)?.let { renderInventory(player, it) }
                             }
@@ -287,11 +288,16 @@ inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
             z !in ChunkPosition.MIN_COORDINATE.toLong()..ChunkPosition.MAX_COORDINATE.toLong()) return null
         return ChunkPosition(x.toInt(), z.toInt())
     }
-    private fun isBlocked(player: Player, plot: PlotData, position: ChunkPosition): Boolean {
-        val occupied = plugin.cacheManager.getCachedPlots().any { other ->
-            other.id != plot.id && other.world.equals(plot.world, true) &&
-                other.geometry.intersects(ChunkGeometry(setOf(position)))
-        }
-        return occupied || plugin.regionProtectionHook?.overlapsBounds(player.world, position.bounds) == true
+    private fun isBlocked(player: Player, plot: PlotData, position: ChunkPosition, freshProtectionCheck: Boolean = false): Boolean {
+        val occupied = plugin.cacheManager.getPlotAtChunk(plot.world, position.x, position.z)?.id?.let { it != plot.id } == true
+        if (occupied) return true
+        val hook = plugin.regionProtectionHook ?: return false
+        if (freshProtectionCheck) return hook.overlapsBounds(player.world, position.bounds)
+        val now = System.currentTimeMillis()
+        protectionPreview[position]?.takeIf { it.expiresAt >= now }?.let { return it.blocked }
+        val blocked = hook.overlapsBounds(player.world, position.bounds)
+        protectionPreview[position] = ProtectionPreview(blocked, now + 1_000L)
+        if (protectionPreview.size > 128) protectionPreview.entries.removeIf { it.value.expiresAt < now }
+        return blocked
     }
 }

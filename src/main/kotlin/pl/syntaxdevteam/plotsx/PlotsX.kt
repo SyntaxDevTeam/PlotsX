@@ -63,6 +63,7 @@ class PlotsX : JavaPlugin() {
     lateinit var hookHandler: HookHandler
     lateinit var guiHandler: GUIHandler
     lateinit var cacheManager: CacheManager
+    lateinit var borderVisualizer: pl.syntaxdevteam.plotsx.visualization.PlotBorderVisualizer
     lateinit var privateChestManager: PrivateChestManager
     val identityAliasRegistry = IdentityAliasRegistry()
     //lateinit var invitationManager: InvitationManager
@@ -79,6 +80,8 @@ class PlotsX : JavaPlugin() {
             ModrinthSource("")
         )
         SyntaxCore.init(this)
+        borderVisualizer = pl.syntaxdevteam.plotsx.visualization.PlotBorderVisualizer(this)
+        server.pluginManager.registerEvents(borderVisualizer, this)
         pluginInitializer = PluginInitializer(this)
         pluginInitializer.onEnable()
         val service = pl.syntaxdevteam.plotsx.api.internal.DefaultPlotsXApi(this)
@@ -106,6 +109,8 @@ class PlotsX : JavaPlugin() {
         apiImplementation = null
         HandlerList.unregisterAll(this)
 
+        if (::borderVisualizer.isInitialized) borderVisualizer.close()
+
         server.scheduler.cancelTasks(this)
         server.globalRegionScheduler.cancelTasks(this)
         server.asyncScheduler.cancelTasks(this)
@@ -125,6 +130,7 @@ class PlotsX : JavaPlugin() {
     fun onReload() {
         val candidate = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(dataFolder, "config.yml"))
         require(validateClaimConfig(candidate) == claimMode) { "Changing plots.claiming.mode requires a server restart" }
+        if (::borderVisualizer.isInitialized) borderVisualizer.close()
         protectionCoordinator.recover {
             super.reloadConfig()
             cacheManager.reloadAllCachesSync()
