@@ -346,6 +346,14 @@ flags:
     name: "Blokowanie wzrostu roślin"
     description: "Blokuje wzrost roślin i farm."
     not_allowed: "<red>Nie możesz powodować wzrostu ani zmieniać roślin na tej działce.</red>"
+  path-create:
+    name: "Tworzenie ścieżek"
+    description: "Pozwala obcym tworzyć ścieżki za pomocą łopaty."
+    not_allowed: "<red>Nie możesz tworzyć ścieżek na tej działce.</red>"
+  log-strip:
+    name: "Okorowywanie pni"
+    description: "Pozwala obcym okorowywać pnie za pomocą siekiery."
+    not_allowed: "<red>Nie możesz okorowywać pni na tej działce.</red>"
   allow-spawners:
     name: "Zezwolenie na spawnery"
     description: "Pozwala obcym stawiać i niszczyć spawnery."

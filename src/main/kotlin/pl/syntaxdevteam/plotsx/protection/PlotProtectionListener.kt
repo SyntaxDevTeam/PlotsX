@@ -577,9 +577,14 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         // They are building actions, not environmental block transformations.
         val player = event.entity as? Player
         if (player != null) {
-            if (!hasPlotPermission(player, plot, "build")) {
+            val flag = when {
+                event.to == Material.DIRT_PATH -> "path-create"
+                event.to.name.startsWith("STRIPPED_") -> "log-strip"
+                else -> "build"
+            }
+            if (!hasPlotPermission(player, plot, flag)) {
                 event.isCancelled = true
-                player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
+                player.sendMessage(message.stringMessageToComponent("flags", "$flag.not_allowed"))
             }
             return
         }
@@ -712,10 +717,15 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             block.type in PATH_CONVERTIBLE_BLOCKS
         val isLogStripping = itemType?.name?.endsWith("_AXE") == true &&
             Material.matchMaterial("STRIPPED_${block.type.name}") != null
-        if (isPathCreation || isLogStripping) {
-            if (!hasPlotPermission(player, plot, "build")) {
+        val toolActionFlag = when {
+            isPathCreation -> "path-create"
+            isLogStripping -> "log-strip"
+            else -> null
+        }
+        if (toolActionFlag != null) {
+            if (!hasPlotPermission(player, plot, toolActionFlag)) {
                 event.isCancelled = true
-                player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
+                player.sendMessage(message.stringMessageToComponent("flags", "$toolActionFlag.not_allowed"))
             }
             return
         }

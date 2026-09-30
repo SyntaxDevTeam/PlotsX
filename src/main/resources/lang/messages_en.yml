@@ -345,6 +345,14 @@ flags:
     name: "Plant Growth"
     description: "Prevents crop and plant growth."
     not_allowed: "<red>You cannot grow or modify plants on this plot.</red>"
+  path-create:
+    name: "Path Creation"
+    description: "Allows visitors to create paths with a shovel."
+    not_allowed: "<red>You cannot create paths on this plot.</red>"
+  log-strip:
+    name: "Log Stripping"
+    description: "Allows visitors to strip logs with an axe."
+    not_allowed: "<red>You cannot strip logs on this plot.</red>"
   allow-spawners:
     name: "Spawner Access"
     description: "Allows non-members to place and break spawners."
