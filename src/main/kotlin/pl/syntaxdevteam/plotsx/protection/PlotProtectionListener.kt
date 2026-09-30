@@ -572,6 +572,18 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
         logger.debug("EntityChangeBlockEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
 
+        // Some server implementations report player-driven block conversions (for
+        // example grass turned into a dirt path with a shovel) through this event.
+        // They are building actions, not environmental block transformations.
+        val player = event.entity as? Player
+        if (player != null) {
+            if (!hasPlotPermission(player, plot, "build")) {
+                event.isCancelled = true
+                player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
+            }
+            return
+        }
+
         if (event.entityType == EntityType.FALLING_BLOCK && !isFlagAllowed(plot.id, "fall")) {
             event.isCancelled = true
             event.block.state.update(true, false)
@@ -692,6 +704,22 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val block = event.clickedBlock ?: return
         val plot = getPlotAtLocation(block.world.name, block.x, block.z) ?: return
 
+        // Tool-driven conversions do not produce a BlockPlaceEvent/BlockBreakEvent.
+        // Treat path creation and log stripping like every other build action.
+        // Outside plots this listener returns above and leaves vanilla behaviour intact.
+        val itemType = event.item?.type
+        val isPathCreation = itemType?.name?.endsWith("_SHOVEL") == true &&
+            block.type in PATH_CONVERTIBLE_BLOCKS
+        val isLogStripping = itemType?.name?.endsWith("_AXE") == true &&
+            Material.matchMaterial("STRIPPED_${block.type.name}") != null
+        if (isPathCreation || isLogStripping) {
+            if (!hasPlotPermission(player, plot, "build")) {
+                event.isCancelled = true
+                player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
+            }
+            return
+        }
+
         val mat = block.type
 
         val interactionFlag = when {
@@ -809,6 +837,17 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val openable = block.blockData as? Openable ?: return
         openable.isOpen = !openable.isOpen
         block.blockData = openable
+    }
+
+    private companion object {
+        val PATH_CONVERTIBLE_BLOCKS = setOf(
+            Material.GRASS_BLOCK,
+            Material.DIRT,
+            Material.COARSE_DIRT,
+            Material.PODZOL,
+            Material.MYCELIUM,
+            Material.ROOTED_DIRT
+        )
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
