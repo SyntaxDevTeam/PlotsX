@@ -46,6 +46,7 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.saveDefaultConfig()
         plugin.configHandler = ConfigHandler(plugin)
         plugin.configHandler.verifyAndUpdateConfig()
+        plugin.configHandler.verifyAndUpdateLanguageFiles()
         plugin.initializeClaimMode()
     }
 
