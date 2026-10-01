@@ -310,7 +310,7 @@ flags:
     not_allowed: "<red>Nie możesz używać ognia na tej działce.</red>"
   minecart:
     name: "Blokowanie wagoników"
-    description: "Pozwala obcym umieszczać i niszczyć wagoniki/łodzie."
+    description: "Blokuje obcym umieszczanie i niszczenie wagoników oraz łodzi."
     not_allowed: "<red>Nie możesz używać wagoników na tej działce.</red>"
   allow-home:
     name: "Zezwolenie na /home"
@@ -389,8 +389,8 @@ flags:
     description: "Pozwala obcym stawiać, niszczyć i modyfikować obrazy, ramki oraz stojaki na zbroję."
     not_allowed: "<red>Nie możesz modyfikować dekoracji na tej działce.</red>"
   item-transfer:
-    name: "Transfer przedmiotów"
-    description: "Pozwala lejom przenosić przedmioty przez granicę działki."
+    name: "Blokowanie transferu przedmiotów"
+    description: "Blokuje lejom przenoszenie przedmiotów przez granicę działki."
   portal-create:
     name: "Tworzenie portali"
     description: "Pozwala na tworzenie portali na działce."
@@ -444,8 +444,8 @@ flags:
     description: "Pozwala obcym używać trójzębów i buzdyganów na działce."
     not_allowed: "<red>Nie możesz używać tej broni na tej działce.</red>"
   weather:
-    name: "Pogoda i pioruny"
-    description: "Pozwala piorunom uderzać i zadawać obrażenia na działce."
+    name: "Blokowanie pogody i piorunów"
+    description: "Blokuje uderzenia piorunów i zadawane przez nie obrażenia na działce."
   bed-use:
     name: "Używanie łóżek"
     description: "Pozwala obcym korzystać z łóżek na działce."
@@ -463,8 +463,8 @@ flags:
     description: "Pozwala obcym korzystać z kotwic odrodzenia."
     not_allowed: "<red>Nie możesz korzystać z kotwicy odrodzenia na tej działce.</red>"
   conduit-effects:
-    name: "Efekty przewodni"
-    description: "Pozwala przewodniom nakładać efekty na graczy na działce."
+    name: "Blokowanie efektów przewodni"
+    description: "Blokuje przewodniom nakładanie efektów na graczy na działce."
   flight:
     name: "Latanie"
     description: "Pozwala obcym rozpoczynać zwykłe latanie na działce."

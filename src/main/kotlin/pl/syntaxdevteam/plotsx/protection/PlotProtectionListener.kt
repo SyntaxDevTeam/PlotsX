@@ -165,10 +165,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                     "dla gracza ${player.name} na działce ${plot.id} (${plot.name})"
         )
 
-        return when (flagMeta.type) {
-            FlagType.WHITELIST -> value
-            FlagType.BLACKLIST -> !value
-        }
+        return flagMeta.type.allows(value)
     }
 
     /**
@@ -181,10 +178,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val flagMeta = PlotFlagRegistry.allFlags[flag] ?: return false
         val flags = plugin.cacheManager.getFlags(plotId) ?: emptyList()
         val value = flags.firstOrNull { it.name == flag }?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
-        return when (flagMeta.type) {
-            FlagType.WHITELIST -> value
-            FlagType.BLACKLIST -> !value
-        }
+        return flagMeta.type.allows(value)
     }
 
 
@@ -195,10 +189,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     @Suppress("unused")
     private fun printAllFlagBehaviors() {
         PlotFlagRegistry.allFlags.forEach { (key, def) ->
-            println("Flaga $key: default=${def.defaultValue}, typ=${def.type}, efektDlaObcego=${when (def.type) {
-                FlagType.WHITELIST -> def.defaultValue
-                FlagType.BLACKLIST -> !def.defaultValue
-            }}")
+            println("Flaga $key: default=${def.defaultValue}, typ=${def.type}, efektDlaObcego=${def.type.allows(def.defaultValue)}")
         }
     }
 

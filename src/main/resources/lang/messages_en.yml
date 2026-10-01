@@ -308,8 +308,8 @@ flags:
     description: "Blocks explosions, fire and its spread."
     not_allowed: "<red>You can't use fire on this plot.</red>"
   minecart:
-    name: "Minecart/Boat Usage"
-    description: "Allows non-members to place and break minecarts/boats."
+    name: "Minecart/Boat Blocking"
+    description: "Blocks non-members from placing and breaking minecarts/boats."
     not_allowed: "<red>You can't use minecarts on this plot.</red>"
   allow-home:
     name: "Allow /home"
@@ -374,8 +374,8 @@ flags:
     description: "Allows non-members to place, break and modify paintings, frames and armor stands."
     not_allowed: "<red>You cannot modify decorations on this plot.</red>"
   item-transfer:
-    name: "Item Transfer"
-    description: "Allows hoppers to move items across the plot boundary."
+    name: "Item Transfer Blocking"
+    description: "Blocks hoppers from moving items across the plot boundary."
   portal-create:
     name: "Portal Creation"
     description: "Allows portals to be created on the plot."
@@ -429,8 +429,8 @@ flags:
     description: "Allows non-members to use tridents and maces on the plot."
     not_allowed: "<red>You cannot use this weapon on this plot.</red>"
   weather:
-    name: "Weather and Lightning"
-    description: "Allows lightning to strike and deal damage on the plot."
+    name: "Weather and Lightning Blocking"
+    description: "Blocks lightning strikes and lightning damage on the plot."
   bed-use:
     name: "Bed Usage"
     description: "Allows non-members to use beds on the plot."
@@ -448,8 +448,8 @@ flags:
     description: "Allows non-members to use respawn anchors."
     not_allowed: "<red>You cannot use a respawn anchor on this plot.</red>"
   conduit-effects:
-    name: "Conduit Effects"
-    description: "Allows conduits to apply effects to players on the plot."
+    name: "Conduit Effect Blocking"
+    description: "Blocks conduits from applying effects to players on the plot."
   flight:
     name: "Flight"
     description: "Allows non-members to start regular flight on the plot."

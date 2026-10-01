@@ -49,10 +49,7 @@ internal class AnimalProtectionListener(private val plugin: PlotsX) : Listener {
             ?.toBooleanStrictOrNull()
             ?: definition.defaultValue
 
-        return when (definition.type) {
-            FlagType.WHITELIST -> stored
-            FlagType.BLACKLIST -> !stored
-        }
+        return definition.type.allows(stored)
     }
 
     private fun deny(player: Player) {
