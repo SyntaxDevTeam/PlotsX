@@ -54,7 +54,7 @@ class PlotGUI(
         inventory.setItem(membersIndex, createItem(Material.PLAYER_HEAD,
             message.stringMessageToComponentNoPrefix("members", "title")))
 
-        inventory.setItem(plotIndex, createPlotHead(player, targetPlot))
+        inventory.setItem(plotIndex, createPlotHead(current))
         inventory.setItem(
             flagsIndex,
             createItem(
@@ -206,11 +206,11 @@ class PlotGUI(
         return item
     }
 
-    private fun createPlotHead(player: Player, plot: PlotData): ItemStack {
+    private fun createPlotHead(plot: PlotData): ItemStack {
         val skull = ItemStack(Material.PLAYER_HEAD)
         val meta = skull.itemMeta as SkullMeta
 
-        meta.owningPlayer = player
+        meta.owningPlayer = plugin.server.getOfflinePlayer(plot.ownerUuid)
         meta.displayName(
             message.stringMessageToComponentNoPrefix(
                 "GUI", "plot.material_name.info",

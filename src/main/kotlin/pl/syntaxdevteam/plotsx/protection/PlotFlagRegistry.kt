@@ -43,7 +43,7 @@ object PlotFlagRegistry {
         FlagMeta("explosions", true, FlagType.BLACKLIST, Material.TNT, "explosions.name", "explosions.description"),
         FlagMeta("decorations", false, FlagType.WHITELIST, Material.ARMOR_STAND, "decorations.name", "decorations.description"),
         FlagMeta("item-transfer", true, FlagType.BLACKLIST, Material.HOPPER, "item-transfer.name", "item-transfer.description"),
-        FlagMeta("portal-create", true, FlagType.BLACKLIST, Material.OBSIDIAN, "portal-create.name", "portal-create.description"),
+        FlagMeta("portal-create", false, FlagType.WHITELIST, Material.OBSIDIAN, "portal-create.name", "portal-create.description"),
         FlagMeta("portal-use", false, FlagType.WHITELIST, Material.ENDER_EYE, "portal-use.name", "portal-use.description"),
         FlagMeta("projectiles", false, FlagType.WHITELIST, Material.BOW, "projectiles.name", "projectiles.description"),
         FlagMeta("item-pickup", false, FlagType.WHITELIST, Material.DIAMOND, "item-pickup.name", "item-pickup.description"),

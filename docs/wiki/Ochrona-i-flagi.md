@@ -85,7 +85,7 @@ Dodanie osoby do działki daje jej szerszy dostęp również przy sprawdzaniu wi
 | --- | --- | --- |
 | `minecart` | Blokada obsługiwanych interakcji gości z pojazdami. | TAK |
 | `teleport` | Blokada teleportowania gości na działkę perłą Endu lub owocem refrenusu. | TAK |
-| `portal-create` | Blokada tworzenia portali. | TAK |
+| `portal-create` | Zezwolenie na tworzenie portali. | NIE |
 | `portal-use` | Goście mogą korzystać z portali. | NIE |
 | `allow-home` | Goście mogą używać komend `/home` i `/sethome`. | NIE |
 | `command-use` | Goście mogą używać pozostałych komend. | TAK |
