@@ -30,7 +30,7 @@ plots:
 
 Cena wynosi `price × priceMultiplier ^ expansionLevel`. Pierwsze zajęcie chunka pozostaje bezpłatne; cena 0 pozwala rozszerzyć działkę bez dostawcy ekonomii. Kwota zapisana w dzienniku ma najwyżej 38 cyfr znaczących i 18 miejsc dziesiętnych; nieobsługiwana kwota jest odrzucana przed zakupem.
 
-`ExpansionEconomy` wybiera VaultUnlocked, a następnie Vault. Zakup zachowuje konkretny obiekt konta/dostawcy do ewentualnego zwrotu. Dla chunków VaultUnlocked zapisuje domyślną walutę i świat w momencie przygotowania konta oraz używa przeciążeń z jawną walutą i światem dla obciążenia i zwrotu. Vault ma pojedynczą walutę; zapisujemy jej nazwę, a kwoty nieprzenoszalne do jego API `Double` są odrzucane. Istniejące klasyczne wywołania ekonomii zachowują dotychczasowy wariant konta.
+`ExpansionEconomy` wybiera VaultUnlocked, a następnie Vault. Zakup zachowuje konkretny obiekt konta/dostawcy do ewentualnego zwrotu. Dla chunków VaultUnlocked zapisuje domyślną walutę i świat w momencie przygotowania konta oraz używa przeciążeń z jawną walutą i światem dla obciążenia i zwrotu. Vault ma pojedynczą walutę; zapisujemy jej nazwę. Obliczona cena rozszerzenia jest normalizowana do dziesiętnej reprezentacji wartości `Double` obsługiwanej przez Vault przed wyświetleniem oferty. GUI, dziennik, obciążenie i zwrot używają tej samej kwoty; przepełnienie i utrata dodatniej ceny do zera są odrzucane. Istniejące klasyczne wywołania ekonomii zachowują dotychczasowy wariant konta.
 
 ## Wątki i rezerwacja
 

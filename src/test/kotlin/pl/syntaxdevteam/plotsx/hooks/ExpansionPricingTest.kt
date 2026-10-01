@@ -16,6 +16,22 @@ class ExpansionPricingTest {
         assertEquals(0, ExpansionPricing.calculate("0", "1.5", 10)!!.signum())
     }
 
+    @Test fun `later expansions quote the amount representable by Vault`() {
+        // Reported failure: 500 * 1.2^16 = 9244.2129447518208.
+        val price = ExpansionPricing.calculate("500", "1.2", 16)!!
+        assertEquals(0, BigDecimal("9244.21294475182").compareTo(price))
+        assertEquals(0, BigDecimal.valueOf(price.toDouble()).compareTo(price))
+
+        for (level in 0..63) {
+            val quote = ExpansionPricing.calculate("500", "1.2", level)!!
+            assertEquals(0, BigDecimal.valueOf(quote.toDouble()).compareTo(quote))
+        }
+    }
+
+    @Test fun `positive prices cannot underflow into a free purchase`() {
+        assertNull(ExpansionPricing.calculate("1e-400", "1", 0))
+    }
+
     @Test fun `invalid settings and overflowing price reject purchase`() {
         for (factor in listOf(null, "invalid", "NaN", "Infinity", "-1", "0", "0.9")) {
             assertNull(ExpansionPricing.calculate("500", factor, 0))

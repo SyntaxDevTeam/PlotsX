@@ -11,8 +11,12 @@ internal object ExpansionPricing {
         if (purchasedSegments < 0 || base.signum() < 0 || factor < BigDecimal.ONE ||
             !base.toDouble().isFinite() || !factor.toDouble().isFinite()) return null
         return try {
-            base.multiply(factor.pow(purchasedSegments, MathContext.DECIMAL128), MathContext.DECIMAL128)
-                .takeIf { it.toDouble().isFinite() }
+            val calculated = base.multiply(factor.pow(purchasedSegments, MathContext.DECIMAL128), MathContext.DECIMAL128)
+            val vaultAmount = calculated.toDouble()
+            if (!vaultAmount.isFinite() || (calculated.signum() > 0 && vaultAmount == 0.0)) return null
+            // Quote and persist the same amount Vault can debit/refund. Multiplication
+            // can otherwise produce more decimal digits than its Double API supports.
+            BigDecimal.valueOf(vaultAmount)
         } catch (_: ArithmeticException) {
             null
         }
