@@ -81,7 +81,7 @@ class PlotsX : JavaPlugin() {
             GitHubSource("SyntaxDevTeam/PlotsX"),
             ModrinthSource("")
         )
-        SyntaxCore.init(this)
+        SyntaxCore.init(this, versionType = "paper")
         borderVisualizer = pl.syntaxdevteam.plotsx.visualization.PlotBorderVisualizer(this)
         server.pluginManager.registerEvents(borderVisualizer, this)
         pluginInitializer = PluginInitializer(this)

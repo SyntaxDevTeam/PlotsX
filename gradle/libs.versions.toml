@@ -1,0 +1,68 @@
+[versions]
+kotlin = "2.4.20"
+shadow = "9.6.1"
+run-paper = "3.1.0"
+plugin-deployer = "1.0.6-R0.2-SNAPSHOT"
+foojay-resolver = "1.0.0"
+paper = "1.21.11-R0.1-SNAPSHOT"
+syntaxcore = "1.4.0-R0.1-SNAPSHOT"
+messagehandler = "1.3.0-R0.1-SNAPSHOT"
+cleanerx = "1.5.8"
+aether = "1.1.0"
+snakeyaml = "2.7"
+gson = "2.14.0"
+adventure = "5.2.0"
+mariadb = "3.5.10"
+sqlite = "3.53.4.0"
+postgresql = "42.7.13"
+h2 = "2.5.250"
+hikari = "7.1.0"
+caffeine = "3.2.2"
+ant = "1.10.15"
+luckperms = "5.5"
+placeholderapi = "2.12.3"
+miniplaceholders = "2.3.0"
+vault = "1.7.1"
+vault-unlocked = "2.15"
+coreprotect = "24.1"
+worldguard = "7.0.13"
+worldedit = "7.3.9"
+junit4 = "4.13.2"
+
+[libraries]
+paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
+syntaxcore = { module = "pl.syntaxdevteam:syntaxcore", version.ref = "syntaxcore" }
+messagehandler-paper = { module = "pl.syntaxdevteam:messageHandler-paper", version.ref = "messagehandler" }
+cleanerx = { module = "pl.syntaxdevteam:cleanerx", version.ref = "cleanerx" }
+aether-api = { module = "org.eclipse.aether:aether-api", version.ref = "aether" }
+snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+adventure-legacy = { module = "net.kyori:adventure-text-serializer-legacy", version.ref = "adventure" }
+adventure-minimessage = { module = "net.kyori:adventure-text-minimessage", version.ref = "adventure" }
+adventure-gson = { module = "net.kyori:adventure-text-serializer-gson", version.ref = "adventure" }
+adventure-plain = { module = "net.kyori:adventure-text-serializer-plain", version.ref = "adventure" }
+adventure-ansi = { module = "net.kyori:adventure-text-serializer-ansi", version.ref = "adventure" }
+mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version.ref = "mariadb" }
+sqlite = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+h2 = { module = "com.h2database:h2", version.ref = "h2" }
+hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
+ant = { module = "org.apache.ant:ant", version.ref = "ant" }
+luckperms = { module = "net.luckperms:api", version.ref = "luckperms" }
+placeholderapi = { module = "me.clip:placeholderapi", version.ref = "placeholderapi" }
+miniplaceholders = { module = "io.github.miniplaceholders:miniplaceholders-kotlin-ext", version.ref = "miniplaceholders" }
+vault = { module = "com.github.milkbowl:VaultAPI", version.ref = "vault" }
+vault-unlocked = { module = "net.milkbowl.vault:VaultUnlockedAPI", version.ref = "vault-unlocked" }
+coreprotect = { module = "net.coreprotect:coreprotect", version.ref = "coreprotect" }
+worldguard-bukkit = { module = "com.sk89q.worldguard:worldguard-bukkit", version.ref = "worldguard" }
+worldguard-core = { module = "com.sk89q.worldguard:worldguard-core", version.ref = "worldguard" }
+worldedit-bukkit = { module = "com.sk89q.worldedit:worldedit-bukkit", version.ref = "worldedit" }
+worldedit-core = { module = "com.sk89q.worldedit:worldedit-core", version.ref = "worldedit" }
+junit4 = { module = "junit:junit", version.ref = "junit4" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+run-paper = { id = "xyz.jpenilla.run-paper", version.ref = "run-paper" }
+plugin-deployer = { id = "pl.syntaxdevteam.plugindeployer", version.ref = "plugin-deployer" }

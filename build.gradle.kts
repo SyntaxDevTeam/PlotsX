@@ -1,21 +1,16 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+import org.gradle.api.file.DuplicatesStrategy
+
 plugins {
-    kotlin("jvm") version "2.4.20"
-    id("com.gradleup.shadow") version "9.6.1"
-    id("xyz.jpenilla.run-paper") version "3.1.0"
-    id("pl.syntaxdevteam.plugindeployer") version "1.0.6-R0.2-SNAPSHOT"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.shadow)
+    alias(libs.plugins.run.paper)
+    alias(libs.plugins.plugin.deployer)
 }
 
 group = "pl.syntaxdevteam"
-version = "1.0.0-Beta-4"
+version = "1.0.0-RC"
 description = "Lightweight and versatile player plot protection plugin"
-
-val paperApiVersion = providers.gradleProperty("paperApiVersion")
-    .getOrElse("1.21.11-R0.1-SNAPSHOT")
-val worldGuardVersion = providers.gradleProperty("worldGuardVersion")
-    .getOrElse("7.0.13")
-// WorldEdit 7.4.x is compiled for Java 25. PlotsX still targets Java 21.
-val worldEditVersion = providers.gradleProperty("worldEditVersion")
-    .getOrElse("7.3.9")
 
 repositories {
     mavenCentral()
@@ -42,54 +37,52 @@ repositories {
 }
 
 dependencies {
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.xerial:sqlite-jdbc:3.53.4.0")
-    testImplementation("com.h2database:h2:2.5.250")
-    testRuntimeOnly("org.mariadb.jdbc:mariadb-java-client:3.5.10")
-    testRuntimeOnly("org.postgresql:postgresql:42.7.13")
+    testImplementation(libs.junit4)
+    testImplementation(libs.sqlite)
+    testImplementation(libs.h2)
+    testRuntimeOnly(libs.mariadb)
+    testRuntimeOnly(libs.postgresql)
 
-    compileOnly("io.papermc.paper:paper-api:$paperApiVersion")
-    compileOnly("pl.syntaxdevteam:syntaxcore:1.4.0-R0.1-SNAPSHOT")
-    compileOnly("pl.syntaxdevteam:messageHandler-paper:1.2.2-R0.4-SNAPSHOT")
-    compileOnly("pl.syntaxdevteam:cleanerx:1.5.8")
-    compileOnly("org.eclipse.aether:aether-api:1.1.0")
-    compileOnly("org.yaml:snakeyaml:2.7")
-    compileOnly("com.google.code.gson:gson:2.14.0")
-    compileOnly("net.kyori:adventure-text-serializer-legacy:5.2.0")
-    compileOnly("net.kyori:adventure-text-minimessage:5.2.0")
-    compileOnly("net.kyori:adventure-text-serializer-gson:5.2.0")
-    compileOnly("net.kyori:adventure-text-serializer-plain:5.2.0")
-    compileOnly("net.kyori:adventure-text-serializer-ansi:5.2.0")
-    compileOnly("org.mariadb.jdbc:mariadb-java-client:3.5.10")
-    compileOnly("org.xerial:sqlite-jdbc:3.53.4.0")
-    compileOnly("org.postgresql:postgresql:42.7.13")
-    compileOnly("com.h2database:h2:2.5.250")
-    compileOnly("com.zaxxer:HikariCP:7.1.0")
-    compileOnly("net.luckperms:api:5.5")
-    compileOnly("me.clip:placeholderapi:2.12.3")
-    compileOnly("io.github.miniplaceholders:miniplaceholders-kotlin-ext:2.3.0")
-    compileOnly("com.github.milkbowl:VaultAPI:1.7.1")
-    compileOnly("net.milkbowl.vault:VaultUnlockedAPI:2.15")
-    compileOnly("net.coreprotect:coreprotect:24.1")
-    compileOnly("com.sk89q.worldguard:worldguard-bukkit:$worldGuardVersion") {
+    compileOnly(libs.paper.api)
+    compileOnly(libs.syntaxcore)
+    compileOnly(libs.messagehandler.paper)
+    compileOnly(libs.cleanerx)
+    compileOnly(libs.aether.api)
+    compileOnly(libs.snakeyaml)
+    compileOnly(libs.gson)
+    compileOnly(libs.adventure.legacy)
+    compileOnly(libs.adventure.minimessage)
+    compileOnly(libs.adventure.gson)
+    compileOnly(libs.adventure.plain)
+    compileOnly(libs.adventure.ansi)
+    compileOnly(libs.mariadb)
+    compileOnly(libs.sqlite)
+    compileOnly(libs.postgresql)
+    compileOnly(libs.h2)
+    compileOnly(libs.hikari)
+    compileOnly(libs.luckperms)
+    compileOnly(libs.placeholderapi)
+    compileOnly(libs.miniplaceholders)
+    compileOnly(libs.vault)
+    compileOnly(libs.vault.unlocked)
+    compileOnly(libs.coreprotect)
+    compileOnly(libs.worldguard.bukkit) {
         isTransitive = false
     }
-    compileOnly("com.sk89q.worldguard:worldguard-core:$worldGuardVersion") {
+    compileOnly(libs.worldguard.core) {
         isTransitive = false
     }
-    compileOnly("com.sk89q.worldedit:worldedit-bukkit:$worldEditVersion") {
+    // WorldEdit 7.4.x is compiled for Java 25. PlotsX still targets Java 21.
+    compileOnly(libs.worldedit.bukkit) {
         isTransitive = false
     }
-    compileOnly("com.sk89q.worldedit:worldedit-core:$worldEditVersion") {
+    compileOnly(libs.worldedit.core) {
         isTransitive = false
     }
 }
 
-val targetJavaVersion = providers.gradleProperty("javaVersion")
-    .map(String::toInt)
-    .getOrElse(21)
 kotlin {
-    jvmToolchain(targetJavaVersion)
+    jvmToolchain(21)
 }
 
 tasks {
@@ -101,20 +94,55 @@ tasks {
         runDirectory(file("run/paper"))
     }
     runPaper.folia.registerTask()
-    shadowJar {
-        // Kotlin module metadata is merged by Shadow's transformer. EXCLUDE would
-        // discard duplicates before the transformer can combine them.
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
 }
+
+val runtimeLibraryVersions = mapOf(
+    "syntaxcoreVersion" to libs.versions.syntaxcore.get(),
+    "messagehandlerVersion" to libs.versions.messagehandler.get(),
+    "caffeineVersion" to libs.versions.caffeine.get(),
+    "aetherVersion" to libs.versions.aether.get(),
+    "snakeyamlVersion" to libs.versions.snakeyaml.get(),
+    "gsonVersion" to libs.versions.gson.get(),
+    "adventureVersion" to libs.versions.adventure.get(),
+    "antVersion" to libs.versions.ant.get(),
+    "mariadbVersion" to libs.versions.mariadb.get(),
+    "sqliteVersion" to libs.versions.sqlite.get(),
+    "postgresqlVersion" to libs.versions.postgresql.get(),
+    "h2Version" to libs.versions.h2.get(),
+    "hikariVersion" to libs.versions.hikari.get(),
+)
 
 tasks.processResources {
     val props = mapOf("version" to project.version, "description" to project.description)
-    inputs.properties(props)
+    inputs.properties(props + runtimeLibraryVersions)
     filteringCharset = "UTF-8"
     filesMatching("paper-plugin.yml") {
         expand(props)
     }
+    filesMatching("paper-libraries.yml") {
+        expand(runtimeLibraryVersions)
+    }
+}
+
+tasks.named<ShadowJar>("shadowJar") {
+    archiveBaseName.set("PlotsX-Paper")
+    archiveClassifier.set("")
+    archiveVersion.set(project.version.toString())
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    mergeServiceFiles()
+
+    filesMatching("META-INF/services/**") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+    filesMatching("META-INF/*.kotlin_module") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+}
+
+tasks.register("buildAll") {
+    group = "build"
+    description = "Builds every currently supported PlotsX platform artifact."
+    dependsOn(tasks.named("build"))
 }
 
 val apiJar = tasks.register<Jar>("apiJar") {
