@@ -118,7 +118,8 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
                     val recipient = plugin.server.getPlayer(target) ?: return MemberUpdateResult.RECIPIENT_OFFLINE
                     val limits = plugin.hookHandler.getPlotLimits(recipient)
                     plugin.databaseHandler.transferPlotOwnership(plotId, plot.ownerUuid, target,
-                        plugin.hookHandler.getMaxPlots(recipient), limits.maxRadius, limits.maxTotalArea,
+                        plugin.hookHandler.getMaxPlots(recipient), limits.maxRadius,
+                        if (plot.radius == null) plugin.hookHandler.getChunkMaxTotalArea(recipient) else limits.maxTotalArea,
                         plugin.hookHandler.getMaxChunksPerPlot(recipient), plugin.hookHandler.getMaxOwnedChunks(recipient))
                 }
             }

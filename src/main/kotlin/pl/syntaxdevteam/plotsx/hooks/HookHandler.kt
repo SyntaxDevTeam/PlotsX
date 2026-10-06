@@ -296,6 +296,12 @@ class HookHandler(private val plugin: PlotsX) {
             plugin.config.getInt("plots.chunks.maxTotalOwned", 64))
     }
 
+    /** A configured chunk count must remain reachable without a second, hidden area cap. */
+    fun getChunkMaxTotalArea(player: Player): Long = effectiveChunkAreaLimit(
+        getPlotLimits(player).maxTotalArea,
+        getMaxOwnedChunks(player)
+    )
+
     private fun numericPlayerSetting(player: Player, prefix: String, fallback: Int): Int {
         val granted = player.effectivePermissions.asSequence()
             .filter { it.value }
@@ -314,4 +320,9 @@ class HookHandler(private val plugin: PlotsX) {
         .mapNotNull { it.removePrefix(prefix).toLongOrNull() }
         .filter { it > 0L }
         .maxOrNull()
+}
+
+internal fun effectiveChunkAreaLimit(configuredArea: Long, maxOwnedChunks: Int): Long {
+    val areaForChunkLimit = maxOwnedChunks.toLong() * pl.syntaxdevteam.plotsx.geometry.ChunkPosition.AREA
+    return maxOf(configuredArea, areaForChunkLimit)
 }

@@ -139,7 +139,8 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                         y = y,
                         radius = radius,
                         maxPlots = maxPlots,
-                        maxTotalArea = limits.maxTotalArea,
+                        maxTotalArea = if (plugin.claimMode == pl.syntaxdevteam.plotsx.claiming.ClaimMode.CHUNKS)
+                            plugin.hookHandler.getChunkMaxTotalArea(p) else limits.maxTotalArea,
                         namePrefix = namePrefix,
                         maxChunksPerPlot = maxChunksPerPlot, maxChunksOwned = maxChunksOwned
                     ) } catch (failure: Exception) {

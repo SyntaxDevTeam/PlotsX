@@ -292,7 +292,7 @@ internal class ChunkExpandGUI(
         })
     }
 
-    private fun limits(player: Player) = ChunkExpansionTransaction.Limits(plugin.hookHandler.getPlotLimits(player).maxTotalArea,
+    private fun limits(player: Player) = ChunkExpansionTransaction.Limits(plugin.hookHandler.getChunkMaxTotalArea(player),
         plugin.hookHandler.getMaxChunksPerPlot(player), plugin.hookHandler.getMaxOwnedChunks(player))
     private fun playerChunk(player: Player, world: String): ChunkPosition? {
         if (!player.world.name.equals(world, ignoreCase = true)) return null

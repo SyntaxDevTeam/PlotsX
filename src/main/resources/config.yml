@@ -40,7 +40,8 @@ plots:
     maxPerPlot: 32
     # Maximum chunks owned across all chunk plots and worlds; raise it with
     # plotsx.plot.max-chunks.<number>.
-    # The highest granted value or this configured baseline wins.
+    # The highest granted value or this configured baseline wins. For chunk plots,
+    # the effective total-area limit is raised automatically so this count is reachable.
     maxTotalOwned: 64
     expansion:
       # Price per additional chunk; the first claimed chunk remains free.
