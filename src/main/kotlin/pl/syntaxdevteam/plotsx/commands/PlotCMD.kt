@@ -50,11 +50,13 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
         }
         val player = sender as? Player ?: run { members.reply(sender, "admin_usage"); return }
         if (!PermissionChecker.canManagePlot(player)) { members.reply(player, "denied"); return }
-        val standing = plugin.databaseHandler.getPlotAtLocation(player.world.name, player.location.blockX, player.location.blockZ)
         if (args.firstOrNull().equals("expand", true)) {
             expandStandingChunk(player, args)
             return
         }
+        // Command routing runs on the server thread. The plot cache already contains the
+        // geometry needed here; querying SQL caused a visible pause before /plot expand.
+        val standing = plugin.cacheManager.getPlotAt(player.world.name, player.location.blockX, player.location.blockZ)
         if (args.firstOrNull()?.lowercase() in actions) {
             if (standing == null) { members.reply(player, "stand_on_plot"); return }
             if (args.size == 1 && args[0].equals("members", true) && access.canOpen(player, standing)) {

@@ -33,7 +33,7 @@ Uprawnienie do komendy nie zastępuje wymaganej własności działki lub skrzyni
 | `plotsx.plot.size.<promień>` | `plotsx.plot.size.64` | Maksymalny promień pojedynczej działki w blokach. |
 | `plotsx.plot.max-area.<liczba>` | `plotsx.plot.max-area.16641` | Maksymalna suma powierzchni wszystkich działek gracza w blokach kwadratowych. |
 
-Wygrywa największa przyznana wartość danego uprawnienia, nawet gdy jest niższa od wartości w configu. Bez niej obowiązuje odpowiednio `plots.maxPlots` (5), `plots.radius` (16), `plots.expansion.defaultMaxRadius` (64) lub `plots.expansion.defaultMaxTotalArea` (16641). Wartości ujemne i nienumeryczne są pomijane; rozmiar maksymalny i powierzchnia wymagają wartości dodatnich. `max-plots.0` blokuje tworzenie i odbieranie kolejnych działek, a promień początkowy jest ograniczony od dołu do 1.
+Wygrywa największa przyznana wartość danego uprawnienia. Dla limitów chunków konfiguracja jest wartością bazową: niższy odziedziczony node nie obniża `maxPerPlot` ani `maxTotalOwned`. Pozostałe uprawnienia liczbowe zastępują wartość z configu. Wartości ujemne i nienumeryczne są pomijane; rozmiar maksymalny i powierzchnia wymagają wartości dodatnich. `max-plots.0` blokuje tworzenie i odbieranie kolejnych działek, a promień początkowy jest ograniczony od dołu do 1. Operatorzy i `plotsx.admin.bypass` omijają także limity chunków.
 
 Początkowy promień nadal podlega limitowi maksymalnego promienia i powierzchni. Powierzchnia działki wynosi `(2 × promień + 1)²`. OP i `plotsx.admin.bypass` znoszą limit maksymalnego promienia oraz powierzchni, ale nie limit liczby działek ani nie zmieniają początkowego promienia. Istniejące działki nie są zmniejszane ani usuwane po zmianie uprawnień.
 
