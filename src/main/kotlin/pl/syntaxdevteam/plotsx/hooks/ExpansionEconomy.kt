@@ -16,12 +16,15 @@ object ExpansionEconomy {
     fun price(plugin: PlotsX, purchasedSegments: Int): BigDecimal? = ExpansionPricing.calculate(
         plugin.config.getString("plots.expansion.price", "500.0"),
         plugin.config.getString("plots.expansion.priceMultiplier", "1.5"),
-        purchasedSegments
+        purchasedSegments,
+        plugin.config.getString("plots.expansion.maxPrice", "-1")
     )
 
     fun chunkPrice(plugin: PlotsX, level: Int): BigDecimal? = ExpansionPricing.calculate(
         plugin.config.getString("plots.chunks.expansion.price", "500.0"),
-        plugin.config.getString("plots.chunks.expansion.priceMultiplier", "1.5"), level
+        plugin.config.getString("plots.chunks.expansion.priceMultiplier", "1.5"),
+        level,
+        plugin.config.getString("plots.chunks.expansion.maxPrice", "-1")
     )
 
     fun account(plugin: PlotsX, player: Player, amount: BigDecimal, pinCurrency: Boolean = false): Account? {

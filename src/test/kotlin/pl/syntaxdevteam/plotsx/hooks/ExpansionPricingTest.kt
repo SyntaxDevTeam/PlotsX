@@ -11,6 +11,28 @@ class ExpansionPricingTest {
         }
     }
 
+    @Test fun `maximum price caps later expansions`() {
+        listOf("500", "750", "1000", "1000", "1000").forEachIndexed { count, expected ->
+            assertEquals(
+                0,
+                BigDecimal(expected).compareTo(ExpansionPricing.calculate("500", "1.5", count, "1000"))
+            )
+        }
+    }
+
+    @Test fun `disabled maximum price keeps existing pricing behavior`() {
+        assertEquals(0, BigDecimal("1687.5").compareTo(ExpansionPricing.calculate("500", "1.5", 3, "-1")))
+        assertEquals(0, BigDecimal("1687.5").compareTo(ExpansionPricing.calculate("500", "1.5", 3, "-1.00")))
+    }
+
+    @Test fun `maximum price is applied before Vault conversion overflow`() {
+        assertEquals(0, BigDecimal("10000").compareTo(ExpansionPricing.calculate("500", "10", 400, "10000")))
+    }
+
+    @Test fun `zero maximum price makes expansions free`() {
+        assertEquals(0, ExpansionPricing.calculate("500", "1.5", 10, "0")!!.signum())
+    }
+
     @Test fun `unit multiplier and free expansions remain supported`() {
         assertEquals(0, BigDecimal("500").compareTo(ExpansionPricing.calculate("500", "1", 10)))
         assertEquals(0, ExpansionPricing.calculate("0", "1.5", 10)!!.signum())
@@ -35,6 +57,9 @@ class ExpansionPricingTest {
     @Test fun `invalid settings and overflowing price reject purchase`() {
         for (factor in listOf(null, "invalid", "NaN", "Infinity", "-1", "0", "0.9")) {
             assertNull(ExpansionPricing.calculate("500", factor, 0))
+        }
+        for (maximum in listOf("invalid", "NaN", "Infinity", "-2", "-0.01")) {
+            assertNull(ExpansionPricing.calculate("500", "1.5", 0, maximum))
         }
         assertNull(ExpansionPricing.calculate("-1", "1.5", 0))
         assertNull(ExpansionPricing.calculate("invalid", "1.5", 0))

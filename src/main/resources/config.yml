@@ -47,6 +47,9 @@ plots:
       # Price per additional chunk; the first claimed chunk remains free.
       price: 500.0
       priceMultiplier: 1.5
+      # Maximum price of a single additional chunk after applying priceMultiplier.
+      # -1 = unlimited; 0 makes every additional chunk free.
+      maxPrice: -1
       # Allow /plot expand while standing on a free chunk adjacent to your chunk plot.
       # The command skips direction selection and opens the purchase confirmation directly.
       standingCommand: true
@@ -74,6 +77,9 @@ plots:
     # Next price = price * priceMultiplier ^ purchased segment count (per plot).
     # Must be >= 1; 1 disables growth. Example: 500, 750, 1125, ...
     priceMultiplier: 1.5
+    # Maximum price of one expansion after applying priceMultiplier.
+    # -1 = unlimited; 0 makes every expansion free.
+    maxPrice: -1
     # Used when the player has no plotsx.plot.size.<radius> permission
     defaultMaxRadius: 64
     # Combined block area of all owned plots; override with plotsx.plot.max-area.<blocks>
