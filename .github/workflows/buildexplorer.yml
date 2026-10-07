@@ -201,12 +201,42 @@ jobs:
           import subprocess
           from datetime import datetime, timezone
 
-          before = os.environ.get("GITHUB_BEFORE", "")
-          after = os.environ["GITHUB_AFTER"]
-          rev_range = after
-          if before and before != "0000000000000000000000000000000000000000":
-              rev_range = f"{before}..{after}"
-          raw = subprocess.check_output(["git", "log", "--format=%H%x1f%cI%x1f%s", rev_range], text=True).strip()
+          before = os.environ.get("GITHUB_BEFORE", "").strip()
+          after = os.environ["GITHUB_AFTER"].strip()
+          zero_sha = "0" * 40
+
+          def commit_exists(ref: str) -> bool:
+              return subprocess.run(
+                  ["git", "cat-file", "-e", f"{ref}^{{commit}}"],
+                  stdout=subprocess.DEVNULL,
+                  stderr=subprocess.DEVNULL,
+                  check=False,
+              ).returncode == 0
+
+          rev_range = f"{after}^!"
+          if before and before != zero_sha and commit_exists(before):
+              is_ancestor = subprocess.run(
+                  ["git", "merge-base", "--is-ancestor", before, after],
+                  stdout=subprocess.DEVNULL,
+                  stderr=subprocess.DEVNULL,
+                  check=False,
+              ).returncode == 0
+              if is_ancestor:
+                  rev_range = f"{before}..{after}"
+              else:
+                  merge_base = subprocess.run(
+                      ["git", "merge-base", before, after],
+                      capture_output=True,
+                      text=True,
+                      check=False,
+                  )
+                  if merge_base.returncode == 0 and merge_base.stdout.strip():
+                      rev_range = f"{merge_base.stdout.strip()}..{after}"
+
+          raw = subprocess.check_output(
+              ["git", "log", "--format=%H%x1f%cI%x1f%s", rev_range],
+              text=True,
+          ).strip()
           commits = []
           for line in raw.splitlines():
               if not line:

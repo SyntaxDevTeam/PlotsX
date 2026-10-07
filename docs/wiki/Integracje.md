@@ -6,13 +6,35 @@ PlotsX może korzystać z dodatków, które masz już na serwerze.
 
 ## WorldGuard — miejsce dla spawnu i serwerowych budowli
 
-Jeśli WorldGuard jest aktywny, PlotsX sprawdza, czy nowa lub rozszerzana działka nie nachodzi na jego regiony. Dzięki temu można zarezerwować teren pod spawn, arenę czy inne miejsca serwerowe.
+Jeśli WorldGuard jest aktywny, PlotsX sprawdza cały obszar nowej lub rozszerzanej działki względem jego regionów. Domyślnie zwykły region WorldGuard nadal blokuje zajęcie terenu, dzięki czemu spawn, arena czy budowle administracyjne pozostają chronione.
 
-Sprawdzany jest cały obszar działki i cała wysokość świata. Nawet region wysoko nad ziemią może blokować działkę pod nim. Zwykły region blokuje zajęcie również wtedy, gdy gracz jest jego właścicielem lub członkiem.
+PlotsX rejestruje w WorldGuardzie własną flagę stanu:
 
-Globalny region WorldGuard, `__global__`, nie blokuje sam w sobie zakładania działek. Pozostałe zasady WorldGuard nadal mogą ograniczać działania w świecie.
+```text
+plotsx-claim
+```
 
-Jeśli PlotsX nie może sprawdzić regionów, wstrzymuje zakładanie lub rozszerzanie terenu. Administracja powinna wtedy sprawdzić uruchomienie WorldGuarda. Integracja kontroluje nowy teren; nie łączy ustawień flag obu pluginów ani nie usuwa automatycznie wcześniejszych działek.
+Aby zezwolić na tworzenie i rozszerzanie działek na regionie, ustaw:
+
+```text
+/rg flag <region> plotsx-claim allow
+```
+
+Aby jawnie zablokować claimy:
+
+```text
+/rg flag <region> plotsx-claim deny
+```
+
+Brak flagi na chronionym regionie nie oznacza zgody — teren pozostaje zablokowany. Gdy regiony nachodzą na siebie, PlotsX korzysta z mechanizmu `StateFlag` WorldGuarda, więc obowiązują jego priorytety, dziedziczenie oraz standardowe rozstrzyganie konfliktów `allow`/`deny`.
+
+Sprawdzany jest cały obszar działki i cała wysokość świata. Dotyczy to zarówno `/claim`, klasycznego rozszerzania, jak i rozszerzeń chunkowych. Nie wystarczy, że tylko punkt pod graczem znajduje się poza regionem.
+
+Globalny region WorldGuard, `__global__`, nie blokuje sam w sobie zakładania działek i nie jest używany do rozstrzygania `plotsx-claim`. Pozostałe zasady WorldGuard nadal mogą ograniczać działania w świecie.
+
+Jeśli PlotsX nie może sprawdzić regionów albo flaga nie została poprawnie zarejestrowana, wstrzymuje zakładanie lub rozszerzanie terenu nachodzącego na region. To zachowanie fail-safe zapobiega przypadkowemu otwarciu chronionego obszaru.
+
+Flaga jest rejestrowana podczas fazy ładowania pluginów, zanim WorldGuard zablokuje swój rejestr flag. Po dodaniu lub aktualizacji PlotsX wykonaj pełny restart serwera zamiast przeładowania pluginu.
 
 Bez WorldGuarda działki nadal działają i nie mogą nachodzić na siebie.
 

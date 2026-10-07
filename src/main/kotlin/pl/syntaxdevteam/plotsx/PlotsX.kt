@@ -16,6 +16,7 @@ import pl.syntaxdevteam.plotsx.hooks.HookHandler
 import pl.syntaxdevteam.plotsx.hooks.CoreProtectHook
 import pl.syntaxdevteam.plotsx.hooks.EconomyHook
 import pl.syntaxdevteam.plotsx.hooks.RegionProtectionHook
+import pl.syntaxdevteam.plotsx.hooks.WorldGuardFlags
 import pl.syntaxdevteam.plotsx.common.ConfigHandler
 import pl.syntaxdevteam.plotsx.common.UUIDManager
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
@@ -33,6 +34,9 @@ class PlotsX : JavaPlugin() {
     private val stopping = AtomicBoolean(false)
     val protectionCoordinator = pl.syntaxdevteam.plotsx.protection.ProtectionCoordinator()
     var claimMode = pl.syntaxdevteam.plotsx.claiming.ClaimMode.CLASSIC
+        private set
+
+    internal var worldGuardFlagRegistrationError: String? = null
         private set
 
     fun initializeClaimMode() { claimMode = validateClaimConfig(config) }
@@ -74,6 +78,19 @@ class PlotsX : JavaPlugin() {
     lateinit var coreProtectHook: CoreProtectHook
     var regionProtectionHook: RegionProtectionHook? = null
     lateinit var versionChecker: VersionChecker
+
+    override fun onLoad() {
+        if (server.pluginManager.getPlugin("WorldGuard") == null) return
+
+        worldGuardFlagRegistrationError = try {
+            WorldGuardFlags.register()
+            null
+        } catch (exception: RuntimeException) {
+            exception.message ?: exception.javaClass.simpleName
+        } catch (error: LinkageError) {
+            error.message ?: error.javaClass.simpleName
+        }
+    }
 
     override fun onEnable() {
         stopping.set(false)

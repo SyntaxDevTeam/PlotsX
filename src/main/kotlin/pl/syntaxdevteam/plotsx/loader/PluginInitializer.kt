@@ -12,6 +12,7 @@ import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
 import pl.syntaxdevteam.plotsx.gui.GUIHandler
 import pl.syntaxdevteam.plotsx.hooks.CoreProtectHook
 import pl.syntaxdevteam.plotsx.hooks.EconomyHook
+import pl.syntaxdevteam.plotsx.hooks.WorldGuardFlags
 import pl.syntaxdevteam.plotsx.hooks.WorldGuardHook
 import pl.syntaxdevteam.plotsx.protection.AnimalFlagMigration
 import pl.syntaxdevteam.plotsx.protection.AnimalProtectionListener
@@ -101,7 +102,17 @@ class PluginInitializer(private val plugin: PlotsX) {
         }, plugin)
         if (plugin.server.pluginManager.isPluginEnabled("WorldGuard")) {
             plugin.regionProtectionHook = WorldGuardHook(plugin)
-            plugin.logger.success("WorldGuard detected - claims cannot overlap WorldGuard regions.")
+            if (WorldGuardFlags.claimFlag != null) {
+                plugin.logger.success(
+                    "WorldGuard detected - '${WorldGuardFlags.CLAIM_FLAG_NAME}' flag enabled for claim/expansion control."
+                )
+            } else {
+                val reason = plugin.worldGuardFlagRegistrationError?.let { ": $it" }.orEmpty()
+                plugin.logger.warning(
+                    "WorldGuard detected, but '${WorldGuardFlags.CLAIM_FLAG_NAME}' is unavailable$reason. " +
+                        "Claims overlapping WorldGuard regions remain blocked for safety."
+                )
+            }
         } else {
             plugin.logger.info("WorldGuard not detected - region overlap check disabled.")
         }
