@@ -16,7 +16,6 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
             stack.sender.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "console"))
             return
         }
-        val dbh = plugin.databaseHandler
         val location = player.location
         val world = location.world.name
         val x = location.blockX
@@ -27,8 +26,7 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
             return
         }
 
-        val currentPlot = dbh.getPlotAtLocation(world, x, z)
-
+        val currentPlot = plugin.cacheManager.getPlotAt(world, x, z)
         if (currentPlot == null) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "no_in_plot"))
             return
@@ -47,28 +45,37 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
             plugin = plugin,
             player = player,
             onConfirm = { p ->
-                val current = plugin.databaseHandler.getPlotById(plotId)
+                val current = plugin.cacheManager.getPlot(plotId)
                 if (current == null || current.ownerUuid != p.uniqueId || !PermissionChecker.canUnclaimPlot(p)) {
                     p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "not_owner"))
                     return@UnclaimConfirmGUI
                 }
-                val success = plugin.databaseHandler.deletePlot(plotId)
-                if (!success) {
-                    p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "create_error"))
-                } else {
-                    plugin.databaseHandler.logPlotAction(
-                        PlotLogEntry(
-                            plotId = plotId,
-                            action = "DELETE",
-                            actorUUID = p.uniqueId,
-                            timestamp = System.currentTimeMillis()
-                        )
-                    )
-                    p.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "unclaim_success"))
-                    plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-                        plugin.cacheManager.invalidatePlot(plotId)
+                val actor = p.uniqueId
+                plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                    // JDBC deletion and the audit write must never run on the server thread.
+                    val success = try { plugin.databaseHandler.deletePlot(plotId) }
+                    catch (failure: Exception) {
+                        plugin.logger.err("Unclaim failed for plot $plotId: ${failure.message}")
+                        false
+                    }
+                    if (success) {
+                        try {
+                            plugin.databaseHandler.logPlotAction(
+                                PlotLogEntry(plotId, "DELETE", actor, System.currentTimeMillis())
+                            )
+                        } catch (failure: Exception) {
+                            plugin.logger.warning("Cannot persist DELETE audit for plot $plotId: ${failure.message}")
+                        }
+                    }
+                    if (!plugin.isEnabled) return@Runnable
+                    plugin.server.scheduler.runTask(plugin, Runnable {
+                        if (!p.isOnline) return@Runnable
+                        p.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                            if (success) "plots" else "error",
+                            if (success) "unclaim_success" else "create_error"
+                        ))
                     })
-                }
+                })
             },
             onCancel = { p ->
                 p.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "unclaim_cancelled"))
@@ -78,10 +85,8 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
         plugin.guiHandler.registerGui(player, gui)
     }
 
-    private fun plotList(player: Player): List<String> {
-        val uuid = plugin.uuidManager.getUUID(player.name)
-        return plugin.databaseHandler.getPlayerPlots(uuid).map { it.name }
-    }
+    private fun plotList(player: Player): List<String> =
+        plugin.cacheManager.getPlayerPlots(player.uniqueId).map { it.name }
 
     override fun suggest(@NotNull stack: CommandSourceStack, @NotNull args: Array<String>): List<String> {
         if (!PermissionChecker.canUnclaimPlot(stack.sender)) return emptyList()

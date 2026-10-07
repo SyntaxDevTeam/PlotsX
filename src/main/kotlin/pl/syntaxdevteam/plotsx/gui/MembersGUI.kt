@@ -70,7 +70,9 @@ class MembersGUI(
         val plot = plugin.cacheManager.getPlot(plotId)
         if (plot == null || !access.canOpen(player, plot)) { operations.reply(player, "denied"); return }
         val members = plugin.cacheManager.getMembers(plotId).orEmpty()
-        fun run(p: Player, args: List<String>) { operations.execute(p, plotId, args); show(p) }
+        fun run(p: Player, args: List<String>) {
+            operations.execute(p, plotId, args) { if (p.isOnline) show(p) }
+        }
         when (screen) {
             "members" -> {
                 val entries = members.sortedBy { operations.name(UUID.fromString(it.memberUuid)).lowercase() }
@@ -137,9 +139,10 @@ class MembersGUI(
                         text(if (granted) "grant_true" else "grant_false"),
                         listOf(Component.empty(), text(if (flag != null) "flag_permission_hint" else "action_permission_hint"),
                             text(if (access.owner(player, plot)) "toggle_permission_hint" else "permission_read_only"))))
-                    clicks[slot] = {
-                        operations.execute(it, plotId, listOf("permission", rank, action, (!granted).toString()))
-                        show(it, "permissions", role = rank, page = page)
+                    clicks[slot] = { p ->
+                        operations.execute(p, plotId, listOf("permission", rank, action, (!granted).toString())) {
+                            if (p.isOnline) show(p, "permissions", role = rank, page = page)
+                        }
                     }
                 }
                 pages(actions.size)

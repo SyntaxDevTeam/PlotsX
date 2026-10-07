@@ -43,9 +43,11 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             return
         }
 
+        // Runtime eligibility checks are cache-only. The async transaction repeats authoritative limits/collision checks.
         val maxPlots = plugin.hookHandler.getMaxPlots(player)
         val ownerUuid = player.uniqueId
-        val ownedPlots = dbh.getPlotsByOwner(ownerUuid)
+        val cachedPlots = plugin.cacheManager.getCachedPlots()
+        val ownedPlots = cachedPlots.filter { it.ownerUuid == ownerUuid }
         if (ownedPlots.size >= maxPlots) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent(
                 "error",
@@ -62,13 +64,13 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
             return
         }
 
-        val currentPlot = dbh.getPlotAtLocation(world, x, z)
+        val currentPlot = plugin.cacheManager.getPlotAt(world, x, z)
         if (currentPlot != null) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "is_plot"))
             return
         }
 
-        if (dbh.getPlotsFromAllUsers().any { it.world.equals(world, true) && it.geometry.intersects(claimGeometry(x, z, radius)) }) {
+        if (cachedPlots.any { it.world.equals(world, true) && it.geometry.intersects(claimGeometry(x, z, radius)) }) {
             player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "in_collision"))
             return
         }
@@ -99,8 +101,8 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                     return@ClaimConfirmGUI
                 }
                 val loc      = p.location
-                val uuid     = player.uniqueId
-                val world    = loc.world!!.name
+                val uuid     = p.uniqueId
+                val world    = loc.world.name
                 val x        = loc.blockX
                 val z        = loc.blockZ
                 val y        = loc.blockY
@@ -120,13 +122,16 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                     return@ClaimConfirmGUI
                 }
 
-                if (overlapsExternalRegion(loc.world!!, x, z, radius)) {
+                if (overlapsExternalRegion(loc.world, x, z, radius)) {
                     p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "worldguard_collision"))
                     return@ClaimConfirmGUI
                 }
 
+                // Resolve every Bukkit/permission-derived value before leaving the server thread.
                 val maxChunksPerPlot = plugin.hookHandler.getMaxChunksPerPlot(p)
                 val maxChunksOwned = plugin.hookHandler.getMaxOwnedChunks(p)
+                val maxTotalArea = if (plugin.claimMode == pl.syntaxdevteam.plotsx.claiming.ClaimMode.CHUNKS)
+                    plugin.hookHandler.getChunkMaxTotalArea(p) else limits.maxTotalArea
                 val actor = p.uniqueId
                 val namePrefix = "Działka ${p.name}"
                 plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
@@ -139,43 +144,39 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                         y = y,
                         radius = radius,
                         maxPlots = maxPlots,
-                        maxTotalArea = if (plugin.claimMode == pl.syntaxdevteam.plotsx.claiming.ClaimMode.CHUNKS)
-                            plugin.hookHandler.getChunkMaxTotalArea(p) else limits.maxTotalArea,
+                        maxTotalArea = maxTotalArea,
                         namePrefix = namePrefix,
-                        maxChunksPerPlot = maxChunksPerPlot, maxChunksOwned = maxChunksOwned
+                        maxChunksPerPlot = maxChunksPerPlot,
+                        maxChunksOwned = maxChunksOwned
                     ) } catch (failure: Exception) {
                         plugin.logger.err("Claim failed: ${failure.message}")
                         DatabaseHandler.ClaimResult.DatabaseError
                     }
-                    when (result) {
-                        is DatabaseHandler.ClaimResult.Success -> {
-                            plugin.server.scheduler.runTask(plugin, Runnable {
+                    if (!plugin.isEnabled) return@Runnable
+                    plugin.server.scheduler.runTask(plugin, Runnable {
+                        if (!p.isOnline) return@Runnable
+                        when (result) {
+                            is DatabaseHandler.ClaimResult.Success -> {
                                 p.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "claim_success"))
                                 plugin.cacheManager.getPlot(result.plotId)?.let { helpers.visualizePlotBorder3D(p, it, 20, 2, 4) }
-                            })
+                            }
+                            DatabaseHandler.ClaimResult.LimitReached -> p.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                                "error", "max_plots_reached", mapOf("max" to maxPlots.toString())
+                            ))
+                            DatabaseHandler.ClaimResult.AreaLimitReached -> p.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                                "error", "claim_area_limit", mapOf("max" to formatLimit(maxTotalArea))
+                            ))
+                            DatabaseHandler.ClaimResult.ChunkLimitReached -> p.sendMessage(
+                                plugin.messageHandler.stringMessageToComponent("error", "claim_chunk_limit")
+                            )
+                            DatabaseHandler.ClaimResult.Overlap -> p.sendMessage(
+                                plugin.messageHandler.stringMessageToComponent("error", "in_collision")
+                            )
+                            DatabaseHandler.ClaimResult.DatabaseError -> p.sendMessage(
+                                plugin.messageHandler.stringMessageToComponent("error", "create_error")
+                            )
                         }
-                        DatabaseHandler.ClaimResult.LimitReached -> plugin.server.scheduler.runTask(plugin, Runnable {
-                            p.sendMessage(plugin.messageHandler.stringMessageToComponent(
-                                "error",
-                                "max_plots_reached",
-                                mapOf("max" to maxPlots.toString())
-                            ))
-                        })
-                        DatabaseHandler.ClaimResult.AreaLimitReached -> plugin.server.scheduler.runTask(plugin, Runnable {
-                            p.sendMessage(plugin.messageHandler.stringMessageToComponent(
-                                "error", "claim_area_limit", mapOf("max" to formatLimit(limits.maxTotalArea))
-                            ))
-                        })
-                        DatabaseHandler.ClaimResult.ChunkLimitReached -> plugin.server.scheduler.runTask(plugin, Runnable {
-                            p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "claim_chunk_limit"))
-                        })
-                        DatabaseHandler.ClaimResult.Overlap -> plugin.server.scheduler.runTask(plugin, Runnable {
-                            p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "in_collision"))
-                        })
-                        DatabaseHandler.ClaimResult.DatabaseError -> plugin.server.scheduler.runTask(plugin, Runnable {
-                            p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "create_error"))
-                        })
-                    }
+                    })
                 })
             },
             onCancel = { p ->
@@ -207,5 +208,4 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
         pl.syntaxdevteam.plotsx.claiming.ClaimGeometryFactory.create(plugin.claimMode, x, z, radius)
 
     private fun formatLimit(value: Long): String = if (value == Long.MAX_VALUE) "∞" else value.toString()
-
 }

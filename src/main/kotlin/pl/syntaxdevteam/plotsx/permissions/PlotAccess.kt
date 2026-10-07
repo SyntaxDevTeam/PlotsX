@@ -6,7 +6,7 @@ import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 
-/** Role grants are scoped to a plot and stored alongside its boolean settings. */
+/** Role grants are scoped to a plot and resolved entirely from the atomic runtime cache. */
 class PlotAccess(private val plugin: PlotsX) {
     val roles = listOf("member", "builder", "manager")
     val actions get() = listOf("invite", "kick", "rename") +
@@ -17,11 +17,13 @@ class PlotAccess(private val plugin: PlotsX) {
         (sender is Player && sender.uniqueId == plot.ownerUuid)
 
     fun canOpen(sender: CommandSender, plot: PlotData): Boolean = owner(sender, plot) ||
-        (sender is Player && plugin.databaseHandler.getPlotMembers(plot.id).any { it.memberUuid == sender.uniqueId.toString() })
+        (sender is Player && plugin.cacheManager.getMembers(plot.id).orEmpty()
+            .any { it.memberUuid == sender.uniqueId.toString() })
 
     fun granted(plotId: Int, role: String, action: String): Boolean {
         if (role !in roles || action !in actions) return false
-        return plugin.databaseHandler.getPlotFlag(plotId, key(role, action))?.value?.toBooleanStrictOrNull()
+        return plugin.cacheManager.getFlags(plotId).orEmpty()
+            .firstOrNull { it.name == key(role, action) }?.value?.toBooleanStrictOrNull()
             ?: defaults(role).contains(action)
     }
 
@@ -33,7 +35,7 @@ class PlotAccess(private val plugin: PlotsX) {
 
     fun grants(plotId: Int, role: String): Set<String> {
         if (role !in roles) return emptySet()
-        val settings = plugin.databaseHandler.getPlotFlags(plotId).associate { it.name to it.value }
+        val settings = plugin.cacheManager.getFlags(plotId).orEmpty().associate { it.name to it.value }
         val defaults = defaults(role)
         return actions.filter { settings[key(role, it)]?.toBooleanStrictOrNull() ?: (it in defaults) }.toSet()
     }
@@ -41,7 +43,7 @@ class PlotAccess(private val plugin: PlotsX) {
     fun allowedActions(sender: CommandSender, plot: PlotData): Set<String> {
         if (owner(sender, plot)) return actions.toSet()
         val player = sender as? Player ?: return emptySet()
-        val role = plugin.databaseHandler.getPlotMembers(plot.id)
+        val role = plugin.cacheManager.getMembers(plot.id).orEmpty()
             .firstOrNull { it.memberUuid == player.uniqueId.toString() }?.memberRole ?: return emptySet()
         return grants(plot.id, role)
     }
@@ -49,7 +51,7 @@ class PlotAccess(private val plugin: PlotsX) {
     fun allowed(sender: CommandSender, plot: PlotData, action: String): Boolean {
         if (owner(sender, plot)) return true
         val player = sender as? Player ?: return false
-        val role = plugin.databaseHandler.getPlotMembers(plot.id)
+        val role = plugin.cacheManager.getMembers(plot.id).orEmpty()
             .firstOrNull { it.memberUuid == player.uniqueId.toString() }?.memberRole ?: return false
         return granted(plot.id, role, action)
     }

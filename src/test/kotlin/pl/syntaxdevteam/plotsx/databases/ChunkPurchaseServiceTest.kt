@@ -60,7 +60,9 @@ class ChunkPurchaseServiceTest {
             override val currencyId = "default"
             override fun withdraw(): Boolean {
                 assertEquals("test-server", Thread.currentThread().name)
-                assertFalse(coordinator.decision({ false }) { true })
+                // A reserved purchase no longer globally fail-closes protection. Readers keep using the
+                // previous immutable snapshot until the committed cache snapshot is published.
+                assertTrue(coordinator.decision({ false }) { true })
                 withdrawals++
                 if (debitError) error("provider response lost")
                 return !decline

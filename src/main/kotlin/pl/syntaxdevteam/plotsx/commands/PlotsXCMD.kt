@@ -2,6 +2,7 @@ package pl.syntaxdevteam.plotsx.commands
 
 import io.papermc.paper.command.brigadier.BasicCommand
 import io.papermc.paper.command.brigadier.CommandSourceStack
+import org.bukkit.command.CommandSender
 import org.jetbrains.annotations.NotNull
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.SqlBackup
@@ -22,14 +23,11 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
         if (args.isNotEmpty()) {
             when {
                 args[0].equals("help", ignoreCase = true) -> {
-
                     val page = args.getOrNull(1)?.toIntOrNull() ?: 1
                     sendHelp(stack, page)
-
                 }
 
                 args[0].equals("version", ignoreCase = true) -> {
-
                     stack.sender.sendMessage(
                         mH.miniMessageFormat(
                             "\n<gray>-------------------------------------------------\n" +
@@ -42,52 +40,70 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
                                     "\n-------------------------------------------------"
                         )
                     )
-
                 }
 
                 args[0].equals("reload", ignoreCase = true) -> {
-
                     try {
-                        plugin.onReload()
-                        stack.sender.sendMessage(mH.miniMessageFormat("<green>The configuration file has been reloaded.</green>"))
+                        plugin.onReload { failure ->
+                            if (failure == null) {
+                                stack.sender.sendMessage(mH.miniMessageFormat("<green>The configuration file has been reloaded.</green>"))
+                            } else {
+                                stack.sender.sendMessage("Reload unavailable: ${failure.message}")
+                            }
+                        }
                     } catch (failure: IllegalArgumentException) {
                         stack.sender.sendMessage("Reload rejected: ${failure.message}")
                     } catch (failure: IllegalStateException) {
                         stack.sender.sendMessage("Reload unavailable: ${failure.message}")
                     }
-
                 }
 
                 args[0].equals("export", ignoreCase = true) -> {
-
-                    try {
-                        require(args.size <= 2) { "Usage: /ptx export [mysql|mariadb|sqlite|postgresql|h2]" }
-                        val file = if (args.size == 2) plugin.databaseHandler.exportDatabase(args[1])
-                            else plugin.databaseHandler.exportDatabase()
-                        stack.sender.sendMessage("Backup saved: ${file.absolutePath}")
-                    } catch (e: Exception) {
-                        plugin.logger.err("Database export failed: ${e.message}")
-                        stack.sender.sendMessage("Export failed: ${e.message}")
+                    if (args.size > 2) {
+                        stack.sender.sendMessage("Usage: /ptx export [mysql|mariadb|sqlite|postgresql|h2]")
+                        return
                     }
-
+                    val dialect = args.getOrNull(1)
+                    databaseTask(stack.sender, "Database export") {
+                        val file = if (dialect != null) plugin.databaseHandler.exportDatabase(dialect)
+                        else plugin.databaseHandler.exportDatabase()
+                        "Backup saved: ${file.absolutePath}"
+                    }
                 }
 
                 args[0].equals("import", ignoreCase = true) -> {
-
-                    try {
-                        require(args.size == 1) { "Usage: /ptx import" }
-                        plugin.databaseHandler.importDatabase()
-                        stack.sender.sendMessage("Database restored from dump/backup.sql.")
-                    } catch (e: Exception) {
-                        plugin.logger.err("Database import failed: ${e.message}")
-                        stack.sender.sendMessage("Import failed: ${e.message}")
+                    if (args.size != 1) {
+                        stack.sender.sendMessage("Usage: /ptx import")
+                        return
                     }
-
+                    databaseTask(stack.sender, "Database import") {
+                        plugin.databaseHandler.importDatabase()
+                        "Database restored from dump/backup.sql."
+                    }
                 }
             }
         } else {
             stack.sender.sendMessage(mH.stringMessageToComponentNoPrefix("help", "hint"))
         }
+    }
+
+    /** Heavy backup/restore work is never allowed to occupy the Paper server thread. */
+    private fun databaseTask(sender: CommandSender, operationName: String, operation: () -> String) {
+        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+            val result = try {
+                Result.success(operation())
+            } catch (exception: Exception) {
+                plugin.logger.err("$operationName failed: ${exception.message}")
+                Result.failure(exception)
+            }
+            if (!plugin.isEnabled) return@Runnable
+            plugin.server.scheduler.runTask(plugin, Runnable {
+                result.fold(
+                    onSuccess = { message -> sender.sendMessage(message) },
+                    onFailure = { failure -> sender.sendMessage("$operationName failed: ${failure.message}") }
+                )
+            })
+        })
     }
 
     private val helpEntries = listOf(

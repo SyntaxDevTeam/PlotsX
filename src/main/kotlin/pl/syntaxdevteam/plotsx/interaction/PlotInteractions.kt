@@ -36,9 +36,10 @@ class PlotInteractions(private val plugin: PlotsX) : Listener {
     fun rename(player: Player, plotId: Int, initial: String, error: Component? = null): Boolean =
         show(player, text("rename"), listOfNotNull(error), initial, text("save"), text("cancel"), { p, value ->
             if (value != null) {
-                val result = RenamePlotService(plugin).rename(p, plotId, value)
-                if (result != null) {
-                    if (!rename(p, plotId, value.take(255), result)) p.sendMessage(result)
+                RenamePlotService(plugin).rename(p, plotId, value) { result ->
+                    if (result != null) {
+                        if (!rename(p, plotId, value.take(255), result)) p.sendMessage(result)
+                    }
                 }
             }
         }, { plugin.renamePlotChatListener.startRenameProcess(player, plotId) })

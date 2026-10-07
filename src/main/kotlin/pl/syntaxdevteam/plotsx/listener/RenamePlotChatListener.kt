@@ -33,7 +33,9 @@ class RenamePlotChatListener(private val plugin: PlotsX) : Listener {
         event.isCancelled = true
         val input = PlainTextComponentSerializer.plainText().serialize(event.originalMessage())
         player.scheduler.run(plugin, {
-            RenamePlotService(plugin).rename(player, pending.plotId, input)?.let(player::sendMessage)
+            RenamePlotService(plugin).rename(player, pending.plotId, input) { result ->
+                result?.let(player::sendMessage)
+            }
         }, null)
     }
 
