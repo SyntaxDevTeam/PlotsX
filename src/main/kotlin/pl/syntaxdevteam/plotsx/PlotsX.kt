@@ -130,14 +130,30 @@ class PlotsX : JavaPlugin() {
         if (::databaseHandler.isInitialized) databaseHandler.closeConnection()
         if (::pluginInitializer.isInitialized) pluginInitializer.onDisable()
     }
-    fun onReload() {
+
+    /**
+     * Reloads configuration immediately on the server thread, then rebuilds the DB-backed runtime snapshot
+     * on a worker. Protection keeps serving the previous immutable snapshot until the replacement is ready.
+     */
+    fun onReload(completion: (Exception?) -> Unit = {}) {
         val candidate = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(dataFolder, "config.yml"))
         require(validateClaimConfig(candidate) == claimMode) { "Changing plots.claiming.mode requires a server restart" }
         if (::borderVisualizer.isInitialized) borderVisualizer.close()
-        protectionCoordinator.recover {
-            super.reloadConfig()
-            cacheManager.reloadAllCachesSync()
-        }
-        logger.success("Config reloaded.")
+        super.reloadConfig()
+
+        server.scheduler.runTaskAsynchronously(this, Runnable {
+            val failure = try {
+                protectionCoordinator.recover { cacheManager.reloadAllCachesSync() }
+                null
+            } catch (exception: Exception) {
+                exception
+            }
+            if (!isEnabled) return@Runnable
+            server.scheduler.runTask(this, Runnable {
+                if (failure == null) logger.success("Config reloaded.")
+                else logger.err("Config reload cache refresh failed: ${failure.message}")
+                completion(failure)
+            })
+        })
     }
 }
