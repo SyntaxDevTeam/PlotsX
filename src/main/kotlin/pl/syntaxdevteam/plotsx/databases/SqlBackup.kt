@@ -45,13 +45,16 @@ internal object SqlBackup {
         val chunkSchema = DatabaseMigrations.isChunkSchema(conn)
         val journalSchema = OperationJournal.exists(conn)
         val identityAliases = tableExists(conn, "plotsx_uuid_aliases")
+        val spawnSchema = PlotSpawnRepository.exists(conn)
         require(!journalSchema || chunkSchema) { "Journal requires the geometry schema" }
         val exportedTables = (if (chunkSchema) tables + "plot_chunks" else tables) +
             (if (journalSchema) listOf("plot_operations") else emptyList()) +
-            (if (identityAliases) listOf("plotsx_uuid_aliases") else emptyList())
+            (if (identityAliases) listOf("plotsx_uuid_aliases") else emptyList()) +
+            (if (spawnSchema) listOf("plot_spawns") else emptyList())
         val schema = (if (chunkSchema) DatabaseSchema.chunkStatements(dialect) else DatabaseSchema.statements(dialect)) +
             (if (journalSchema) listOf(OperationJournal.schema()) else emptyList()) +
-            (if (identityAliases) listOf(IdentityMigrationStore.aliasSchema()) else emptyList())
+            (if (identityAliases) listOf(IdentityMigrationStore.aliasSchema()) else emptyList()) +
+            (if (spawnSchema) listOf(PlotSpawnRepository.schema()) else emptyList())
         Files.createDirectories(directory.toPath())
         val destination = File(directory, "backup.sql")
         val temporary = Files.createTempFile(directory.toPath(), "backup-", ".tmp")
@@ -63,7 +66,14 @@ internal object SqlBackup {
             if (journalSchema) OperationJournal.readAll(conn)
             Files.newBufferedWriter(temporary, Charsets.UTF_8).use { writer ->
                 fun line(sql: String) { writer.write(sql); writer.newLine() }
-                line("-- PlotsX SQL backup v${if (identityAliases) 4 else if (journalSchema) 3 else if (chunkSchema) 2 else 1} dialect=$dialect")
+                val version = when {
+                    spawnSchema -> 5
+                    identityAliases -> 4
+                    journalSchema -> 3
+                    chunkSchema -> 2
+                    else -> 1
+                }
+                line("-- PlotsX SQL backup v$version dialect=$dialect")
                 schema.forEach { line(it.trim().removeSuffix(";").replace(Regex("\\s+"), " ") + ";") }
                 line("BEGIN;")
                 exportedTables.asReversed().forEach { line("DELETE FROM $it;") }
@@ -114,7 +124,8 @@ internal object SqlBackup {
     fun restore(conn: Connection, dialect: String, file: File, allowChunkPlots: Boolean = false) {
         // Validate the entire file before modifying the database. Only our versioned format is supported.
         val lines = file.readLines(Charsets.UTF_8)
-        val identityBackup = lines.firstOrNull() == "-- PlotsX SQL backup v4 dialect=$dialect"
+        val spawnBackup = lines.firstOrNull() == "-- PlotsX SQL backup v5 dialect=$dialect"
+        val identityBackup = spawnBackup || lines.firstOrNull() == "-- PlotsX SQL backup v4 dialect=$dialect"
         val journalBackup = identityBackup || lines.firstOrNull() == "-- PlotsX SQL backup v3 dialect=$dialect"
         val chunkBackup = journalBackup || lines.firstOrNull() == "-- PlotsX SQL backup v2 dialect=$dialect"
         require(chunkBackup || lines.firstOrNull() == "-- PlotsX SQL backup v1 dialect=$dialect") {
@@ -122,13 +133,15 @@ internal object SqlBackup {
         }
         val schema = ((if (chunkBackup) DatabaseSchema.chunkStatements(dialect) else DatabaseSchema.statements(dialect)) +
             (if (journalBackup) listOf(OperationJournal.schema()) else emptyList()) +
-            (if (identityBackup) listOf(IdentityMigrationStore.aliasSchema()) else emptyList()))
+            (if (identityBackup) listOf(IdentityMigrationStore.aliasSchema()) else emptyList()) +
+            (if (spawnBackup) listOf(PlotSpawnRepository.schema()) else emptyList()))
             .map { it.trim().removeSuffix(";").replace(Regex("\\s+"), " ") + ";" }
         val legacySchema = schema.filterNot { it.startsWith("CREATE TABLE IF NOT EXISTS plot_segments ") }
         val sourceSchema = if (chunkBackup || lines.drop(1).take(schema.size) == schema) schema else legacySchema
         val sourceTables = (if (chunkBackup) tables + "plot_chunks" else if (sourceSchema == schema) tables else tables.filterNot { it == "plot_segments" }) +
             (if (journalBackup) listOf("plot_operations") else emptyList()) +
-            (if (identityBackup) listOf("plotsx_uuid_aliases") else emptyList())
+            (if (identityBackup) listOf("plotsx_uuid_aliases") else emptyList()) +
+            (if (spawnBackup) listOf("plot_spawns") else emptyList())
         require(lines.drop(1).take(sourceSchema.size) == sourceSchema && lines.lastOrNull() == "COMMIT;") { "Incomplete backup or unsupported schema." }
         val body = lines.drop(1 + sourceSchema.size).dropLast(1)
         require(body.firstOrNull() == "BEGIN;") { "Missing transaction." }
@@ -140,6 +153,7 @@ internal object SqlBackup {
         if (chunkBackup) DatabaseMigrations.migrate(conn, dialect)
         if (journalBackup) OperationJournal.migrate(conn)
         if (identityBackup) IdentityMigrationStore.migrateSchema(conn)
+        if (spawnBackup) PlotSpawnRepository.migrate(conn)
         conn.createStatement().use { statement ->
             schema.forEach { statement.execute(it) }
         }
@@ -149,6 +163,7 @@ internal object SqlBackup {
             conn.createStatement().use { statement ->
                 if (OperationJournal.exists(conn)) statement.execute("DELETE FROM plot_operations")
                 if (tableExists(conn, "plotsx_uuid_aliases")) statement.execute("DELETE FROM plotsx_uuid_aliases")
+                if (PlotSpawnRepository.exists(conn)) statement.execute("DELETE FROM plot_spawns")
                 if (chunkTarget) statement.execute("DELETE FROM plot_chunks")
                 statement.execute("DELETE FROM plot_segments")
                 // H2 ALTER TABLE commits implicitly: reset identities only after all data has loaded.

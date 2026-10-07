@@ -48,6 +48,8 @@ error:
   chunk_remove_anchor: "<red>The plot anchor chunk cannot be removed.</red>"
   chunk_remove_disconnect: "<red>Removing this chunk would split the plot into disconnected parts.</red>"
   chunk_remove_wrong_geometry: "<red>Individual chunk removal is available only for chunk plots.</red>"
+  teleport_spawn_outside: "<red>Stand inside your plot to set its teleport point.</red>"
+  teleport_spawn_unsafe: "<red>This position is not safe enough to use as the plot teleport point.</red>"
 
 
   console: "<red>Only players can use this command.</red>"
@@ -67,6 +69,8 @@ plots:
   approaching_plot: "<yellow>You are approaching plot <white><plot></white>. Protections will change soon.</yellow>"
   teleport: "<green>Teleported to the plot!</green>"
   teleport_failed: "<red>No safe location found to teleport to this plot.</red>"
+  teleport_spawn_set: "<green>Plot teleport point set to <white><x>, <y>, <z></white>.</green>"
+  teleport_spawn_failed: "<red>Could not save the plot teleport point.</red>"
   rename_hint: "Type the new plot name in chat (you have 60 seconds)."
   rename_timeout: "<red>Time to enter a new name has expired. Process cancelled.</red>"
   rename_success: "<green>Plot name changed to: <white><name></white></green>"
@@ -157,6 +161,7 @@ members:
   removed: "Removed <player> from the plot."
 
 GUI:
+  back: "<gray>Back to plot settings</gray>"
   claim:
     title_claim: "Confirm plot creation!"
     material_name:
@@ -173,6 +178,7 @@ GUI:
       info: "<gold><bold>Plot Information</bold></gold>"
       flags: "<color:#852579>Flag Settings</color>"
       teleport: "<color:#aa2244>Teleport to plot</color>"
+      set_spawn: "<gold>Set teleport point</gold>"
       list: "<gold>Plot List</gold>"
       rename: "<gold>Rename Plot</gold>"
       expand: "<gold>Expand Plot</gold>"

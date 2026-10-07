@@ -29,6 +29,7 @@ internal class ChunkRemoveGUI(
     private val bordersIndex = 45
     private val confirmIndex = 47
     private val cancelIndex = 51
+    private val backIndex = 53
 
     private var offered: PlotData? = null
     private var target: ChunkPosition? = null
@@ -119,6 +120,7 @@ internal class ChunkRemoveGUI(
             }
         )
         inventory.setItem(cancelIndex, item(Material.BARRIER, "remove_chunk.cancel"))
+        inventory.setItem(backIndex, item(Material.ARROW, "back"))
     }
 
     override fun handleClick(event: InventoryClickEvent) {
@@ -156,6 +158,11 @@ internal class ChunkRemoveGUI(
             plugin.cacheManager.getPlot(plotId)?.let {
                 Helpers(plugin).visualizePlotBorder3D(player, it, Helpers(plugin).borderDurationSeconds(), 2, 4)
             }
+            return
+        }
+
+        if (event.rawSlot == backIndex) {
+            returnToPlotMenu(player)
             return
         }
 
@@ -235,6 +242,20 @@ internal class ChunkRemoveGUI(
                 }
             }, null)
         })
+    }
+
+    private fun returnToPlotMenu(player: Player) {
+        submitted = true
+        player.scheduler.run(plugin, {
+            val current = plugin.cacheManager.getPlot(plotId)
+            if (current == null) {
+                player.closeInventory()
+                plugin.guiHandler.unregisterGui(player)
+                error(player, "plot_not_found")
+                return@run
+            }
+            plugin.guiHandler.registerGui(player, PlotGUI(plugin, current))
+        }, null)
     }
 
     private fun refreshSelectedOffer(player: Player, selected: ChunkPosition): PlotData? {

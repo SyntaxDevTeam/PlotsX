@@ -9,6 +9,8 @@ import org.bukkit.inventory.meta.SkullMeta
 import pl.syntaxdevteam.plotsx.PlotsX
 import pl.syntaxdevteam.plotsx.databases.Helpers
 import pl.syntaxdevteam.plotsx.databases.PlotData
+import pl.syntaxdevteam.plotsx.databases.PlotSpawnRepository
+import pl.syntaxdevteam.plotsx.databases.PlotTeleportSpawn
 import pl.syntaxdevteam.plotsx.protection.SafeTeleportUtil
 import pl.syntaxdevteam.plotsx.permissions.PermissionChecker
 import pl.syntaxdevteam.plotsx.permissions.PlotAccess
@@ -26,13 +28,14 @@ class PlotGUI(
     private val message = plugin.messageHandler
     private val helpers = Helpers(plugin)
     private val plotIndex = 4
-    private val flagsIndex = 11
-    private val tpaIndex = 15
-    private val renameIndex = 29
-    private val listIndex = 31
-    private val expandIndex = 33
-    private val removeChunkIndex = 35
-    private val membersIndex = 13
+    private val flagsIndex = 10
+    private val membersIndex = 12
+    private val tpaIndex = 14
+    private val spawnIndex = 16
+    private val renameIndex = 28
+    private val listIndex = 30
+    private val expandIndex = 32
+    private val removeChunkIndex = 34
 
     override fun open(player: Player) {
         val targetPlot = plot ?: plugin.cacheManager.getPlotAt(
@@ -69,6 +72,17 @@ class PlotGUI(
                 message.stringMessageToComponentNoPrefix("GUI", "plot.material_name.teleport")
             )
         )
+        if (current.ownerUuid == player.uniqueId) {
+            inventory.setItem(
+                spawnIndex,
+                createItem(
+                    Material.LODESTONE,
+                    message.stringMessageToComponentNoPrefix("GUI", "plot.material_name.set_spawn")
+                )
+            )
+        } else {
+            inventory.clear(spawnIndex)
+        }
         inventory.setItem(
             renameIndex,
             createItem(
@@ -132,15 +146,17 @@ class PlotGUI(
             }
 
             tpaIndex -> {
-                    plugin.server.scheduler.runTask(plugin, Runnable {
-                        val success = SafeTeleportUtil.safeTeleport(player, pd)
-                        if (success) {
-                            player.sendMessage(message.stringMessageToComponent("plots", "teleport"))
-                        } else {
-                            player.sendMessage(message.stringMessageToComponent("plots", "teleport_failed"))
-                        }
-                    })
+                player.scheduler.run(plugin, {
+                    val success = SafeTeleportUtil.safeTeleport(player, pd)
+                    if (success) {
+                        player.sendMessage(message.stringMessageToComponent("plots", "teleport"))
+                    } else {
+                        player.sendMessage(message.stringMessageToComponent("plots", "teleport_failed"))
+                    }
+                }, null)
             }
+
+            spawnIndex -> setTeleportSpawn(player, pd)
 
             renameIndex -> {
                 if (!PlotAccess(plugin).allowed(player, pd, "rename")) {
@@ -185,7 +201,7 @@ class PlotGUI(
             }
 
             plotIndex -> {
-                plugin.server.scheduler.runTask(plugin, Runnable {
+                player.scheduler.run(plugin, {
                     helpers.visualizePlotBorder3D(
                         player = player,
                         plot = pd,
@@ -193,9 +209,64 @@ class PlotGUI(
                         stepXZ = 2,
                         stepY = 4
                     )
-                })
+                }, null)
             }
         }
+    }
+
+    private fun setTeleportSpawn(player: Player, plot: PlotData) {
+        if (plot.ownerUuid != player.uniqueId) {
+            player.sendMessage(message.stringMessageToComponent("error", "not_owner"))
+            return
+        }
+        val location = player.location
+        val spawn = PlotTeleportSpawn(location.blockX, location.blockY, location.blockZ)
+        if (!player.world.name.equals(plot.world, ignoreCase = true) || !plot.contains(spawn.x, spawn.z)) {
+            player.sendMessage(message.stringMessageToComponent("error", "teleport_spawn_outside"))
+            return
+        }
+        if (!SafeTeleportUtil.isSafeTeleportSpawn(player.world, plot, spawn)) {
+            player.sendMessage(message.stringMessageToComponent("error", "teleport_spawn_unsafe"))
+            return
+        }
+
+        val owner = player.uniqueId
+        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+            val result = PlotSpawnRepository.save(plugin, plot.id, owner, owner, spawn)
+            if (result == PlotSpawnRepository.SaveResult.Success) {
+                try {
+                    plugin.cacheManager.reloadPlotSync(plot.id)
+                } catch (failure: Exception) {
+                    plugin.logger.err("Teleport spawn cache refresh failed for plot ${plot.id}: ${failure.message}")
+                    if (!plugin.isEnabled) return@Runnable
+                    player.scheduler.run(plugin, {
+                        if (player.isOnline) player.sendMessage(message.stringMessageToComponent("plots", "teleport_spawn_failed"))
+                    }, null)
+                    return@Runnable
+                }
+            }
+            if (!plugin.isEnabled) return@Runnable
+            player.scheduler.run(plugin, {
+                if (!player.isOnline) return@run
+                when (result) {
+                    PlotSpawnRepository.SaveResult.Success -> player.sendMessage(
+                        message.stringMessageToComponent(
+                            "plots", "teleport_spawn_set",
+                            mapOf("x" to spawn.x.toString(), "y" to spawn.y.toString(), "z" to spawn.z.toString())
+                        )
+                    )
+                    PlotSpawnRepository.SaveResult.PlotNotFound -> player.sendMessage(
+                        message.stringMessageToComponent("error", "plot_not_found")
+                    )
+                    PlotSpawnRepository.SaveResult.NotOwner -> player.sendMessage(
+                        message.stringMessageToComponent("error", "not_owner")
+                    )
+                    PlotSpawnRepository.SaveResult.DatabaseError -> player.sendMessage(
+                        message.stringMessageToComponent("plots", "teleport_spawn_failed")
+                    )
+                }
+            }, null)
+        })
     }
 
     private fun createItem(material: Material, name: Component): ItemStack {

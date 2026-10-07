@@ -10,13 +10,13 @@ interactions:
   translated-clients: false
 ```
 
-`mode: legacy` wymusza dotychczasowy interfejs. Lokalne ViaVersion, ViaBackwards, ProtocolSupport, Geyser-Spigot i floodgate powodują użycie tego interfejsu dla wszystkich graczy, również nowych klientów. Jeżeli translacja działa wyłącznie na proxy, administrator powinien ustawić `translated-clients: true`. Nie próbujemy zgadywać wersji klienta na podstawie wersji serwera.
+`mode: legacy` wymusza dotychczasowy interfejs czatowy. W trybie `auto` sama obecność ViaVersion, ViaBackwards, ProtocolSupport, Geyser lub Floodgate nie wyłącza już Dialog API dla całego serwera — na nowoczesnym Paper, który udostępnia API, zmiana nazwy korzysta z natywnego formularza. Jeśli konkretne wdrożenie tłumaczy protokół dla starszych klientów i administrator świadomie potrzebuje jednego kompatybilnego interfejsu dla wszystkich, może ustawić `translated-clients: true`; wtedy wejście tekstowe wraca do czatu.
 
 Nowe komunikaty znajdują się w sekcji `dialogs` plików językowych PL i EN. Nazwa ma maksymalnie 255 znaków, zgodnie ze schematem bazy. Czat i dialog stosują tę samą walidację, filtr CleanerX i kontrolę uprawnień. Zapis obecnej nazwy jest dozwolony.
 
 Formularz jest związany z graczem, wygasa po 60 sekundach i może zostać zatwierdzony tylko raz. Kolejny formularz, otwarcie ekwipunku lub wyjście gracza unieważniają poprzednią sesję. Anulowanie nie wykonuje operacji.
 
-Adapter dialogowy jest ładowany refleksyjnie; wspólna fasada nie zawiera typów Dialog API. Błąd wyświetlenia przywraca obsługiwane menu lub czat. Przełączanie na dialog i obsługa odpowiedzi używają schedulera gracza. Nie jest to audyt zgodności całego pluginu z Folia — istniejące operacje bazy/cache i wizualizacje zawierają również starsze wywołania schedulerów.
+Adapter dialogowy jest ładowany refleksyjnie; wspólna fasada nie zawiera typów Dialog API. Błąd wyświetlenia przywraca obsługiwany czat. Przełączanie na dialog i obsługa odpowiedzi używają schedulera gracza. Nie jest to audyt zgodności całego pluginu z Folia — istniejące operacje bazy/cache i wizualizacje zawierają również starsze wywołania schedulerów.
 
 ## Weryfikacja
 
@@ -24,9 +24,9 @@ Automatyczne testy `DialogSessionsTest` obejmują stare formularze, obcego gracz
 
 Przed wydaniem należy wykonać testy w grze (nie są zastąpione przez testy jednostkowe):
 
-- Paper 1.20.6 i 1.21.6: start JAR bez błędów brakujących klas, wszystkie operacje w starym interfejsie.
+- Paper 1.20.6 i 1.21.6: start JAR bez błędów brakujących klas, zmiana nazwy przez czat.
 - Paper 1.21.7, 1.21.11 i wspierane 26.x: dialog zmiany nazwy, zapis, Anuluj/Escape i timeout; pozostałe operacje w menu ekwipunku.
-- `mode: legacy` oraz konfiguracja translatora: działający fallback, w tym obsługa kliknięć w menu.
+- Serwer z ViaVersion/ViaBackwards/Geyser: `mode: auto` nadal pokazuje dialog nowoczesnym serwerom; `translated-clients: true` jawnie wymusza kompatybilny fallback czatowy.
 - Odebranie uprawnień, usunięcie działki lub zmiana właściciela przy otwartym formularzu: odrzucenie nieaktualnej operacji.
 - Rozszerzenie w menu ekwipunku: zmiana ceny/poziomu, podwójne zatwierdzenie, brak środków i poprawne rozliczenie.
 - Zmiana nazwy: pusta/niedozwolona nazwa, duplikat, bieżąca nazwa i awaria filtra; błędy zachowują wpis w formularzu.

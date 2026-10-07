@@ -58,9 +58,13 @@ internal object PlotCacheLoader {
                 require(level >= 0) { "Invalid expansion level" }
                 levels[rows.getInt("plot_id")] = level
             } }
+            val teleportSpawns = PlotSpawnRepository.readAll(conn, plotId)
             conn.commit()
             return PlotCacheData(plots.map { plot ->
-                if (plot.radius == null) plot.copy(expansionLevel = levels[plot.id] ?: (plot.chunks.size - 1)) else plot
+                val priced = if (plot.radius == null) {
+                    plot.copy(expansionLevel = levels[plot.id] ?: (plot.chunks.size - 1))
+                } else plot
+                priced.copy(teleportSpawn = teleportSpawns[plot.id])
             }, flags, members)
         } catch (failure: Exception) {
             conn.rollback()

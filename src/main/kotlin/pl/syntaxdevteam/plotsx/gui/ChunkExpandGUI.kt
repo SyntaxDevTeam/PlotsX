@@ -27,6 +27,7 @@ internal class ChunkExpandGUI(
     private val bordersIndex = 45
     private val confirmIndex = 47
     private val cancelIndex = 51
+    private val backIndex = 53
     private var direction = ExpansionDirection.NORTH
     private var offered: PlotData? = null
     private var source: ChunkPosition? = null
@@ -113,6 +114,7 @@ internal class ChunkExpandGUI(
         inventory.setItem(confirmIndex, item(if (target == null) Material.GRAY_DYE else Material.EMERALD_BLOCK,
             "expand.confirm").apply { itemMeta = itemMeta.apply { lore(lore) } })
         inventory.setItem(cancelIndex, item(Material.BARRIER, "expand.cancel"))
+        inventory.setItem(backIndex, item(Material.ARROW, "back"))
         plugin.logger.debug(
             "PlotsX expansion timings: GUI render=${millisSince(renderStarted)} ms [main], " +
                 "plot checks=${cells.size}, WorldGuard checks=${preview.checks}, WorldGuard calls=${preview.calls}"
@@ -157,6 +159,10 @@ internal class ChunkExpandGUI(
             plugin.cacheManager.getPlot(plotId)?.let { Helpers(plugin).visualizePlotBorder3D(player, it, Helpers(plugin).borderDurationSeconds(), 2, 4) }
             return
         }
+        if (event.rawSlot == backIndex) {
+            returnToPlotMenu(player)
+            return
+        }
         if (event.rawSlot == cancelIndex) {
             submitted = true
             player.scheduler.run(plugin, {
@@ -172,6 +178,20 @@ internal class ChunkExpandGUI(
         submitted = true
         inventory.setItem(confirmIndex, item(Material.CLOCK, "expand.processing"))
         submit(player)
+    }
+
+    private fun returnToPlotMenu(player: Player) {
+        submitted = true
+        player.scheduler.run(plugin, {
+            val current = plugin.cacheManager.getPlot(plotId)
+            if (current == null) {
+                player.closeInventory()
+                plugin.guiHandler.unregisterGui(player)
+                error(player, "plot_not_found")
+                return@run
+            }
+            plugin.guiHandler.registerGui(player, PlotGUI(plugin, current))
+        }, null)
     }
 
     /** Refreshes the quote immediately before closing the GUI, so map navigation cannot submit stale data. */

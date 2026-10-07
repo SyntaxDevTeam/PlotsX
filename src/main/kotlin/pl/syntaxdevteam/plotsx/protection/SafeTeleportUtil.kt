@@ -8,6 +8,7 @@ import org.bukkit.block.Block
 import org.bukkit.entity.Player
 import pl.syntaxdevteam.plotsx.compat.PlotCompat
 import pl.syntaxdevteam.plotsx.databases.PlotData
+import pl.syntaxdevteam.plotsx.databases.PlotTeleportSpawn
 import java.util.ArrayDeque
 
 object SafeTeleportUtil {
@@ -43,6 +44,7 @@ object SafeTeleportUtil {
      * - dwa bloki nad (y+1, y+2) są powietrzem
      */
     private fun isSafeBlock(world: World, x: Int, y: Int, z: Int): Boolean {
+        if (y < world.minHeight + 1 || y > world.maxHeight - 3) return false
         val ground: Block = world.getBlockAt(x, y - 1, z)
         val block: Block = world.getBlockAt(x, y, z)
         val above: Block = world.getBlockAt(x, y + 1, z)
@@ -58,6 +60,18 @@ object SafeTeleportUtil {
                 && twoAbove.type !in unsafeBlocks
     }
 
+    /** Validates a player-selected teleport point against current plot geometry and blocks. */
+    fun isSafeTeleportSpawn(world: World, plot: PlotData, spawn: PlotTeleportSpawn): Boolean =
+        world.name.equals(plot.world, ignoreCase = true) &&
+            plot.contains(spawn.x, spawn.z) &&
+            isSafeBlock(world, spawn.x, spawn.y, spawn.z)
+
+    private fun configuredSpawn(world: World, plot: PlotData): Location? {
+        val spawn = plot.teleportSpawn ?: return null
+        if (!isSafeTeleportSpawn(world, plot, spawn)) return null
+        return Location(world, spawn.x + 0.5, spawn.y.toDouble(), spawn.z + 0.5)
+    }
+
     /**
      * Szuka bezpiecznej lokalizacji:
      * 1) Priorytet: poziomy wg kolejki buildYQueue (blisko baseY)
@@ -69,7 +83,7 @@ object SafeTeleportUtil {
         baseY: Int,
         contains: (Int, Int) -> Boolean = { _, _ -> true }
     ): Location? {
-        val yMax = world.maxHeight - 2
+        val yMax = world.maxHeight - 3
         val yMin = world.minHeight + 1
         val yQueue = buildYQueue(baseY, yMin, yMax)
 
@@ -103,11 +117,13 @@ object SafeTeleportUtil {
     }
 
     /**
-     * Teleportuje gracza na bezpieczną lokalizację wg PlotData.y.
+     * Teleportuje gracza najpierw do zapisanego punktu działki, a jeśli ten nie jest już
+     * bezpieczny lub nie należy do geometrii, używa dotychczasowego wyszukiwania awaryjnego.
      */
     fun safeTeleport(player: Player, plot: PlotData): Boolean {
         val world = Bukkit.getWorld(plot.world) ?: return false
-        val loc = findSafeLocation(world, plot.x, plot.z, plot.radius ?: 16, plot.y, plot::contains)
+        val loc = configuredSpawn(world, plot)
+            ?: findSafeLocation(world, plot.x, plot.z, plot.radius ?: 16, plot.y, plot::contains)
         return loc?.let {
             player.teleport(it)
             true

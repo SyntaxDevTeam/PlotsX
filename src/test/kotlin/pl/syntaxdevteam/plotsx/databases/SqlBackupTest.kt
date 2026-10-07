@@ -4,6 +4,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import java.nio.file.Files
 import java.sql.DriverManager
+import pl.syntaxdevteam.plotsx.identity.IdentityMigrationStore
 
 class SqlBackupTest {
     @Test fun roundTripAndMigration() {
@@ -83,5 +84,53 @@ class SqlBackupTest {
                 }
             }
         } finally { directory.deleteRecursively() }
+    }
+
+    @Test fun `v5 backup preserves custom teleport spawn`() {
+        for (source in listOf("sqlite", "h2")) for (target in listOf("sqlite", "h2")) {
+            val directory = Files.createTempDirectory("plotsx-spawn-backup-test").toFile()
+            fun connect(type: String) = DriverManager.getConnection(
+                if (type == "sqlite") "jdbc:sqlite::memory:" else "jdbc:h2:mem:${java.util.UUID.randomUUID()}"
+            )
+            try {
+                connect(source).use { conn ->
+                    if (source == "sqlite") conn.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
+                    conn.createStatement().use { statement ->
+                        DatabaseSchema.statements(source).forEach { statement.execute(it) }
+                    }
+                    DatabaseMigrations.migrate(conn, source)
+                    OperationJournal.migrate(conn)
+                    IdentityMigrationStore.migrateSchema(conn)
+                    PlotSpawnRepository.migrate(conn)
+                    conn.createStatement().use { statement ->
+                        statement.execute(
+                            "INSERT INTO plots (plot_id, owner_uuid, x, z, y, radius, world, name, creation_time, geometry_type, geometry_revision) " +
+                                "VALUES (42, 'owner', 10, 20, 64, 4, 'world', 'home', 12345, 'classic', 0)"
+                        )
+                        statement.execute("INSERT INTO plot_segments (plot_id, x, z, radius) VALUES (42, 10, 20, 4)")
+                        statement.execute("INSERT INTO plot_spawns (plot_id, x, y, z) VALUES (42, 12, 70, 18)")
+                    }
+                    val file = SqlBackup.export(conn, target, directory)
+                    assertTrue(file.readLines().first().startsWith("-- PlotsX SQL backup v5"))
+                    connect(target).use { restored ->
+                        if (target == "sqlite") restored.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
+                        restored.createStatement().use { statement ->
+                            DatabaseSchema.statements(target).forEach { statement.execute(it) }
+                        }
+                        SqlBackup.restore(restored, target, file, allowChunkPlots = true)
+                        restored.createStatement().use { statement ->
+                            statement.executeQuery("SELECT x, y, z FROM plot_spawns WHERE plot_id=42").use {
+                                assertTrue(it.next())
+                                assertEquals(12, it.getInt("x"))
+                                assertEquals(70, it.getInt("y"))
+                                assertEquals(18, it.getInt("z"))
+                            }
+                        }
+                    }
+                }
+            } finally {
+                directory.deleteRecursively()
+            }
+        }
     }
 }

@@ -48,6 +48,8 @@ error:
   chunk_remove_anchor: "<red>Nie można usunąć bazowego chunka działki.</red>"
   chunk_remove_disconnect: "<red>Usunięcie tego chunka rozdzieliłoby działkę na osobne części.</red>"
   chunk_remove_wrong_geometry: "<red>Usuwanie pojedynczych chunków jest dostępne tylko dla działek chunkowych.</red>"
+  teleport_spawn_outside: "<red>Aby ustawić punkt teleportacji, stań na swojej działce.</red>"
+  teleport_spawn_unsafe: "<red>Ta pozycja nie jest wystarczająco bezpieczna jako punkt teleportacji działki.</red>"
 
   console: "<red>Tylko gracz może użyć tej komendy.</red>"
   reload: "<red>Wystąpił błąd podczas przeładowania konfiguracji:</red> "
@@ -66,6 +68,8 @@ plots:
   approaching_plot: "<yellow>Zbliżasz się do działki <white><plot></white>. Ochrona za chwilę się zmieni.</yellow>"
   teleport: "<green>Teleportowano na działkę!</green>"
   teleport_failed: "<red>Nie znaleziono bezpiecznego miejsca do teleportacji na tę działkę.</red>"
+  teleport_spawn_set: "<green>Ustawiono punkt teleportacji działki na <white><x>, <y>, <z></white>.</green>"
+  teleport_spawn_failed: "<red>Nie udało się zapisać punktu teleportacji działki.</red>"
   rename_hint: "Wpisz nową nazwę działki na czacie (masz 60 sekund)."
   rename_timeout: "<red>Czas na wpisanie nowej nazwy minął. Anulowano zmianę nazwy.</red>"
   rename_success: "<green>Zmieniono nazwę działki na: <white><name></white></green>"
@@ -157,6 +161,7 @@ members:
   removed: "Usunięto gracza <player> z działki."
 
 GUI:
+  back: "<gray>Wróć do ustawień działki</gray>"
   claim:
     title_claim: "Potwierdź utworzenie działki!"
     material_name:
@@ -173,6 +178,7 @@ GUI:
       info: "<gold><bold>Informacje o działce</bold></gold>"
       flags: "<color:#852579>Ustawienia flag</color>"
       teleport: "<color:#aa2244>Teleportuj się do działki</color>"
+      set_spawn: "<gold>Ustaw punkt teleportacji</gold>"
       list: "<gold>Lista działek</gold>"
       rename: "<gold>Zmień nazwę działki</gold>"
       expand: "<gold>Rozszerz działkę</gold>"
@@ -442,7 +448,7 @@ flags:
   special-weapons:
     name: "Broń specjalna"
     description: "Pozwala obcym używać trójzębów i buzdyganów na działce."
-    not_allowed: "<red>Nie możesz używać tej broni na tej działce.</red>"
+    not_allowed: "<red>Nie możesz używać tej broni na działce.</red>"
   weather:
     name: "Blokowanie pogody i piorunów"
     description: "Blokuje uderzenia piorunów i zadawane przez nie obrażenia na działce."

@@ -23,6 +23,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
     private val helpers = Helpers(plugin)
     private val confirmIndex = 20
     private val cancelIndex = 24
+    private val backIndex = 26
     private var quotedPrice: BigDecimal? = null
     private var quotedSegment: PlotSegment? = null
     private var direction = ExpansionDirection.NORTH
@@ -61,6 +62,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
             listOf(text("expand.borders_duration", mapOf("seconds" to helpers.borderDurationSeconds().toString())))))
         inventory.setItem(confirmIndex, item(Material.EMERALD_BLOCK, text("expand.confirm"), summary))
         inventory.setItem(cancelIndex, item(Material.BARRIER, text("expand.cancel"), emptyList()))
+        inventory.setItem(backIndex, item(Material.ARROW, text("back"), emptyList()))
         openLegacy(player)
     }
 
@@ -88,6 +90,10 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
             }, null)
             return
         }
+        if (event.rawSlot == backIndex) {
+            returnToPlotMenu(player)
+            return
+        }
         if (event.rawSlot !in setOf(confirmIndex, cancelIndex)) return
         submitted = true
         player.closeInventory()
@@ -97,6 +103,20 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         } else {
             expand(player)
         }
+    }
+
+    private fun returnToPlotMenu(player: Player) {
+        submitted = true
+        player.scheduler.run(plugin, {
+            val current = plugin.cacheManager.getPlot(plotId)
+            if (current == null) {
+                player.closeInventory()
+                plugin.guiHandler.unregisterGui(player)
+                player.sendMessage(error("plot_not_found"))
+                return@run
+            }
+            plugin.guiHandler.registerGui(player, PlotGUI(plugin, current))
+        }, null)
     }
 
     private fun expand(player: Player) {

@@ -52,6 +52,7 @@ class PlotCacheLoaderTest {
         assertFalse(plot.contains(112, 15))
         assertTrue(c.autoCommit)
     }
+
     @Test fun `chunk offer loads persisted expansion level instead of guessing from area`() = databases { c, dialect ->
         DatabaseMigrations.migrate(c, dialect)
         c.createStatement().use {
@@ -65,9 +66,19 @@ class PlotCacheLoaderTest {
         c.createStatement().use { it.execute("DELETE FROM plot_expansion_levels WHERE plot_id=1") }
         assertEquals(0, PlotCacheLoader.load(c, 1).plots.single().expansionLevel)
     }
+
     @Test fun `corrupt price level fails cache load instead of silently changing the quote`() = databases { c, _ ->
         c.createStatement().use { it.execute("INSERT INTO plot_expansion_levels VALUES (1, -1)") }
         assertThrows(IllegalArgumentException::class.java) { PlotCacheLoader.load(c) }
+        assertTrue(c.autoCommit)
+    }
+
+    @Test fun `targeted cache load includes persisted teleport spawn`() = databases { c, _ ->
+        PlotSpawnRepository.migrate(c)
+        c.createStatement().use { it.execute("INSERT INTO plot_spawns (plot_id, x, y, z) VALUES (1, 101, 70, -4)") }
+        val plot = PlotCacheLoader.load(c, 1).plots.single()
+        assertEquals(PlotTeleportSpawn(101, 70, -4), plot.teleportSpawn)
+        assertNull(PlotCacheLoader.load(c, 2).plots.single().teleportSpawn)
         assertTrue(c.autoCommit)
     }
 }

@@ -28,9 +28,6 @@ class PlotInteractions(private val plugin: PlotsX) : Listener {
 
     private fun available(): Boolean = backend != null &&
         !plugin.config.getString("interactions.mode", "auto").equals("legacy", true) &&
-        // Without reliable per-client negotiation, use the compatible UI on translated servers.
-        listOf("ViaVersion", "ViaBackwards", "ProtocolSupport", "Geyser-Spigot", "floodgate")
-            .none { plugin.server.pluginManager.isPluginEnabled(it) } &&
         !plugin.config.getBoolean("interactions.translated-clients", false)
 
     fun rename(player: Player, plotId: Int, initial: String, error: Component? = null): Boolean =
