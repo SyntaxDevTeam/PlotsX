@@ -7,7 +7,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class ProtectionCoordinatorTest {
-    @Test fun `decisions fail closed until commit and publication finish`() {
+    @Test fun `decisions keep using published snapshot while mutation publishes`() {
         val coordinator = ProtectionCoordinator()
         val publishing = CountDownLatch(1)
         val finish = CountDownLatch(1)
@@ -17,12 +17,13 @@ class ProtectionCoordinatorTest {
                 coordinator.mutate({ publishing.countDown(); check(finish.await(5, TimeUnit.SECONDS)) }) { 42 }
             }
             assertTrue(publishing.await(5, TimeUnit.SECONDS))
-            assertEquals("deny", coordinator.decision({ "deny" }) { "allow" })
+            assertEquals("allow", coordinator.decision({ "deny" }) { "allow" })
             finish.countDown()
             assertEquals(42, job.get(5, TimeUnit.SECONDS))
             assertEquals("allow", coordinator.decision({ "deny" }) { "allow" })
         } finally { finish.countDown(); executor.shutdownNow() }
     }
+
     @Test fun `failed publication requires explicit successful recovery`() {
         val coordinator = ProtectionCoordinator()
         assertThrows(IllegalStateException::class.java) { coordinator.mutate<Unit>({ error("load failed") }) {} }
@@ -31,6 +32,7 @@ class ProtectionCoordinatorTest {
         coordinator.recover {}
         assertTrue(coordinator.decision({ false }) { true })
     }
+
     @Test fun `nested event metadata mutation publishes once without upgrade deadlock`() {
         val coordinator = ProtectionCoordinator()
         var publications = 0
@@ -40,6 +42,7 @@ class ProtectionCoordinatorTest {
         assertEquals(7, result)
         assertEquals(1, publications)
     }
+
     @Test fun `failed action still republishes before releasing barrier`() {
         val coordinator = ProtectionCoordinator()
         var published = false

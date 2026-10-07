@@ -29,7 +29,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
                     ?: plugin.server.getPlayerExact(input)?.uniqueId
                     ?: plugin.server.offlinePlayers.firstOrNull { it.name.equals(input, true) }?.uniqueId
                 if (uuid == null) { members.reply(sender, "unknown_player"); return }
-                val plots = plugin.databaseHandler.getPlotsByOwner(uuid).sortedBy { it.id }
+                val plots = plugin.cacheManager.getCachedPlots().filter { it.ownerUuid == uuid }.sortedBy { it.id }
                 members.reply(sender, "admin_list_header", mapOf("player" to members.name(uuid), "count" to plots.size.toString()))
                 plots.forEach { plot ->
                     // Names are literal text, never MiniMessage markup.
@@ -41,7 +41,7 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             }
             val id = args.getOrNull(1)?.toIntOrNull()
             if (id == null) { members.reply(sender, "admin_usage"); return }
-            val plot = plugin.databaseHandler.getPlotById(id)
+            val plot = plugin.cacheManager.getPlot(id)
             if (plot == null) { members.reply(sender, "stand_on_plot"); return }
             if (args.size == 2 && sender is Player) {
                 plugin.guiHandler.registerGui(sender, MembersGUI(plugin, id))
@@ -54,8 +54,6 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             expandStandingChunk(player, args)
             return
         }
-        // Command routing runs on the server thread. The plot cache already contains the
-        // geometry needed here; querying SQL caused a visible pause before /plot expand.
         val standing = plugin.cacheManager.getPlotAt(player.world.name, player.location.blockX, player.location.blockZ)
         if (args.firstOrNull()?.lowercase() in actions) {
             if (standing == null) { members.reply(player, "stand_on_plot"); return }
@@ -64,15 +62,16 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             } else members.execute(player, standing.id, args.toList())
             return
         }
+        val cachedPlots = plugin.cacheManager.getCachedPlots()
         val plot = if (args.isEmpty()) standing else {
-            plugin.databaseHandler.getPlotByName(args[0], player.uniqueId) ?: plugin.databaseHandler.getPlotsFromAllUsers()
-                .firstOrNull { it.name.equals(args[0], true) && access.canOpen(player, it) }
+            cachedPlots.firstOrNull { it.ownerUuid == player.uniqueId && it.name.equals(args[0], true) }
+                ?: cachedPlots.firstOrNull { it.name.equals(args[0], true) && access.canOpen(player, it) }
         }
         if (plot != null) {
             if (!access.canOpen(player, plot)) { members.reply(player, "denied"); return }
             plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot))
         } else if (args.isEmpty()) {
-            val plots = plugin.databaseHandler.getPlayerPlots(player.uniqueId)
+            val plots = plugin.cacheManager.getPlayerPlots(player.uniqueId)
             if (plots.isEmpty()) members.reply(player, "stand_on_plot")
             else plugin.guiHandler.registerGui(player, PlotListGUI(plugin, plots, player.uniqueId))
         } else player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "plot_not_found"))
@@ -104,7 +103,8 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             words.size == 3 && words[0] == "transfer" -> listOf("confirm")
             words.size == 2 && words[0] in listOf("add", "remove", "role", "transfer") -> {
                 if (words[0] == "add") plugin.server.onlinePlayers.filter { sender !is Player || sender.canSee(it) }.map { it.name }
-                else plugin.databaseHandler.getPlotMembers(plot.id).map { PlotMembers(plugin).name(java.util.UUID.fromString(it.memberUuid)) }
+                else plugin.cacheManager.getMembers(plot.id).orEmpty()
+                    .map { PlotMembers(plugin).name(java.util.UUID.fromString(it.memberUuid)) }
             }
             else -> emptyList()
         }

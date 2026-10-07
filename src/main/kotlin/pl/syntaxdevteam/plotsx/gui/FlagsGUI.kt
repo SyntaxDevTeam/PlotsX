@@ -6,8 +6,10 @@ import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.persistence.PersistentDataType
 import pl.syntaxdevteam.plotsx.PlotsX
+import pl.syntaxdevteam.plotsx.api.PlotFlagChangedEvent
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.databases.PlotFlagData
+import pl.syntaxdevteam.plotsx.databases.PlotLogEntry
 import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 
 class FlagsGUI(
@@ -33,7 +35,6 @@ class FlagsGUI(
         val visibleFlags = PlotFlagRegistry.visibleFlags
 
         visibleFlags.drop(page * 45).take(45).forEachIndexed { idx: Int, flagMeta ->
-
             val flagData = flags.firstOrNull { it.name == flagMeta.name }
             val current = flagData?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
 
@@ -75,8 +76,7 @@ class FlagsGUI(
         plugin.guiHandler.unregisterGui(player)
         player.closeInventory()
 
-        val flagKey = meta.persistentDataContainer
-            .get(keyFlag, PersistentDataType.STRING)
+        val flagKey = meta.persistentDataContainer.get(keyFlag, PersistentDataType.STRING)
 
         if (event.slot == 45 && page > 0) {
             plugin.guiHandler.registerGui(player, FlagsGUI(plugin, plot, page - 1))
@@ -86,12 +86,10 @@ class FlagsGUI(
             plugin.guiHandler.registerGui(player, FlagsGUI(plugin, plot, page + 1))
             return
         }
-
         if (event.slot == 49) {
             plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot))
             return
         }
-
         if (flagKey == null) return
 
         val currentPlot = plugin.cacheManager.getPlot(plot.id) ?: return
@@ -100,16 +98,41 @@ class FlagsGUI(
             return
         }
         val definition = PlotFlagRegistry.allFlags[flagKey] ?: return
-        val current = plugin.cacheManager.getFlags(plot.id).orEmpty()
+        val previous = plugin.cacheManager.getFlags(plot.id).orEmpty()
             .firstOrNull { it.name == flagKey }?.value?.toBooleanStrictOrNull()
             ?: definition.defaultValue
-        val result = plugin.api.setFlag(player, plot.id, flagKey, !current)
-        if (result == pl.syntaxdevteam.plotsx.api.FlagUpdateResult.UPDATED ||
-            result == pl.syntaxdevteam.plotsx.api.FlagUpdateResult.UNCHANGED) {
-            player.sendMessage(message.stringMessageToComponent("flags", "toggle",
-                mapOf("flag" to flagKey, "value" to (!current).toString())))
-            plugin.guiHandler.registerGui(player, FlagsGUI(plugin, currentPlot, page))
-        } else player.sendMessage(message.stringMessageToComponent("error", "flag_update_failed"))
+        val next = !previous
+        val actor = player.uniqueId
+
+        // JDBC/cache publication stays entirely on the worker. Bukkit event/UI returns to the server thread.
+        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+            val success = try {
+                plugin.databaseHandler.updatePlotFlag(plot.id, flagKey, next).also { updated ->
+                    if (updated) plugin.databaseHandler.logPlotAction(
+                        PlotLogEntry(plot.id, "UpdateFlag:$flagKey:$next", actor, System.currentTimeMillis())
+                    )
+                }
+            } catch (failure: Exception) {
+                plugin.logger.err("Flag update failed for plot ${plot.id}: ${failure.message}")
+                false
+            }
+            if (!plugin.isEnabled) return@Runnable
+            plugin.server.scheduler.runTask(plugin, Runnable {
+                if (!player.isOnline) return@Runnable
+                if (!success) {
+                    player.sendMessage(message.stringMessageToComponent("error", "flag_update_failed"))
+                    return@Runnable
+                }
+                plugin.api.getPlot(plot.id)?.let { snapshot ->
+                    plugin.server.pluginManager.callEvent(PlotFlagChangedEvent(snapshot, flagKey, previous, next, actor))
+                }
+                player.sendMessage(message.stringMessageToComponent("flags", "toggle",
+                    mapOf("flag" to flagKey, "value" to next.toString())))
+                plugin.cacheManager.getPlot(plot.id)?.let {
+                    plugin.guiHandler.registerGui(player, FlagsGUI(plugin, it, page))
+                }
+            })
+        })
     }
 
     fun formatFlagComparison(cacheFlags: List<PlotFlagData>, dbFlags: List<PlotFlagData>): String {

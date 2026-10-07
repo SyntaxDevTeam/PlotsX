@@ -3,7 +3,13 @@ package pl.syntaxdevteam.plotsx.protection
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.withLock
 
-/** Single-server mutation barrier. Readers never wait for SQL on the server thread. */
+/**
+ * Serialises plot mutations while protection readers use immutable cache snapshots.
+ *
+ * Runtime protection decisions must never wait for JDBC/cache publication. During a mutation they keep
+ * reading the last fully published snapshot (RCU/read-copy-update). Only a publication that has already
+ * failed switches decisions to fail-closed mode until an explicit recovery succeeds.
+ */
 class ProtectionCoordinator {
     private val lock = ReentrantReadWriteLock(true)
     @Volatile private var recoveryRequired = false
@@ -21,17 +27,22 @@ class ProtectionCoordinator {
         finally { purchase = null }
     }
 
+    /**
+     * Lock-free read path for server events.
+     *
+     * The cache is an immutable atomic snapshot, therefore an in-flight writer does not make the previous
+     * snapshot unsafe. Taking the read lock here used to make every protection event fail closed while a
+     * plot was being persisted/published, which translated directly into server-wide cancelled movement and
+     * interactions (visible as rubber-banding). A completed publication failure is different: once the writer
+     * has left the critical section there is no known-good current snapshot, so fail closed until recovery.
+     */
     fun <T> decision(unavailable: () -> T, action: () -> T): T {
-        if (!lock.readLock().tryLock()) return unavailable()
-        try { return if (recoveryRequired || purchase != null) unavailable() else action() }
-        finally { lock.readLock().unlock() }
+        if (recoveryRequired && !lock.isWriteLocked) return unavailable()
+        return action()
     }
 
     fun <T> mutate(publish: () -> Unit, action: () -> T): T {
         if (lock.isWriteLockedByCurrentThread) return action()
-        // Container protection can write metadata from inside a protection event.
-        val heldReads = lock.readHoldCount
-        repeat(heldReads) { lock.readLock().unlock() }
         lock.writeLock().lock()
         try {
             check(purchase == null) { "A plot purchase is in progress; retry after it finishes" }
@@ -43,7 +54,6 @@ class ProtectionCoordinator {
                 recoveryRequired = false
             }
         } finally {
-            repeat(heldReads) { lock.readLock().lock() }
             lock.writeLock().unlock()
         }
     }
