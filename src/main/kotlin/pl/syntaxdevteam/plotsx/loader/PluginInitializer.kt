@@ -1,5 +1,8 @@
 package pl.syntaxdevteam.plotsx.loader
 
+import pl.syntaxdevteam.plotsx.compatibility.VersionChecker
+import pl.syntaxdevteam.plotsx.compatibility.VersionCompatibility
+import pl.syntaxdevteam.plotsx.compatibility.platform.BukkitSchedulerAdapter
 import pl.syntaxdevteam.core.SyntaxCore
 import pl.syntaxdevteam.message.SyntaxMessages
 import pl.syntaxdevteam.plotsx.PlotsX
@@ -25,6 +28,7 @@ class PluginInitializer(private val plugin: PlotsX) {
 
     fun onEnable() {
         setUpLogger()
+        setupCompatibility()
         setupConfig()
         setupUUID()
         setupDatabase()
@@ -41,6 +45,12 @@ class PluginInitializer(private val plugin: PlotsX) {
     private fun setUpLogger() {
         plugin.pluginConfig = plugin.config
         plugin.logger = SyntaxCore.logger
+    }
+
+    private fun setupCompatibility() {
+        plugin.versionChecker = VersionChecker(plugin)
+        plugin.versionCompatibility = VersionCompatibility(plugin.versionChecker)
+        plugin.schedulerAdapter = BukkitSchedulerAdapter(plugin)
     }
 
     private fun setupConfig() {
@@ -84,8 +94,6 @@ class PluginInitializer(private val plugin: PlotsX) {
 
     private fun registerEvents() {
         plugin.server.pluginManager.registerEvents(plugin.guiHandler, plugin)
-        plugin.versionChecker = VersionChecker(plugin)
-
         AnimalFlagMigration.migrate(plugin)
         plugin.cacheManager.clearAllCaches()
         plugin.cacheManager.reloadAllCachesSync()

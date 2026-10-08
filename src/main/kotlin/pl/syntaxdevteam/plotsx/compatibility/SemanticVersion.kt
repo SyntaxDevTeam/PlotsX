@@ -1,4 +1,4 @@
-package pl.syntaxdevteam.plotsx.loader
+package pl.syntaxdevteam.plotsx.compatibility
 
 data class SemanticVersion(
     val major: Int,
@@ -6,16 +6,12 @@ data class SemanticVersion(
     val patch: Int
 ) : Comparable<SemanticVersion> {
     override fun compareTo(other: SemanticVersion): Int {
-        return compareValuesBy(
-            this,
-            other,
-            SemanticVersion::major,
-            SemanticVersion::minor,
-            SemanticVersion::patch
-        )
+        return compareValuesBy(this, other, SemanticVersion::major, SemanticVersion::minor, SemanticVersion::patch)
     }
 
-    override fun toString(): String = "$major.$minor.$patch"
+    override fun toString(): String {
+        return "$major.$minor.$patch"
+    }
 
     companion object {
         private val VERSION_PATTERN = Regex("\\d+(?:\\.\\d+){0,2}")

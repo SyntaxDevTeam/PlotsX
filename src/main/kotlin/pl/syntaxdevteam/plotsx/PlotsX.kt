@@ -25,7 +25,9 @@ import pl.syntaxdevteam.plotsx.identity.IdentityAliasRegistry
 import pl.syntaxdevteam.plotsx.identity.PlotsXIdentityMigrationService
 import pl.syntaxdevteam.plotsx.loader.PluginInitializer
 import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
-import pl.syntaxdevteam.plotsx.loader.VersionChecker
+import pl.syntaxdevteam.plotsx.compatibility.VersionChecker
+import pl.syntaxdevteam.plotsx.compatibility.VersionCompatibility
+import pl.syntaxdevteam.plotsx.compatibility.platform.SchedulerAdapter
 import pl.syntaxdevteam.plotsx.protection.PrivateChestManager
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -78,6 +80,8 @@ class PlotsX : JavaPlugin() {
     lateinit var coreProtectHook: CoreProtectHook
     var regionProtectionHook: RegionProtectionHook? = null
     lateinit var versionChecker: VersionChecker
+    lateinit var versionCompatibility: VersionCompatibility
+    lateinit var schedulerAdapter: SchedulerAdapter
 
     override fun onLoad() {
         if (server.pluginManager.getPlugin("WorldGuard") == null) return
@@ -130,7 +134,7 @@ class PlotsX : JavaPlugin() {
 
         if (::borderVisualizer.isInitialized) borderVisualizer.close()
 
-        server.scheduler.cancelTasks(this)
+        if (!pl.syntaxdevteam.core.platform.ServerEnvironment.isFoliaBased()) server.scheduler.cancelTasks(this)
         server.globalRegionScheduler.cancelTasks(this)
         server.asyncScheduler.cancelTasks(this)
 
@@ -158,7 +162,7 @@ class PlotsX : JavaPlugin() {
         if (::borderVisualizer.isInitialized) borderVisualizer.close()
         super.reloadConfig()
 
-        server.scheduler.runTaskAsynchronously(this, Runnable {
+        schedulerAdapter.runAsync(Runnable {
             val failure = try {
                 protectionCoordinator.recover { cacheManager.reloadAllCachesSync() }
                 null
@@ -166,7 +170,7 @@ class PlotsX : JavaPlugin() {
                 exception
             }
             if (!isEnabled) return@Runnable
-            server.scheduler.runTask(this, Runnable {
+            schedulerAdapter.runSync(Runnable {
                 if (failure == null) logger.success("Config reloaded.")
                 else logger.err("Config reload cache refresh failed: ${failure.message}")
                 completion(failure)

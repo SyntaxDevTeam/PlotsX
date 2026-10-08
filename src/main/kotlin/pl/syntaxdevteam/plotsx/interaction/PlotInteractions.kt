@@ -7,6 +7,9 @@ import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.inventory.InventoryOpenEvent
 import pl.syntaxdevteam.plotsx.PlotsX
+import pl.syntaxdevteam.plotsx.compatibility.DialogSupport
+import pl.syntaxdevteam.plotsx.compatibility.VersionCompatibility
+import pl.syntaxdevteam.plotsx.compatibility.platform.FoliaRunnable
 
 /** No dialog API types may escape the optional adapter into this baseline facade. */
 interface DialogBackend {
@@ -17,9 +20,11 @@ interface DialogBackend {
 class PlotInteractions(private val plugin: PlotsX) : Listener {
     private val sessions = DialogSessions()
     private val backend: DialogBackend? = try {
-        Class.forName("io.papermc.paper.dialog.Dialog")
-        Class.forName("pl.syntaxdevteam.plotsx.interaction.PaperDialogBackend")
-            .getDeclaredConstructor().newInstance() as DialogBackend
+        if (plugin.versionCompatibility.supports(VersionCompatibility.CompatibilityFlag.DIALOGS)) {
+            Class.forName("io.papermc.paper.dialog.Dialog")
+            Class.forName("pl.syntaxdevteam.plotsx.interaction.PaperDialogBackend")
+                .getDeclaredConstructor().newInstance() as DialogBackend
+        } else null
     } catch (_: ReflectiveOperationException) { null
     } catch (_: LinkageError) { null }
 
@@ -27,8 +32,7 @@ class PlotInteractions(private val plugin: PlotsX) : Listener {
         plugin.messageHandler.stringMessageToComponentNoPrefix("dialogs", key, values)
 
     private fun available(): Boolean = backend != null &&
-        !plugin.config.getString("interactions.mode", "auto").equals("legacy", true) &&
-        !plugin.config.getBoolean("interactions.translated-clients", false)
+        DialogSupport.canUseDialogs(plugin)
 
     fun rename(player: Player, plotId: Int, initial: String, error: Component? = null): Boolean =
         show(player, text("rename"), listOfNotNull(error), initial, text("save"), text("cancel"), { p, value ->
@@ -54,22 +58,22 @@ class PlotInteractions(private val plugin: PlotsX) : Listener {
         plugin.renamePlotChatListener.cancel(player)
         val token = sessions.start(player.uniqueId)
         // Inventory click handlers must finish before switching screens. Entity scheduler also supports Folia.
-        player.scheduler.run(plugin, {
-            if (!sessions.isCurrent(player.uniqueId, token)) return@run
+        FoliaRunnable.entity(player.scheduler, Runnable { sessions.remove(player.uniqueId, token) }) {
+            if (!sessions.isCurrent(player.uniqueId, token)) return@entity
             plugin.guiHandler.unregisterGui(player)
             player.closeInventory()
             try {
                 display { value ->
-                    player.scheduler.run(plugin, {
+                    FoliaRunnable.entity(player.scheduler) {
                         if (sessions.consume(player.uniqueId, token)) reply(player, value)
-                    }, null)
+                    }.run(plugin)
                 }
-                player.scheduler.runDelayed(plugin, {
+                FoliaRunnable.entity(player.scheduler) {
                     if (sessions.remove(player.uniqueId, token)) {
                         player.closeInventory()
                         player.sendMessage(text("expired"))
                     }
-                }, null, 1200L)
+                }.runDelayed(plugin, 1200L)
             } catch (ex: LinkageError) {
                 sessions.remove(player.uniqueId, token)
                 plugin.logger.warning("Dialog API unavailable: ${ex.javaClass.simpleName}; using legacy UI.")
@@ -79,7 +83,7 @@ class PlotInteractions(private val plugin: PlotsX) : Listener {
                 plugin.logger.warning("Cannot show dialog: ${ex.message}; using legacy UI.")
                 fallback()
             }
-        }, { sessions.remove(player.uniqueId, token) })
+        }.run(plugin)
         return true
     }
 
