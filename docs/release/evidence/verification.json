@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-08",
+  "version": "1.0.0",
+  "tests": {
+    "tests": 228,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "local_sql": [
+    "SQLite",
+    "H2"
+  ],
+  "ci_sql": [
+    "SQLite",
+    "H2",
+    "MySQL 8.4",
+    "MariaDB 11.8",
+    "PostgreSQL 18"
+  ],
+  "external_sql_executed_locally": false,
+  "paper": "1.21.11 build 132",
+  "folia": "1.21.11 build 14",
+  "java": "Corretto 21.0.12.1",
+  "artifacts": {
+    "PlotsX-Paper-1.0.0.jar": {
+      "bytes": 2698307,
+      "sha256": "cb789c0530d0166d7bd196acf317f6e5a18ac59e529163965972005e61d1e45a"
+    },
+    "PlotsX-1.0.0-api.jar": {
+      "bytes": 23573,
+      "sha256": "4b2fd1c020297fddbb48767f58c8311c645d2219ccb1f3d5b6cbea97bb4de36a"
+    }
+  }
+}

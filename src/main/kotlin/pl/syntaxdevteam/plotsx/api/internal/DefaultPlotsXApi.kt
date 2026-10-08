@@ -96,6 +96,11 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     override fun setMemberRole(actor: CommandSender, plotId: Int, player: UUID, role: String) = changeMember(actor, plotId, player, "role", role)
     override fun transferOwnership(actor: CommandSender, plotId: Int, recipient: UUID) = changeMember(actor, plotId, recipient, "transfer")
 
+    override fun transferOwnershipAsync(actor: CommandSender, plotId: Int, recipient: UUID): java.util.concurrent.CompletableFuture<MemberUpdateResult> {
+        actorThread(actor)
+        return plugin.ownershipTransfers.transfer(actor, plotId, recipient)
+    }
+
     private fun changeMember(actor: CommandSender, plotId: Int, target: UUID, action: String, role: String = "member"): MemberUpdateResult {
         actorThread(actor)
         try {
@@ -122,6 +127,8 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
                 "role" -> plugin.databaseHandler.updatePlotMemberRole(plotId, target, role)
                 else -> {
                     val recipient = plugin.server.getPlayer(target) ?: return MemberUpdateResult.RECIPIENT_OFFLINE
+                    if (plugin.schedulerAdapter.isFoliaBased() && !Bukkit.isOwnedByCurrentRegion(recipient))
+                        return MemberUpdateResult.RECIPIENT_WRONG_THREAD
                     val limits = plugin.hookHandler.getPlotLimits(recipient)
                     plugin.databaseHandler.transferPlotOwnership(plotId, plot.ownerUuid, target,
                         plugin.hookHandler.getMaxPlots(recipient), limits.maxRadius,

@@ -18,7 +18,7 @@ internal object OperationJournal {
         val id: UUID, val plotId: Int, val owner: UUID, val actor: UUID, val world: String,
         val source: ChunkPosition, val target: ChunkPosition, val expectedRevision: Long,
         val amount: BigDecimal, val provider: String, val currency: String,
-        val state: State = State.PREPARED, val createdAt: Long, val updatedAt: Long = createdAt
+        val state: State = State.PREPARED, val createdAt: Long, val updatedAt: Long = createdAt, val classicRadius: Int? = null
     ) {
         init {
             require(plotId > 0 && expectedRevision in 0 until Long.MAX_VALUE)
@@ -26,12 +26,16 @@ internal object OperationJournal {
             require(provider.isNotBlank() && provider.length <= 255 && currency.isNotBlank() && currency.length <= 255)
             require(amount.signum() >= 0 && amount.precision() <= 38 && amount.scale() in 0..18)
             require(createdAt >= 0 && updatedAt >= createdAt)
-            require(kotlin.math.abs(source.x.toLong() - target.x) + kotlin.math.abs(source.z.toLong() - target.z) == 1L)
+            require(classicRadius == null || classicRadius >= 1)
+            val distance = classicRadius?.let { it.toLong() * 2 + 1 } ?: 1L
+            val dx = kotlin.math.abs(source.x.toLong() - target.x)
+            val dz = kotlin.math.abs(source.z.toLong() - target.z)
+            require((dx == distance && dz == 0L) || (dz == distance && dx == 0L))
         }
     }
 
     // No FK: financial evidence must survive plot deletion and an unresolved refund.
-    fun schema(): String = """
+    fun schema(includeClassic: Boolean = true): String = """
         CREATE TABLE IF NOT EXISTS plot_operations (
             operation_id VARCHAR(36) PRIMARY KEY,
             plot_id INTEGER NOT NULL,
@@ -48,7 +52,7 @@ internal object OperationJournal {
             currency VARCHAR(255) NOT NULL,
             state VARCHAR(32) NOT NULL,
             created_at BIGINT NOT NULL,
-            updated_at BIGINT NOT NULL
+            updated_at BIGINT NOT NULL${if (includeClassic) ",\n            classic_radius INTEGER" else ""}
         )
     """.trimIndent()
 
@@ -60,6 +64,9 @@ internal object OperationJournal {
 
     fun migrate(conn: Connection) {
         require(conn.autoCommit)
+        if (exists(conn) && !hasClassicRadius(conn)) conn.createStatement().use {
+            it.execute("ALTER TABLE plot_operations ADD COLUMN classic_radius INTEGER")
+        }
         conn.prepareStatement("SELECT name FROM schema_migrations WHERE version = 2").use {
             it.executeQuery().use { rows -> if (rows.next()) {
                 require(rows.getString(1) == "operation_journal")
@@ -73,6 +80,13 @@ internal object OperationJournal {
         conn.createStatement().use { it.executeUpdate("INSERT INTO schema_migrations (version, name) VALUES (2, 'operation_journal')") }
     }
 
+    fun hasClassicRadius(conn: Connection): Boolean = conn.metaData.getColumns(conn.catalog, conn.schema, "%", "%").use { rows ->
+        var found = false
+        while (rows.next()) if (rows.getString("TABLE_NAME").equals("plot_operations", true) &&
+            rows.getString("COLUMN_NAME").equals("classic_radius", true)) found = true
+        found
+    }
+
     fun readAll(conn: Connection): List<Operation> = conn.createStatement().use { stmt ->
         stmt.executeQuery("SELECT * FROM plot_operations ORDER BY created_at, operation_id").use { rows -> buildList {
             while (rows.next()) add(Operation(
@@ -80,7 +94,9 @@ internal object OperationJournal {
                 UUID.fromString(rows.getString("owner_uuid")), UUID.fromString(rows.getString("actor_uuid")), rows.getString("world"),
                 ChunkPosition(rows.getInt("source_x"), rows.getInt("source_z")), ChunkPosition(rows.getInt("target_x"), rows.getInt("target_z")),
                 rows.getLong("expected_revision"), rows.getString("amount").toBigDecimal(), rows.getString("provider"), rows.getString("currency"),
-                State.valueOf(rows.getString("state")), rows.getLong("created_at"), rows.getLong("updated_at")
+                State.valueOf(rows.getString("state")), rows.getLong("created_at"), rows.getLong("updated_at"),
+                if ((1..rows.metaData.columnCount).any { rows.metaData.getColumnName(it).equals("classic_radius", true) })
+                    (rows.getObject("classic_radius") as? Number)?.toInt() else null
             ))
         } }
     }
@@ -99,13 +115,15 @@ internal object OperationJournal {
         require(pending(conn).none { it.owner == operation.owner || it.plotId == operation.plotId }) {
             "An unresolved operation reserves this owner or plot"
         }
-        conn.prepareStatement("INSERT INTO plot_operations VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").use {
+        conn.prepareStatement("INSERT INTO plot_operations (operation_id, plot_id, owner_uuid, actor_uuid, world, source_x, source_z, target_x, target_z, expected_revision, amount, provider, currency, state, created_at, updated_at, classic_radius) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").use {
             it.setString(1, operation.id.toString()); it.setInt(2, operation.plotId)
             it.setString(3, operation.owner.toString()); it.setString(4, operation.actor.toString()); it.setString(5, operation.world)
             it.setInt(6, operation.source.x); it.setInt(7, operation.source.z); it.setInt(8, operation.target.x); it.setInt(9, operation.target.z)
             it.setLong(10, operation.expectedRevision); it.setString(11, operation.amount.toPlainString())
             it.setString(12, operation.provider); it.setString(13, operation.currency); it.setString(14, operation.state.name)
-            it.setLong(15, operation.createdAt); it.setLong(16, operation.updatedAt); it.executeUpdate()
+            it.setLong(15, operation.createdAt); it.setLong(16, operation.updatedAt)
+            if (operation.classicRadius == null) it.setNull(17, java.sql.Types.INTEGER) else it.setInt(17, operation.classicRadius)
+            it.executeUpdate()
         }
         return true
     }
@@ -139,6 +157,7 @@ internal object OperationJournal {
     fun applyLand(conn: Connection, id: UUID, limits: ChunkExpansionTransaction.Limits, now: Long): ChunkExpansionTransaction.Result {
         require(!conn.autoCommit)
         val operation = readAll(conn).single { it.id == id }
+        require(operation.classicRadius == null) { "Classic purchase requires classic land validation" }
         require(operation.state == State.DEBITED || (operation.state == State.PREPARED && operation.amount.signum() == 0)) {
             "Land requires confirmed payment or a prepared free operation"
         }
@@ -151,6 +170,17 @@ internal object OperationJournal {
         if (result is ChunkExpansionTransaction.Result.Success) {
             check(update(conn, id, operation.state, State.LAND_COMMITTED, now)) { "Operation changed before land commit" }
         }
+        return result
+    }
+
+    fun applyClassicLand(conn: Connection, id: UUID, expectedLevel: Int, limits: ClassicExpansionTransaction.Limits,
+                         now: Long): ClassicExpansionTransaction.Result {
+        require(!conn.autoCommit)
+        val op = readAll(conn).single { it.id == id }
+        require(op.state == State.DEBITED || (op.state == State.PREPARED && op.amount.signum() == 0))
+        val result = ClassicExpansionTransaction.apply(conn, op, expectedLevel, limits)
+        if (result == ClassicExpansionTransaction.Result.SUCCESS)
+            check(update(conn, id, op.state, State.LAND_COMMITTED, now))
         return result
     }
 

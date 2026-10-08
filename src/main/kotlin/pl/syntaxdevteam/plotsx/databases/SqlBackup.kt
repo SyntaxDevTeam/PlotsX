@@ -52,7 +52,7 @@ internal object SqlBackup {
             (if (identityAliases) listOf("plotsx_uuid_aliases") else emptyList()) +
             (if (spawnSchema) listOf("plot_spawns") else emptyList())
         val schema = (if (chunkSchema) DatabaseSchema.chunkStatements(dialect) else DatabaseSchema.statements(dialect)) +
-            (if (journalSchema) listOf(OperationJournal.schema()) else emptyList()) +
+            (if (journalSchema) listOf(OperationJournal.schema(includeClassic = OperationJournal.hasClassicRadius(conn))) else emptyList()) +
             (if (identityAliases) listOf(IdentityMigrationStore.aliasSchema()) else emptyList()) +
             (if (spawnSchema) listOf(PlotSpawnRepository.schema()) else emptyList())
         Files.createDirectories(directory.toPath())
@@ -67,6 +67,7 @@ internal object SqlBackup {
             Files.newBufferedWriter(temporary, Charsets.UTF_8).use { writer ->
                 fun line(sql: String) { writer.write(sql); writer.newLine() }
                 val version = when {
+                    journalSchema && OperationJournal.hasClassicRadius(conn) -> 6
                     spawnSchema -> 5
                     identityAliases -> 4
                     journalSchema -> 3
@@ -124,15 +125,16 @@ internal object SqlBackup {
     fun restore(conn: Connection, dialect: String, file: File, allowChunkPlots: Boolean = false) {
         // Validate the entire file before modifying the database. Only our versioned format is supported.
         val lines = file.readLines(Charsets.UTF_8)
-        val spawnBackup = lines.firstOrNull() == "-- PlotsX SQL backup v5 dialect=$dialect"
-        val identityBackup = spawnBackup || lines.firstOrNull() == "-- PlotsX SQL backup v4 dialect=$dialect"
-        val journalBackup = identityBackup || lines.firstOrNull() == "-- PlotsX SQL backup v3 dialect=$dialect"
+        val classicBackup = lines.firstOrNull() == "-- PlotsX SQL backup v6 dialect=$dialect"
+        val spawnBackup = (classicBackup && lines.any { it.startsWith("CREATE TABLE IF NOT EXISTS plot_spawns ") }) || lines.firstOrNull() == "-- PlotsX SQL backup v5 dialect=$dialect"
+        val identityBackup = (classicBackup && lines.any { it.startsWith("CREATE TABLE IF NOT EXISTS plotsx_uuid_aliases ") }) || spawnBackup || lines.firstOrNull() == "-- PlotsX SQL backup v4 dialect=$dialect"
+        val journalBackup = classicBackup || identityBackup || lines.firstOrNull() == "-- PlotsX SQL backup v3 dialect=$dialect"
         val chunkBackup = journalBackup || lines.firstOrNull() == "-- PlotsX SQL backup v2 dialect=$dialect"
         require(chunkBackup || lines.firstOrNull() == "-- PlotsX SQL backup v1 dialect=$dialect") {
             "Not a PlotsX backup for $dialect. Export using the target database dialect."
         }
         val schema = ((if (chunkBackup) DatabaseSchema.chunkStatements(dialect) else DatabaseSchema.statements(dialect)) +
-            (if (journalBackup) listOf(OperationJournal.schema()) else emptyList()) +
+            (if (journalBackup) listOf(OperationJournal.schema(includeClassic = classicBackup)) else emptyList()) +
             (if (identityBackup) listOf(IdentityMigrationStore.aliasSchema()) else emptyList()) +
             (if (spawnBackup) listOf(PlotSpawnRepository.schema()) else emptyList()))
             .map { it.trim().removeSuffix(";").replace(Regex("\\s+"), " ") + ";" }

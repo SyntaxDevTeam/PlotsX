@@ -6,7 +6,12 @@ import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.inventory.ItemStack
 import pl.syntaxdevteam.plotsx.PlotsX
-import pl.syntaxdevteam.plotsx.databases.DatabaseHandler
+import pl.syntaxdevteam.plotsx.databases.ClassicExpansionTransaction
+import pl.syntaxdevteam.plotsx.databases.ChunkExpansionTransaction
+import pl.syntaxdevteam.plotsx.databases.ExpansionPurchaseService
+import pl.syntaxdevteam.plotsx.databases.OperationJournal
+import pl.syntaxdevteam.plotsx.geometry.ChunkPosition
+import java.util.UUID
 import pl.syntaxdevteam.plotsx.databases.Helpers
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.databases.PlotSegment
@@ -156,71 +161,59 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
         }
         // Economy APIs remain on the server thread; only the database mutation is dispatched.
         val account = if (price.signum() > 0) {
-            try { ExpansionEconomy.account(plugin, player, price) } catch (ex: Exception) {
+            try { ExpansionEconomy.account(plugin, player, price, pinCurrency = true) } catch (ex: Exception) {
                 plugin.logger.err("Economy lookup failed: ${ex.message}")
                 null
             } ?: run { player.sendMessage(error("expand_no_economy")); return }
         } else null
-        if (account != null) {
-            val paid = try { account.withdraw() } catch (ex: Exception) {
-                plugin.logger.err("Expansion payment failed for $ownerUuid, amount=$price: ${ex.message}")
-                false
-            }
-            if (!paid) { player.sendMessage(error("expand_payment_failed")); return }
+        fun valid(): Boolean {
+            if (!player.isOnline || !PermissionChecker.canExpandPlot(player)) return false
+            val current = plugin.cacheManager.getPlot(plotId) ?: return false
+            if (current.ownerUuid != ownerUuid || current.geometryRevision != plot.geometryRevision ||
+                player.world.name != plot.world || current.segmentAt(player.location.blockX, player.location.blockZ) != source)
+                return false
+            if (ExpansionEconomy.price(plugin, current.extensions.size)?.compareTo(price) != 0 ||
+                plugin.hookHandler.getPlotLimits(player) != limits) return false
+            return plugin.regionProtectionHook?.overlapsProtectedRegion(player.world, target.x, target.z, target.radius) != true
         }
-        // Only JDBC/cache publication runs here. Economy and every Bukkit call stay on the server thread.
+        val operation = OperationJournal.Operation(UUID.randomUUID(), plot.id, ownerUuid, ownerUuid, plot.world,
+            ChunkPosition(source.x, source.z), ChunkPosition(target.x, target.z), plot.geometryRevision, price,
+            account?.providerId ?: "free", account?.currencyId ?: "free", createdAt = System.currentTimeMillis(),
+            classicRadius = target.radius)
         plugin.schedulerAdapter.runAsync(Runnable {
             val result = try {
-                plugin.databaseHandler.expandPlotAtomically(
-                    plot.id, ownerUuid, ownerUuid, direction, source, target,
-                    limits.maxRadius, limits.maxTotalArea, plot.extensions.size
-                )
-            } catch (ex: Exception) {
-                plugin.logger.err("Expansion failed for plot ${plot.id}: ${ex.message}")
-                DatabaseHandler.ExpandResult.DatabaseError
+                plugin.databaseHandler.purchaseExpansion(operation, plot.extensions.size,
+                    ChunkExpansionTransaction.Limits(limits.maxTotalArea, Int.MAX_VALUE, Int.MAX_VALUE), account, ::valid,
+                    ClassicExpansionTransaction.Limits(limits.maxRadius, limits.maxTotalArea))
+            } catch (failure: Exception) {
+                plugin.logger.err("Classic purchase ${operation.id}: ${failure.message}")
+                ExpansionPurchaseService.Result.REVIEW_REQUIRED
             }
             if (!plugin.isEnabled) return@Runnable
             plugin.schedulerAdapter.runForPlayer(player, Runnable {
-                val completionStarted = System.nanoTime()
-                if (result !is DatabaseHandler.ExpandResult.Success && account != null) {
-                    val refunded = try { account.refund() } catch (ex: Exception) {
-                        plugin.logger.err("Expansion refund exception: ${ex.message}"); false
+                if (!player.isOnline) return@Runnable
+                val key = when (result) {
+                    ExpansionPurchaseService.Result.SUCCESS -> {
+                        player.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "expand_success",
+                            mapOf("size" to (target.radius.toLong() * 2 + 1).toString())))
+                        return@Runnable
                     }
-                    if (!refunded) {
-                        plugin.logger.err("REFUND REQUIRED: player=$ownerUuid plot=${plot.id} amount=$price")
-                        if (player.isOnline) player.sendMessage(error("expand_refund_failed"))
+                    ExpansionPurchaseService.Result.RADIUS_LIMIT -> "expand_radius_limit"
+                    ExpansionPurchaseService.Result.AREA_LIMIT -> "expand_area_limit"
+                    ExpansionPurchaseService.Result.COLLISION -> "expand_collision"
+                    ExpansionPurchaseService.Result.DECLINED -> "expand_payment_failed"
+                    ExpansionPurchaseService.Result.BUSY -> "chunk_purchase_busy"
+                    ExpansionPurchaseService.Result.REJECTED, ExpansionPurchaseService.Result.DUPLICATE -> "expand_quote_changed"
+                    ExpansionPurchaseService.Result.REVIEW_REQUIRED -> {
+                        player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "chunk_purchase_review",
+                            mapOf("operation" to operation.id.toString())))
+                        return@Runnable
                     }
+                    else -> "expand_failed"
                 }
-                if (player.isOnline) showResult(player, result)
-                plugin.logger.debug(
-                    "PlotsX expansion timings: classic main-thread completion=" +
-                        "${"%.3f".format(java.util.Locale.ROOT, (System.nanoTime() - completionStarted) / 1_000_000.0)} ms, " +
-                        "plot=${plot.id}, result=$result"
-                )
-            }, Runnable {
-                if (result !is DatabaseHandler.ExpandResult.Success && account != null) {
-                    plugin.logger.err("REFUND REQUIRED: player=$ownerUuid plot=${plot.id} amount=$price (player disconnected before refund)")
-                }
+                player.sendMessage(error(key))
             })
         })
-    }
-
-    private fun showResult(player: Player, result: DatabaseHandler.ExpandResult) {
-        val errorKey = when (result) {
-            is DatabaseHandler.ExpandResult.Success -> {
-                player.sendMessage(plugin.messageHandler.stringMessageToComponent(
-                    "plots", "expand_success", mapOf("size" to (result.segment.radius.toLong() * 2 + 1).toString())
-                ))
-                return
-            }
-            DatabaseHandler.ExpandResult.PlotNotFound -> "plot_not_found"
-            DatabaseHandler.ExpandResult.NotOwner -> "not_owner"
-            DatabaseHandler.ExpandResult.RadiusLimitReached -> "expand_radius_limit"
-            DatabaseHandler.ExpandResult.AreaLimitReached -> "expand_area_limit"
-            DatabaseHandler.ExpandResult.Overlap -> "expand_collision"
-            DatabaseHandler.ExpandResult.DatabaseError -> "expand_failed"
-        }
-        player.sendMessage(error(errorKey))
     }
 
     private fun limit(value: Long) = if (value == Long.MAX_VALUE || value == Int.MAX_VALUE.toLong()) "∞" else value.toString()

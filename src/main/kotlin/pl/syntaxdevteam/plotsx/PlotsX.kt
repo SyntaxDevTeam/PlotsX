@@ -69,6 +69,7 @@ class PlotsX : JavaPlugin() {
     lateinit var commandsManager: CommandsManager
     lateinit var hookHandler: HookHandler
     lateinit var economyHook: EconomyHook
+    val ownershipTransfers = pl.syntaxdevteam.plotsx.commands.OwnershipTransferService(this)
     lateinit var guiHandler: GUIHandler
     lateinit var cacheManager: CacheManager
     lateinit var borderVisualizer: pl.syntaxdevteam.plotsx.visualization.PlotBorderVisualizer
@@ -98,6 +99,7 @@ class PlotsX : JavaPlugin() {
 
     override fun onEnable() {
         stopping.set(false)
+        ownershipTransfers.open()
         SyntaxCore.registerUpdateSources(
             GitHubSource("SyntaxDevTeam/PlotsX"),
             ModrinthSource("")
@@ -128,6 +130,7 @@ class PlotsX : JavaPlugin() {
         if (!stopping.compareAndSet(false, true)) return
 
         server.servicesManager.unregisterAll(this)
+        ownershipTransfers.close()
         apiImplementation?.close()
         apiImplementation = null
         HandlerList.unregisterAll(this)
@@ -156,6 +159,7 @@ class PlotsX : JavaPlugin() {
      * Reloads configuration immediately on the server thread, then rebuilds the DB-backed runtime snapshot
      * on a worker. Protection keeps serving the previous immutable snapshot until the replacement is ready.
      */
+    @JvmOverloads
     fun onReload(completion: (Exception?) -> Unit = {}) {
         val candidate = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(dataFolder, "config.yml"))
         require(validateClaimConfig(candidate) == claimMode) { "Changing plots.claiming.mode requires a server restart" }

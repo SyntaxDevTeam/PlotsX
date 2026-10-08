@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "pl.syntaxdevteam"
-version = "1.0.0-RC-2"
+version = "1.0.0"
 description = "Lightweight and versatile player plot protection plugin"
 
 repositories {
@@ -173,4 +173,12 @@ tasks.register<Jar>("liveTestJar") {
     archiveClassifier.set("live-test")
     from(compileLiveTest.flatMap { it.destinationDirectory })
     from("src/liveTest/resources")
+}
+
+tasks.register<Jar>("foliaLiveTestJar") {
+    description = "Builds the disposable two-player Folia acceptance plugin."
+    dependsOn(compileLiveTest)
+    archiveClassifier.set("folia-live-test")
+    from(compileLiveTest.flatMap { it.destinationDirectory })
+    from("src/foliaLiveTest/resources")
 }

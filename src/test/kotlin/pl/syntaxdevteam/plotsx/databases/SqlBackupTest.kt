@@ -86,7 +86,7 @@ class SqlBackupTest {
         } finally { directory.deleteRecursively() }
     }
 
-    @Test fun `v5 backup preserves custom teleport spawn`() {
+    @Test fun `v6 backup preserves custom teleport spawn`() {
         for (source in listOf("sqlite", "h2")) for (target in listOf("sqlite", "h2")) {
             val directory = Files.createTempDirectory("plotsx-spawn-backup-test").toFile()
             fun connect(type: String) = DriverManager.getConnection(
@@ -111,7 +111,7 @@ class SqlBackupTest {
                         statement.execute("INSERT INTO plot_spawns (plot_id, x, y, z) VALUES (42, 12, 70, 18)")
                     }
                     val file = SqlBackup.export(conn, target, directory)
-                    assertTrue(file.readLines().first().startsWith("-- PlotsX SQL backup v5"))
+                    assertTrue(file.readLines().first().startsWith("-- PlotsX SQL backup v6"))
                     connect(target).use { restored ->
                         if (target == "sqlite") restored.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
                         restored.createStatement().use { statement ->

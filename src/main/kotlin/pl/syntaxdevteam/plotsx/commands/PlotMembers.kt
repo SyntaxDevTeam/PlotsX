@@ -75,55 +75,37 @@ class PlotMembers(private val plugin: PlotsX) {
         if (action == "role" && args[2] !in access.roles) return fail(sender, "usage")
         if (action == "transfer" && args[2] != "confirm") return fail(sender, "usage")
 
-        // Bukkit/permission-derived transfer limits are captured before dispatching JDBC work.
-        val transfer = if (action == "transfer") {
-            val recipient = plugin.server.getPlayer(target) ?: return fail(sender, "recipient_offline")
-            val limits = plugin.hookHandler.getPlotLimits(recipient)
-            TransferLimits(
-                maxPlots = plugin.hookHandler.getMaxPlots(recipient),
-                maxRadius = limits.maxRadius,
-                maxArea = if (plot.radius == null) plugin.hookHandler.getChunkMaxTotalArea(recipient) else limits.maxTotalArea,
-                maxChunksPerPlot = plugin.hookHandler.getMaxChunksPerPlot(recipient),
-                maxChunksOwned = plugin.hookHandler.getMaxOwnedChunks(recipient)
-            )
-        } else null
+        if (action == "transfer") {
+            val targetName = name(target)
+            plugin.ownershipTransfers.transfer(sender, plotId, target).thenAccept { result ->
+                if (plugin.isEnabled) plugin.schedulerAdapter.runForSender(sender, Runnable {
+                    if (result == MemberUpdateResult.UPDATED) reply(sender, "transferred", mapOf("player" to targetName))
+                    else reportFailure(sender, result)
+                    onComplete()
+                })
+            }
+            return true
+        }
         val role = args.getOrNull(2) ?: "member"
 
         return dispatch(sender, onComplete, successMessage = when (action) {
             "add" -> "added"
             "remove" -> "removed"
-            "transfer" -> "transferred"
             else -> "updated"
         }, successValues = mapOf("player" to name(target))) {
             val success = when (action) {
                 "add" -> plugin.databaseHandler.addPlotMember(plot.id, target)
                 "remove" -> plugin.databaseHandler.removePlotMember(plot.id, target)
                 "role" -> plugin.databaseHandler.updatePlotMemberRole(plot.id, target, role)
-                else -> plugin.databaseHandler.transferPlotOwnership(
-                    plot.id, plot.ownerUuid, target,
-                    requireNotNull(transfer).maxPlots,
-                    transfer.maxRadius,
-                    transfer.maxArea,
-                    transfer.maxChunksPerPlot,
-                    transfer.maxChunksOwned
-                )
+                else -> false
             }
             if (success) plugin.databaseHandler.logPlotAction(PlotLogEntry(
                 plot.id, "Member:$action:$target:$role", actorId, System.currentTimeMillis()
             ))
             if (success) MemberUpdateResult.UPDATED
-            else if (action == "transfer") MemberUpdateResult.TRANSFER_REJECTED
             else MemberUpdateResult.DATABASE_ERROR
         }
     }
-
-    private data class TransferLimits(
-        val maxPlots: Int,
-        val maxRadius: Int,
-        val maxArea: Long,
-        val maxChunksPerPlot: Int,
-        val maxChunksOwned: Int
-    )
 
     private fun dispatch(
         sender: CommandSender,

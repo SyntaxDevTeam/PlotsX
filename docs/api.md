@@ -196,3 +196,9 @@ która również powinna sprawdzać docelową lokalizację, jeśli blokada ma j�
 Repozytorium integracji: [GraveDiggerX](https://github.com/SyntaxDevTeam/GraveDiggerX).
 Powyższy przykład wymaga dostosowania i testu po stronie GraveDiggerX; jego pliki
 nie są zmieniane przez dodanie tego API do PlotsX.
+
+## Transfer własności na Folii
+
+`transferOwnership()` wymaga, aby bieżący wątek był właścicielem zarówno aktora, jak i odbiorcy. Dla odbiorcy w innym regionie zwraca `RECIPIENT_WRONG_THREAD` przed odczytem jego uprawnień.
+
+Użyj `transferOwnershipAsync(actor, plotId, recipientUuid)` na wątku aktora. Metoda pobiera limity na wątku encji odbiorcy i wykonuje zapis na workerze. Nie blokuj wątku serwera przez `join()` ani `get()`. Obsłuż wynik futures i zaplanuj wiadomość lub GUI na schedulerze aktora. Wyłączenie pluginu kończy oczekujące futures wynikiem `DATABASE_ERROR`; rozłączenie przed odczytem limitów daje `RECIPIENT_OFFLINE`.

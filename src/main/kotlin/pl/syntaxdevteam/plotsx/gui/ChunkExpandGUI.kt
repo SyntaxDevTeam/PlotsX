@@ -259,17 +259,17 @@ internal class ChunkExpandGUI(
                 "source=${from.x},${from.z}, target=${to.x},${to.z}, amount=$amount"
         )
         plugin.schedulerAdapter.runAsync(Runnable {
-            val result = try { plugin.databaseHandler.purchaseChunk(operation, plot.expansionLevel, limits, account, ::valid) }
+            val result = try { plugin.databaseHandler.purchaseExpansion(operation, plot.expansionLevel, limits, account, ::valid) }
             catch (failure: Exception) {
                 plugin.logger.err("Chunk purchase ${operation.id}: ${failure.message}")
-                ChunkPurchaseService.Result.REVIEW_REQUIRED
+                ExpansionPurchaseService.Result.REVIEW_REQUIRED
             }
             if (plugin.isEnabled) plugin.schedulerAdapter.runForPlayer(player, Runnable {
                 val completionStarted = System.nanoTime()
                 if (!player.isOnline) return@Runnable
                 submitted = false
                 when (result) {
-                    ChunkPurchaseService.Result.SUCCESS -> {
+                    ExpansionPurchaseService.Result.SUCCESS -> {
                         plugin.logger.debug(
                             "Chunk purchase completed: operation=${operation.id}, player=${player.name}, " +
                                 "plot=$plotId, target=${to.x},${to.z}"
@@ -286,17 +286,18 @@ internal class ChunkExpandGUI(
                             }
                         }
                     }
-                    ChunkPurchaseService.Result.AREA_LIMIT -> error(player, "expand_area_limit")
-                    ChunkPurchaseService.Result.CHUNK_LIMIT -> error(player, "claim_chunk_limit")
-                    ChunkPurchaseService.Result.COLLISION -> error(player, "expand_collision")
-                    ChunkPurchaseService.Result.DECLINED -> error(player, "expand_payment_failed")
-                    ChunkPurchaseService.Result.REFUNDED -> error(player, "expand_failed")
-                    ChunkPurchaseService.Result.BUSY -> error(player, "chunk_purchase_busy")
-                    ChunkPurchaseService.Result.REJECTED, ChunkPurchaseService.Result.DUPLICATE -> error(player, "expand_quote_changed")
-                    ChunkPurchaseService.Result.REVIEW_REQUIRED -> player.sendMessage(plugin.messageHandler.stringMessageToComponent(
+                    ExpansionPurchaseService.Result.RADIUS_LIMIT -> error(player, "expand_radius_limit")
+                    ExpansionPurchaseService.Result.AREA_LIMIT -> error(player, "expand_area_limit")
+                    ExpansionPurchaseService.Result.CHUNK_LIMIT -> error(player, "claim_chunk_limit")
+                    ExpansionPurchaseService.Result.COLLISION -> error(player, "expand_collision")
+                    ExpansionPurchaseService.Result.DECLINED -> error(player, "expand_payment_failed")
+                    ExpansionPurchaseService.Result.REFUNDED -> error(player, "expand_failed")
+                    ExpansionPurchaseService.Result.BUSY -> error(player, "chunk_purchase_busy")
+                    ExpansionPurchaseService.Result.REJECTED, ExpansionPurchaseService.Result.DUPLICATE -> error(player, "expand_quote_changed")
+                    ExpansionPurchaseService.Result.REVIEW_REQUIRED -> player.sendMessage(plugin.messageHandler.stringMessageToComponent(
                         "error", "chunk_purchase_review", mapOf("operation" to operation.id.toString())))
                 }
-                if (result != ChunkPurchaseService.Result.SUCCESS && player.openInventory.topInventory === inventory) {
+                if (result != ExpansionPurchaseService.Result.SUCCESS && player.openInventory.topInventory === inventory) {
                     val current = plugin.cacheManager.getPlot(plotId)
                     if (current != null) {
                         offered = current

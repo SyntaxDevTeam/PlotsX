@@ -2,50 +2,51 @@
 
 [← Home](Home.md)
 
-Brakuje miejsca na kolejną farmę? Powiększ działkę w jej panelu.
+Brakuje miejsca na kolejną farmę? Powiększ działkę w jej panelu. Rozszerzenia są dostępne właścicielowi z uprawnieniem `plotsx.plot.expand`.
 
-## Jak powiększyć działkę?
+## Działka klasyczna
 
-1. Otwórz `/plot` dla swojej działki.
-2. Wybierz rozszerzanie.
-3. Sprawdź docelowy poziom, promień i cenę.
-4. Potwierdź zakup.
+1. Stań w tej części swojej działki, od której chcesz dobudować kolejny fragment.
+2. Otwórz `/plot` i wybierz rozszerzanie.
+3. Wybierz północ, wschód, południe albo zachód.
+4. Sprawdź teren i cenę, następnie potwierdź zakup.
 
-Potrzebujesz uprawnienia `plotsx.plot.expand`. Rozszerzanie jest dostępne właścicielowi działki.
+Każdy zakup dodaje sąsiedni kwadrat o rozmiarze pierwotnej działki. Przy domyślnym promieniu 16 jest to **33 × 33 bloki**. Możesz przejść do dobudowanej części i rozszerzać od niej dalej, tworząc również kształty L. Puste narożniki poza zajętymi kwadratami pozostają wolne.
 
-## Co się powiększa?
+Działka nie rośnie jednocześnie w czterech kierunkach. Zajętej sąsiedniej części nie można przeskoczyć.
 
-Teren rośnie równo w czterech kierunkach. Środek zostaje w tym samym miejscu. Krok 8 oznacza przesunięcie **każdej granicy o 8 bloków**. Kierunek patrzenia nie ma znaczenia.
+## Działka chunkowa
 
-Domyślna oferta wygląda tak:
+Początkowa działka zajmuje jeden chunk, czyli **16 × 16 bloków**. W menu rozszerzania wybierz sąsiedni chunk na mapie i potwierdź zakup. Nowy teren musi łączyć się z działką krawędzią; samo zetknięcie narożnikami nie wystarczy.
 
-| Poziom | Promień | Wymiary | Powierzchnia | Cena tego ulepszenia |
-| --- | --- | --- | --- | --- |
-| 0 — nowa działka | 16 | 33 × 33 | 1089 bloków² | Bez opłaty |
-| 1 | 24 | 49 × 49 | 2401 bloków² | 500 |
-| 2 | 32 | 65 × 65 | 4225 bloków² | 1000 |
-| 3 | 48 | 97 × 97 | 9409 bloków² | 2000 |
+Jeżeli administrator pozostawił tę opcję włączoną, możesz też stanąć na wolnym chunku obok własnej działki i użyć `/plot expand`, aby przejść bezpośrednio do jego potwierdzenia.
 
-Ceny są w walucie serwera. Poziomy kupujesz po kolei. Wszystkie trzy domyślne ulepszenia kosztują razem 3500. Administrator może zmienić ofertę.
+Oba typy działek obejmują całą wysokość świata.
 
-## Trzy osobne limity
+## Ile kosztują rozszerzenia?
+
+Założenie działki jest bezpłatne. Domyślnie kolejne rozszerzenia jednej działki kosztują **500, 750, 1125, 1687,5…** w walucie serwera. Administrator może zmienić ceny osobno dla działek klasycznych i chunkowych lub ustawić je na `0`.
+
+Płatny zakup wymaga działającej ekonomii przez Vault albo VaultUnlocked. Operatorzy również płacą za płatne rozszerzenia. Nieudany zakup nie zwiększa ceny następnego rozszerzenia.
+
+## Limity
 
 | Limit | Domyślnie |
 | --- | --- |
-| Liczba działek gracza | 5 |
-| Maksymalny promień jednej działki | 64 |
-| Łączna powierzchnia działek gracza | 16641 bloków² |
+| Liczba działek gracza we wszystkich światach | 5 |
+| Najdalsza granica działki klasycznej od pierwotnego środka | 64 bloki |
+| Łączna powierzchnia działek klasycznych i mieszanych | 16641 bloków²; limit efektywny może być wyższy dla właścicieli chunków |
+| Chunki jednej działki chunkowej | 32 |
+| Łączna liczba chunków gracza | 64 |
 
-Limit promienia 64 nie dodaje kolejnego ulepszenia. Przy domyślnej ofercie ostatni dostępny poziom daje promień 48.
-
-Powierzchnia działki to długość boku razy długość boku. Bok ma `2 × promień + 1` bloków. Do wspólnego limitu wliczają się wszystkie twoje działki.
+Uprawnienia rang mogą zmieniać te limity. Dla działek chunkowych limit powierzchni jest automatycznie podnoszony tak, aby skonfigurowana liczba chunków była osiągalna.
 
 ## Dlaczego zakup może zostać odrzucony?
 
-Cały nowy teren musi zmieścić się w limitach i nie może nachodzić na inną działkę ani chroniony region WorldGuard. Plugin nie przycina rozszerzenia do wolnego miejsca.
+Cały nowy teren musi zmieścić się w limitach i nie może nachodzić na inną działkę ani zablokowany region WorldGuard. Plugin nie przycina rozszerzenia do wolnego miejsca.
 
-Płatny poziom wymaga działającej ekonomii i odpowiedniego salda. Cena `0` oznacza darmowe ulepszenie bez wymaganej ekonomii. Operatorzy i administratorzy również płacą za płatne poziomy.
+Jeżeli podczas otwartego menu zmienią się cena, teren, właściciel lub limity, otwórz ofertę ponownie. Pozostań przy właściwym fragmencie działki do potwierdzenia.
 
-Jeśli oferta zmieniła się, gdy menu było otwarte, otwórz je ponownie. Jeśli po pobraniu pieniędzy rozszerzenie się nie powiedzie, plugin próbuje zwrócić opłatę. Komunikat o nieudanym zwrocie przekaż administracji.
+Nieudany zapis po potwierdzonym pobraniu pieniędzy uruchamia próbę zwrotu, także po rozłączeniu gracza. Jeśli serwer został przerwany albo odpowiedź ekonomii jest niejednoznaczna, operacja zostaje zapisana do wyjaśnienia przez administrację. Przekaż jej identyfikator z komunikatu o płatności.
 
-Dalej: [ustawienia poziomów](Konfiguracja.md).
+Dalej: [konfiguracja cen i limitów](Konfiguracja.md).

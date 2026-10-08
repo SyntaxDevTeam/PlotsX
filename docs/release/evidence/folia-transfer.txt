@@ -1,0 +1,19 @@
+PASS Folia startup
+PASS disposable empty database
+PASS Folia worker claim and publication
+PASS recipient membership
+PASS classic expansion GUI consumes confirmation
+PASS Folia classic GUI expansion commits once despite duplicate confirmation
+PASS classic GUI purchase has durable committed journal
+PASS duplicate GUI confirmation does not create a second operation
+PASS actor entity thread
+PASS players in distinct Folia regions
+PASS synchronous API safely rejects cross-region recipient
+PASS async API cross-region transfer
+PASS transferred owner published
+PASS transfer command accepted
+PASS command workflow transfers back across regions
+PASS Folia asynchronous reload
+PASS Folia reload preserves ownership
+SERVER 1.21.11-14-529aabc (MC: 1.21.11)
+RESULT PASS

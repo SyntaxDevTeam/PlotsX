@@ -25,13 +25,49 @@ env:
   BUILD_GRADLE_PROPERTIES_TASK: properties
   BUILD_JAR_DIR: build/libs
   BUILD_ARTIFACT_PREFIX: PlotsX-
-  BUILD_GAME_VERSION_SOURCE: src/main/kotlin/pl/syntaxdevteam/plotsx/loader/VersionChecker.kt
+  BUILD_GAME_VERSION_SOURCE: src/main/kotlin/pl/syntaxdevteam/plotsx/compatibility/VersionChecker.kt
   BUILD_GAME_VERSION_MODE: version_checker
 
 jobs:
   verify:
     name: Verify repository
     runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: '1'
+          MARIADB_ROOT_HOST: '%'
+        ports:
+          - 13376:3306
+        options: >-
+          --health-cmd="mariadb-admin ping -h localhost --silent"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_ROOT_HOST: '%'
+        ports:
+          - 13377:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost --silent"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+      postgresql:
+        image: postgres:18
+        env:
+          POSTGRES_USER: plotsx
+          POSTGRES_DB: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 15432:5432
+        options: >-
+          --health-cmd="pg_isready -U plotsx -d postgres"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    env:
+      PLOTSX_TEST_MARIADB_URL: jdbc:mariadb://127.0.0.1:13376/
+      PLOTSX_TEST_MYSQL_URL: jdbc:mariadb://127.0.0.1:13377/
+      PLOTSX_TEST_POSTGRESQL_URL: jdbc:postgresql://127.0.0.1:15432/postgres?user=plotsx
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -48,7 +84,7 @@ jobs:
       - name: Test
         run: |
           chmod +x ./gradlew
-          ./gradlew test --console=plain --no-daemon
+          ./gradlew build liveTestJar foliaLiveTestJar --console=plain --no-daemon
 
   publish:
     name: Publish plotsx / paper

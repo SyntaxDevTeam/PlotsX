@@ -11,12 +11,12 @@ Na własnej działce komenda otwiera jej panel. Poza działkami pokazuje listę 
 | Opcja | Do czego służy? |
 | --- | --- |
 | Informacje o działce | Pokazuje właściciela, nazwę, numer działki i datę utworzenia. |
-| Kliknięcie informacji | Wyświetla granice przez około 20 sekund. |
+| Kliknięcie informacji | Wyświetla granice domyślnie przez 30 sekund. |
 | Flagi | Otwiera ustawienia ochrony. |
 | Teleportacja | Przenosi na działkę, jeśli uda się znaleźć bezpieczne miejsce. |
 | Zmiana nazwy | Otwiera formularz nazwy; na starszych wersjach zbiera nazwę przez czat. |
 | Lista działek | Pomaga przełączać się między własnymi terenami. |
-| Rozszerzanie | Pokazuje następny poziom, nowy rozmiar i cenę. |
+| Rozszerzanie | Pozwala wybrać sąsiedni segment lub chunk i sprawdzić jego cenę. |
 
 ## Nazwa, którą łatwo zapamiętać
 

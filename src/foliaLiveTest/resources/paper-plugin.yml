@@ -1,0 +1,11 @@
+name: PlotsXFoliaAcceptance
+version: '1.0'
+main: pl.syntaxdevteam.plotsx.testing.FoliaAcceptance
+api-version: '1.21.11'
+folia-supported: true
+dependencies:
+  server:
+    PlotsX:
+      load: BEFORE
+      required: true
+      join-classpath: true

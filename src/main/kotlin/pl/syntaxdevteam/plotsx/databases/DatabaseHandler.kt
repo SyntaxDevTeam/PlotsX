@@ -402,15 +402,29 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
 
     /** Worker-thread purchase entry point; Bukkit and economy calls return to the server thread. */
-    internal fun purchaseChunk(operation: OperationJournal.Operation, level: Int,
+    internal fun purchaseExpansion(operation: OperationJournal.Operation, level: Int,
                                limits: ChunkExpansionTransaction.Limits,
                                account: pl.syntaxdevteam.plotsx.hooks.ExpansionEconomy.Account?,
-                               validate: () -> Boolean): ChunkPurchaseService.Result {
-        check(!org.bukkit.Bukkit.isPrimaryThread()) { "Chunk purchases must run off the server thread" }
+                               validate: () -> Boolean,
+                               classicLimits: ClassicExpansionTransaction.Limits? = null): ExpansionPurchaseService.Result {
+        check(!org.bukkit.Bukkit.isPrimaryThread()) { "Expansion purchases must run off the server thread" }
         val workflowStarted = System.nanoTime()
         val serverCallbackNanos = java.util.concurrent.atomic.AtomicLong()
         val cachePublicationNanos = java.util.concurrent.atomic.AtomicLong()
-        val calls = object : ChunkPurchaseService.ServerCalls {
+        val calls = object : ExpansionPurchaseService.ServerCalls {
+            override fun refund(action: () -> Boolean): Boolean {
+                check(!closing.get()) { "PlotsX is shutting down" }
+                val future = CompletableFuture<Boolean>()
+                pendingServerCalls.add(future)
+                try {
+                    plugin.schedulerAdapter.runSync(Runnable {
+                        if (!future.isDone && !closing.get()) try { future.complete(action()) }
+                        catch (failure: Throwable) { future.completeExceptionally(failure) }
+                    })
+                    return future.get(30, java.util.concurrent.TimeUnit.SECONDS)
+                } catch (failure: Exception) { future.cancel(false); throw failure }
+                finally { pendingServerCalls.remove(future) }
+            }
             override fun <T> call(action: () -> T): T {
                 check(!closing.get()) { "PlotsX is shutting down" }
                 val future = CompletableFuture<T>()
@@ -432,14 +446,14 @@ class DatabaseHandler(private val plugin: PlotsX) {
                 finally { pendingServerCalls.remove(future) }
             }
         }
-        val result = ChunkPurchaseService({ getConnection() ?: error("No purchase database connection") },
+        val result = ExpansionPurchaseService({ getConnection() ?: error("No purchase database connection") },
             plugin.protectionCoordinator, {
                 val publicationStarted = System.nanoTime()
-                // A chunk purchase changes one plot only. Do not re-read every plot, chunk,
+                // An expansion purchase changes one plot only. Do not re-read every plot, chunk,
                 // flag and member row just to publish that one changed geometry.
                 try { plugin.cacheManager.reloadPlotSync(operation.plotId) }
                 finally { cachePublicationNanos.addAndGet(System.nanoTime() - publicationStarted) }
-            }, calls, { logger.err(it) }).purchase(operation, level, limits, account, validate)
+            }, calls, { logger.err(it) }).purchase(operation, level, limits, account, validate, classicLimits)
         logger.debug(
             "PlotsX expansion timings: database workflow=${formatMillis(System.nanoTime() - workflowStarted)} ms [worker], " +
                 "cache publication=${formatMillis(cachePublicationNanos.get())} ms [worker], " +

@@ -8,7 +8,7 @@ PlotsX instalujesz na serwerze. Gracze nie muszą dodawać go do swojego Minecra
 
 Potrzebujesz serwera Paper oraz wydania PlotsX dobranego do jego wersji. Plugin jest przygotowany dla Javy 21; jeśli twoje wydanie serwera wymaga nowszej Javy, użyj wymaganej przez serwer.
 
-Lista wersji rozpoznawanych przez plugin obejmuje 1.20.6, 1.21–1.21.11, 26.1, 26.1.1, 26.1.2 i 26.2. Samo rozpoznanie numeru nie oznacza przetestowania każdego połączenia pluginów. PlotsX deklaruje również obsługę Folii — przed udostępnieniem graczom sprawdź swoje wydanie na serwerze próbnym.
+Lista wersji rozpoznawanych przez plugin obejmuje 1.20.6, 1.21–1.21.11, 26.1, 26.1.1, 26.1.2, 26.2 i 26.3. Samo rozpoznanie numeru nie oznacza przetestowania każdego połączenia pluginów. PlotsX deklaruje również obsługę Folii — przed udostępnieniem graczom sprawdź swoje wydanie na serwerze próbnym.
 
 ## Wgraj PlotsX
 
@@ -24,7 +24,7 @@ Domyślna baza SQLite zapisuje dane lokalnie. Nie musisz zakładać osobnej bazy
 
 ## Kopia zapasowa SQL
 
-Komenda `/ptx export [mysql|mariadb|sqlite|postgresql|h2]` zapisuje schemat i wszystkie rekordy sześciu tabel PlotsX (`plots`, `plot_segments`, `plot_expansion_levels`, `plot_members`, `plot_flags`, `plot_logs`) do `plugins/PlotsX/dump/backup.sql`. Bez argumentu używa składni bieżącej bazy. Na przykład `/ptx export mysql` przygotowuje kopię dla MySQL lub MariaDB, również gdy obecnie korzystasz z SQLite. Kolejny udany eksport zastępuje plik, więc wcześniejsze kopie przenieś w inne miejsce.
+Komenda `/ptx export [mysql|mariadb|sqlite|postgresql|h2]` zapisuje działki, segmenty i chunki, członków, flagi, historię, dziennik płatności, aliasy tożsamości oraz punkty teleportacji do `plugins/PlotsX/dump/backup.sql`. Bez argumentu używa składni bieżącej bazy. Na przykład `/ptx export mysql` przygotowuje kopię dla MySQL lub MariaDB, również gdy obecnie korzystasz z SQLite. Kolejny udany eksport zastępuje plik, więc wcześniejsze kopie przenieś w inne miejsce.
 
 `/ptx import` odtwarza ten plik w aktualnie skonfigurowanej bazie i **zastępuje obecne dane PlotsX**. Składnia kopii musi pasować do docelowego silnika. Przy migracji najpierw wykonaj eksport ze składnią docelową, zmień konfigurację bazy, uruchom serwer ponownie i wykonaj import. Import obsługuje format kopii generowany przez tę wersję PlotsX, nie dowolne pliki SQL. Wgrywaj wyłącznie zaufane kopie.
 
@@ -38,4 +38,4 @@ Podstawowe działki nie wymagają WorldGuarda ani pluginu ekonomii. Domyślne ro
 
 Zobacz [integracje](Integracje.md) i [konfigurację](Konfiguracja.md).
 
-Obecne wydanie projektu jest oznaczone jako Alpha. Przed otwarciem serwera dla graczy sprawdź tworzenie działki, ochronę skrzyń i rozszerzanie.
+Wydanie 1.0.0 obejmuje działki klasyczne i chunkowe. Przed otwarciem serwera dla graczy sprawdź tworzenie działki, ochronę skrzyń i rozszerzanie.

@@ -118,7 +118,7 @@ Dla zewnętrznej bazy wpisz dane otrzymane od hostingu. Zmiana nazwy lub rodzaju
 | `aliases.claim` | Dodatkowy skrót tworzenia działki, bez ukośnika. |
 | `aliases.unclaim` | Dodatkowy skrót usuwania działki, bez ukośnika. |
 
-Z pluginem dołączone są polskie i angielskie wiadomości. Config wymienia też `ES`, `FR` i `DE`; przed ich wybraniem upewnij się, że twoje wydanie ma odpowiednie tłumaczenie. W sprawie dodatkowych języków możesz skontaktować się ze społecznością.
+Z pluginem dołączone są polskie (`PL`) i angielskie (`EN`) wiadomości. W sprawie dodatkowych języków możesz skontaktować się ze społecznością.
 
 Zmiana aliasu nie usuwa podstawowych komend. Po zmianie aliasów lub języka uruchom serwer ponownie.
 

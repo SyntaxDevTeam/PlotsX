@@ -11,7 +11,7 @@ support:
   updates: https://github.com/SyntaxDevTeam/PlotsX/releases
 
 localization:
-  available: [en_US, pl_PL, fr_FR, es_ES, de_DE]
+  available: [en_US, pl_PL]
   default: en_US
 
 main: pl.syntaxdevteam.plotsx.PlotsX

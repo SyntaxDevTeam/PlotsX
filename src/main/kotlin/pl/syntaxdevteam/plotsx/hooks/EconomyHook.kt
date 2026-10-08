@@ -95,13 +95,15 @@ class EconomyHook(private val plugin: PlotsX) : Listener {
                     plugin.logger.warning("Expansion price $amount cannot be represented safely by the Vault API.")
                     return null
                 }
+                val offlinePlayer = plugin.server.getOfflinePlayer(player.uniqueId)
+                val worldName = player.world.name
                 val currency = if (pinCurrency) provider.currencyNameSingular().ifBlank { "default" }
                     else "provider-default"
                 return object : ExpansionEconomy.Account {
                     override val providerId = "Vault:${provider.javaClass.name}"
                     override val currencyId = currency
-                    override fun withdraw() = provider.withdrawPlayer(player, doubleAmount).transactionSuccess()
-                    override fun refund() = provider.depositPlayer(player, doubleAmount).transactionSuccess()
+                    override fun withdraw() = provider.withdrawPlayer(offlinePlayer, worldName, doubleAmount).transactionSuccess()
+                    override fun refund() = provider.depositPlayer(offlinePlayer, worldName, doubleAmount).transactionSuccess()
                 }
             }
         } catch (_: LinkageError) {

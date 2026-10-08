@@ -35,8 +35,14 @@ interface PlotsXApi {
     fun removeMember(actor: CommandSender, plotId: Int, player: UUID): MemberUpdateResult
     fun setMemberRole(actor: CommandSender, plotId: Int, player: UUID, role: String): MemberUpdateResult
     fun setRolePermission(actor: CommandSender, plotId: Int, role: String, action: String, allowed: Boolean): MemberUpdateResult
-    /** Consumer is responsible for user confirmation before calling. Recipient must be online. */
+    /** Consumer confirms first. Recipient must be online and owned by the current thread on Folia.
+     * Returns RECIPIENT_WRONG_THREAD for a different region; use transferOwnershipAsync there.
+     */
     fun transferOwnership(actor: CommandSender, plotId: Int, recipient: UUID): MemberUpdateResult
+    /** Call on the actor thread. Captures recipient limits on their entity thread and persists on a worker.
+     * Never block a server/entity thread waiting for the future; schedule UI completion on the actor thread.
+     */
+    fun transferOwnershipAsync(actor: CommandSender, plotId: Int, recipient: UUID): java.util.concurrent.CompletableFuture<MemberUpdateResult>
     /** Checks current owner/rank permissions, persists, refreshes cache and emits a changed event. */
     fun setFlag(actor: CommandSender, plotId: Int, flag: String, value: Boolean): FlagUpdateResult
     /** Register a namespaced flag owned by provider, e.g. myplugin:machines. Never replaces a flag. */
@@ -140,7 +146,7 @@ enum class FlagDecision { ALLOW, DENY, UNKNOWN_FLAG }
 enum class FlagUpdateResult { UPDATED, UNCHANGED, PLOT_NOT_FOUND, UNKNOWN_FLAG, DENIED, DATABASE_ERROR }
 enum class MemberUpdateResult {
     UPDATED, PLOT_NOT_FOUND, DENIED, OWNER, ALREADY_MEMBER, NOT_MEMBER, UNKNOWN_ROLE,
-    UNKNOWN_ACTION, RECIPIENT_OFFLINE, TRANSFER_REJECTED, DATABASE_ERROR
+    UNKNOWN_ACTION, RECIPIENT_OFFLINE, RECIPIENT_WRONG_THREAD, TRANSFER_REJECTED, DATABASE_ERROR
 }
 
 /** One purchased region; radius on PlotSnapshot describes only the original square. */

@@ -7,21 +7,25 @@ import java.sql.Connection
 /** Runs on a worker. Only validation/economy callbacks are marshalled to the server thread.
  * A reservation spans the entire workflow, but never holds a thread lock across callbacks.
  */
-internal class ChunkPurchaseService(
+internal class ExpansionPurchaseService(
     private val connection: () -> Connection,
     private val coordinator: ProtectionCoordinator,
     private val publish: () -> Unit,
     private val server: ServerCalls,
     private val report: (String) -> Unit = {}
 ) {
-    interface ServerCalls { fun <T> call(action: () -> T): T }
-    enum class Result { SUCCESS, BUSY, REJECTED, AREA_LIMIT, CHUNK_LIMIT, COLLISION, DUPLICATE, DECLINED, REFUNDED, REVIEW_REQUIRED }
+    interface ServerCalls {
+        fun <T> call(action: () -> T): T
+        fun refund(action: () -> Boolean): Boolean = call(action)
+    }
+    enum class Result { SUCCESS, BUSY, REJECTED, AREA_LIMIT, RADIUS_LIMIT, CHUNK_LIMIT, COLLISION, DUPLICATE, DECLINED, REFUNDED, REVIEW_REQUIRED }
 
     fun purchase(operation: OperationJournal.Operation, expectedLevel: Int, limits: ChunkExpansionTransaction.Limits,
-                 account: ExpansionEconomy.Account?, validate: () -> Boolean): Result {
+                 account: ExpansionEconomy.Account?, validate: () -> Boolean,
+                 classicLimits: ClassicExpansionTransaction.Limits? = null): Result {
         val reservation = coordinator.reservePurchase() ?: return Result.BUSY
         var result = Result.REVIEW_REQUIRED
-        try { result = run(operation, expectedLevel, limits, account, validate) }
+        try { result = run(operation, expectedLevel, limits, account, validate, classicLimits) }
         catch (failure: Exception) { report("Purchase ${operation.id}: ${failure.message}; inspect its journal before retrying") }
         finally {
             try { coordinator.finishPurchase(reservation, publish) }
@@ -44,26 +48,17 @@ internal class ChunkPurchaseService(
     }
 
     private fun run(op: OperationJournal.Operation, expectedLevel: Int, limits: ChunkExpansionTransaction.Limits,
-                    account: ExpansionEconomy.Account?, validate: () -> Boolean): Result {
+                    account: ExpansionEconomy.Account?, validate: () -> Boolean,
+                    classicLimits: ClassicExpansionTransaction.Limits?): Result {
         if (state(op) != null) return Result.DUPLICATE
         if (op.amount.signum() > 0 && (account == null || account.providerId != op.provider || account.currencyId != op.currency)) return Result.REJECTED
-        val direction = ExpansionDirection.entries.single { op.source.neighbour(it) == op.target }
         val checked = connection().use { c ->
             c.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
             c.autoCommit = false
-            try {
-                ChunkExpansionTransaction.applyInTransaction(c, ChunkExpansionTransaction.Request(
-                    op.plotId, op.owner, op.actor, op.source, direction, op.target, op.expectedRevision
-                ), limits, validateOnly = true)
-            } finally { c.rollback() }
+            try { land(c, op, expectedLevel, limits, classicLimits, validateOnly = true) }
+            finally { c.rollback() }
         }
-        when (checked) {
-            ChunkExpansionTransaction.Result.AreaLimit -> return Result.AREA_LIMIT
-            ChunkExpansionTransaction.Result.PlotChunkLimit, ChunkExpansionTransaction.Result.OwnerChunkLimit -> return Result.CHUNK_LIMIT
-            ChunkExpansionTransaction.Result.Overlap -> return Result.COLLISION
-            is ChunkExpansionTransaction.Result.Success -> if (checked.expansionLevel.toLong() != expectedLevel.toLong() + 1) return Result.REJECTED
-            else -> return Result.REJECTED
-        }
+        if (checked != Result.SUCCESS) return checked
         if (!server.call(validate)) return Result.REJECTED
         if (!connection().use { OperationJournal.prepare(it, op) }) return Result.DUPLICATE
         if (op.amount.signum() > 0) {
@@ -82,8 +77,8 @@ internal class ChunkPurchaseService(
                 c.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
                 c.autoCommit = false
                 try {
-                    val applied = OperationJournal.applyLand(c, op.id, limits, System.currentTimeMillis())
-                    if (applied is ChunkExpansionTransaction.Result.Success) { c.commit(); return Result.SUCCESS }
+                    val applied = land(c, op, expectedLevel, limits, classicLimits, validateOnly = false)
+                    if (applied == Result.SUCCESS) { c.commit(); return Result.SUCCESS }
                     c.rollback()
                 } catch (failure: Exception) {
                     try { c.rollback() } catch (rollback: Exception) { failure.addSuppressed(rollback) }
@@ -102,10 +97,39 @@ internal class ChunkPurchaseService(
         }
     }
 
+    private fun land(c: Connection, op: OperationJournal.Operation, expectedLevel: Int,
+                     limits: ChunkExpansionTransaction.Limits, classicLimits: ClassicExpansionTransaction.Limits?,
+                     validateOnly: Boolean): Result {
+        if (op.classicRadius != null) {
+            val classic = requireNotNull(classicLimits)
+            val result = if (validateOnly) ClassicExpansionTransaction.apply(c, op, expectedLevel, classic, true)
+                else OperationJournal.applyClassicLand(c, op.id, expectedLevel, classic, System.currentTimeMillis())
+            return when (result) {
+                ClassicExpansionTransaction.Result.SUCCESS -> Result.SUCCESS
+                ClassicExpansionTransaction.Result.REJECTED -> Result.REJECTED
+                ClassicExpansionTransaction.Result.RADIUS_LIMIT -> Result.RADIUS_LIMIT
+                ClassicExpansionTransaction.Result.AREA_LIMIT -> Result.AREA_LIMIT
+                ClassicExpansionTransaction.Result.COLLISION -> Result.COLLISION
+            }
+        }
+        val direction = ExpansionDirection.entries.single { op.source.neighbour(it) == op.target }
+        val result = if (validateOnly) ChunkExpansionTransaction.applyInTransaction(c,
+            ChunkExpansionTransaction.Request(op.plotId, op.owner, op.actor, op.source, direction, op.target, op.expectedRevision),
+            limits, validateOnly = true) else OperationJournal.applyLand(c, op.id, limits, System.currentTimeMillis())
+        return when (result) {
+            is ChunkExpansionTransaction.Result.Success -> if (!validateOnly || result.expansionLevel.toLong() == expectedLevel.toLong() + 1)
+                Result.SUCCESS else Result.REJECTED
+            ChunkExpansionTransaction.Result.AreaLimit -> Result.AREA_LIMIT
+            ChunkExpansionTransaction.Result.PlotChunkLimit, ChunkExpansionTransaction.Result.OwnerChunkLimit -> Result.CHUNK_LIMIT
+            ChunkExpansionTransaction.Result.Overlap -> Result.COLLISION
+            else -> Result.REJECTED
+        }
+    }
+
     private fun refund(op: OperationJournal.Operation, account: ExpansionEconomy.Account): Result {
         transition(op, OperationJournal.State.DEBITED, OperationJournal.State.REFUND_REQUIRED)
         transition(op, OperationJournal.State.REFUND_REQUIRED, OperationJournal.State.REFUND_REQUESTED)
-        val refunded = try { server.call { account.refund() } }
+        val refunded = try { server.refund { account.refund() } }
         catch (failure: Exception) {
             transition(op, OperationJournal.State.REFUND_REQUESTED, OperationJournal.State.UNCERTAIN)
             report("Uncertain refund ${op.id}: ${failure.message}")

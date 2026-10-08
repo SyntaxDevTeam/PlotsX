@@ -12,7 +12,7 @@ Masz już pomysł na bazę? Wystarczą wolne miejsce i jedna komenda.
 4. Po utworzeniu działki zobaczysz jego granice. Samo założenie działki nie pobiera opłaty w PlotsX.
 5. Wpisz `/plot`, aby otworzyć panel.
 
-Przy domyślnych ustawieniach działka ma **33 × 33 bloki** i obejmuje całą wysokość świata. Administrator może zmienić rozmiar i limity.
+W domyślnym trybie klasycznym działka ma **33 × 33 bloki**. W trybie chunkowym zajmujesz chunk, w którym stoisz: **16 × 16 bloków**. Oba typy obejmują całą wysokość świata. Administrator wybiera tryb, rozmiary i limity.
 
 ## Zaproś znajomego
 
@@ -26,7 +26,7 @@ Alex może teraz wspólnie z tobą budować. Jeśli chcesz udostępnić mu prywa
 
 ## Nadaj bazie nazwę
 
-W `/plot` wybierz zmianę nazwy i wpisz ją na czacie. Na odpowiedź masz 60 sekund. Przykład: `Baza`. Potem otworzysz jej panel przez `/plot Baza`.
+W `/plot` wybierz zmianę nazwy. Na nowszym serwerze wpiszesz ją w formularzu, a na starszym przez czat. Na odpowiedź masz 60 sekund. Przykład: `Baza`. Potem otworzysz jej panel przez `/plot Baza`.
 
 ## Zwolnij teren
 

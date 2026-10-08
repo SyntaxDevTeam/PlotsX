@@ -22,17 +22,22 @@ public final class PaperAcceptance extends JavaPlugin {
         if (!result) throw new AssertionError(label);
         checks.add("PASS " + label);
     }
+    private final java.util.concurrent.atomic.AtomicBoolean finished = new java.util.concurrent.atomic.AtomicBoolean();
     @Override public void onEnable() {
-        getServer().getScheduler().runTaskLater(this, () -> {
-            try { runChecks(); checks.add("RESULT PASS"); }
-            catch (Throwable error) { checks.add("RESULT FAIL " + error); error.printStackTrace(); }
-            finally {
-                try { Files.write(getDataFolder().toPath().resolve("result.txt"), checks); }
-                catch (Exception error) { error.printStackTrace(); }
-                getServer().shutdown();
-            }
-        }, 20L);
         getDataFolder().mkdirs();
+        getServer().getScheduler().runTaskLater(this, () -> {
+            try { runChecks(); }
+            catch (Throwable error) { finish(error); }
+        }, 20L);
+        getServer().getScheduler().runTaskLater(this, () -> finish(new AssertionError("acceptance timeout")), 1200L);
+    }
+    private void finish(Throwable error) {
+        if (!finished.compareAndSet(false, true)) return;
+        if (error == null) checks.add("RESULT PASS");
+        else { checks.add("RESULT FAIL " + error); error.printStackTrace(); }
+        try { Files.write(getDataFolder().toPath().resolve("result.txt"), checks); }
+        catch (Exception failure) { failure.printStackTrace(); }
+        getServer().shutdown();
     }
     private Player player(UUID uuid, World world) {
         return (Player) Proxy.newProxyInstance(getClassLoader(), new Class<?>[]{Player.class}, (proxy, method, args) -> {
@@ -125,10 +130,18 @@ public final class PaperAcceptance extends JavaPlugin {
             check(publishing.await(5, java.util.concurrent.TimeUnit.SECONDS), "mutation enters publication barrier");
             BlockBreakEvent reserved = new BlockBreakEvent(source, visitor);
             getServer().getPluginManager().callEvent(reserved);
-            check(reserved.isCancelled(), "real event denied during publication gap");
-            check(api.evaluateFlag(world.getName(),0,-1,"build",owner) == FlagDecision.DENY, "API denied during publication gap");
+            check(!reserved.isCancelled(), "unclaimed event stays allowed during healthy publication");
+            check(api.evaluateFlag(world.getName(),0,-1,"build",owner) == FlagDecision.ALLOW, "API serves previous snapshot during healthy publication");
             release.countDown(); job.get(5, java.util.concurrent.TimeUnit.SECONDS);
         } finally { release.countDown(); executor.shutdownNow(); }
+        try {
+            plugin.getProtectionCoordinator().mutate(() -> { throw new IllegalStateException("injected publication failure"); }, () -> Unit.INSTANCE);
+            throw new AssertionError("publication fault was not propagated");
+        } catch (IllegalStateException expected) {
+            check(api.evaluateFlag(world.getName(),0,-1,"build",owner) == FlagDecision.DENY, "failed publication closes API protection");
+        }
+        plugin.getProtectionCoordinator().recover(() -> { plugin.getCacheManager().reloadAllCachesSync(); return Unit.INSTANCE; });
+        check(api.evaluateFlag(world.getName(),0,-1,"build",owner) == FlagDecision.ALLOW, "recovery restores protection snapshot");
         DatabaseHandler.ClaimResult result = db.claimPlotAtomically(owner,owner,world.getName(),128,128,64,2,10,10000,"new",32,64);
         check(result instanceof DatabaseHandler.ClaimResult.Success, "configured claim transaction succeeds");
         PlotSnapshot created = api.getPlotAt(world.getName(),128,128);
@@ -144,10 +157,16 @@ public final class PaperAcceptance extends JavaPlugin {
             try { plugin.onReload(); } catch (IllegalArgumentException expected) { rejected = true; }
             check(rejected, "mode change rejected during reload");
         } finally { Files.writeString(configFile, originalConfig); }
-        plugin.onReload();
-        check(api.getPlotAt(world.getName(),-1,-1).getGeometryType().equals("chunks"), "reload preserves chunk protection");
-        check(api.getPlotAt(world.getName(),40,40).getGeometryType().equals("classic"), "reload preserves classic protection");
-        checks.add("SERVER " + getServer().getVersion());
-        checks.add("MODE " + plugin.getClaimMode());
+        plugin.onReload(failure -> {
+            try {
+                check(failure == null, "asynchronous reload completes successfully");
+                check(api.getPlotAt(world.getName(),-1,-1).getGeometryType().equals("chunks"), "reload preserves chunk protection");
+                check(api.getPlotAt(world.getName(),40,40).getGeometryType().equals("classic"), "reload preserves classic protection");
+                checks.add("SERVER " + getServer().getVersion());
+                checks.add("MODE " + plugin.getClaimMode());
+                finish(null);
+            } catch (Throwable error) { finish(error); }
+            return Unit.INSTANCE;
+        });
     }
 }

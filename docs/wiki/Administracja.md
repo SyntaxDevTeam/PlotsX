@@ -59,7 +59,7 @@ aktualizacji sprawdź `plots.claiming.mode`, osobne cenniki `plots.expansion` i
 ## Problem z płatnością
 
 Jeśli gracz zgłasza pobranie pieniędzy bez rozszerzenia, sprawdź saldo, geometrię
-działki i komunikaty z tego momentu. Dla zakupu chunkowego zapisz UUID operacji,
+działki i komunikaty z tego momentu. Dla każdego płatnego rozszerzenia zapisz UUID operacji,
 dostawcę, walutę, kwotę i stan z komunikatu `PAYMENT REVIEW` lub
 `PAYMENT RECONCILIATION REQUIRED`. Nie ponawiaj obciążenia ani zwrotu bez sprawdzenia
 historii dostawcy — niejednoznaczny wynik jest celowo zachowywany w dzienniku.

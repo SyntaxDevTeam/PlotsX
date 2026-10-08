@@ -128,13 +128,13 @@ class OperationJournalTest {
         assertEquals(op.id, OperationJournal.recoverInterrupted(c, 103).single().id)
         assertTrue(PlotRepository.readAll(c).isEmpty())
     }
-    @Test fun `v3 transfers pending operations across sqlite and h2 and prevents overwriting live unresolved payments`() = databases { source, _, op ->
+    @Test fun `v6 transfers pending operations across sqlite and h2 and prevents overwriting live unresolved payments`() = databases { source, _, op ->
         paid(source, op)
         for (targetType in listOf("sqlite", "h2")) connect(targetType).use { target ->
             val dir = Files.createTempDirectory("plotsx-journal-backup").toFile()
             try {
                 val file = SqlBackup.export(source, targetType, dir)
-                assertTrue(file.readText().startsWith("-- PlotsX SQL backup v3 dialect=$targetType"))
+                assertTrue(file.readText().startsWith("-- PlotsX SQL backup v6 dialect=$targetType"))
                 SqlBackup.restore(target, targetType, file, allowChunkPlots = true)
                 val restored = OperationJournal.readAll(target).single()
                 assertEquals(OperationJournal.readAll(source).single().copy(state = OperationJournal.State.UNCERTAIN, updatedAt = restored.updatedAt), restored)
@@ -193,6 +193,46 @@ class OperationJournalTest {
         c.createStatement().use { it.execute("DROP TABLE plot_operations") }
         assertThrows(IllegalArgumentException::class.java) { OperationJournal.migrate(c) }
         assertFalse(OperationJournal.exists(c))
+    }
+
+    @Test fun `legacy v3 v4 v5 journals migrate and restore without losing payment evidence`() {
+        for (version in 3..5) databases { source, type, op ->
+            paid(source, op)
+            if (version >= 4) pl.syntaxdevteam.plotsx.identity.IdentityMigrationStore.migrateSchema(source)
+            if (version >= 5) PlotSpawnRepository.migrate(source)
+            source.createStatement().use { it.execute("ALTER TABLE plot_operations DROP COLUMN classic_radius") }
+            val before = OperationJournal.readAll(source).single()
+            val dir = Files.createTempDirectory("plotsx-old-payment").toFile()
+            try {
+                val backup = SqlBackup.export(source, type, dir)
+                assertTrue(backup.readText().startsWith("-- PlotsX SQL backup v$version dialect=$type"))
+                connect(type).use { target ->
+                    SqlBackup.restore(target, type, backup, true)
+                    val restored = OperationJournal.readAll(target).single()
+                    assertEquals(before.copy(state = OperationJournal.State.UNCERTAIN, updatedAt = restored.updatedAt), restored)
+                }
+                repeat(2) { OperationJournal.migrate(source) }
+                assertTrue(OperationJournal.hasClassicRadius(source))
+                assertEquals(before, OperationJournal.readAll(source).single())
+            } finally { dir.deleteRecursively() }
+        }
+    }
+
+    @Test fun `classic pending payment survives backup and restart with its exact source and radius`() = databases { source, type, template ->
+        val op = template.copy(classicRadius = 2, target = ChunkPosition(template.source.x + 5, template.source.z))
+        paid(source, op)
+        assertEquals(op.copy(state = OperationJournal.State.DEBITED, updatedAt = 102), OperationJournal.readAll(source).single())
+        val dir = Files.createTempDirectory("plotsx-classic-payment").toFile()
+        try {
+            val backup = SqlBackup.export(source, type, dir)
+            connect(type).use { target ->
+                SqlBackup.restore(target, type, backup, true)
+                val restored = OperationJournal.readAll(target).single()
+                assertEquals(op.copy(state = OperationJournal.State.UNCERTAIN, updatedAt = restored.updatedAt), restored)
+            }
+            val recovered = OperationJournal.recoverInterrupted(source, 200).single()
+            assertEquals(op.copy(state = OperationJournal.State.REFUND_REQUIRED, updatedAt = 200), recovered)
+        } finally { dir.deleteRecursively() }
     }
 
 }
