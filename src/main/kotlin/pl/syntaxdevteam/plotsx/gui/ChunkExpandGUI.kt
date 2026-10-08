@@ -258,13 +258,13 @@ internal class ChunkExpandGUI(
             "Chunk purchase started: operation=${operation.id}, player=${player.name}, plot=$plotId, " +
                 "source=${from.x},${from.z}, target=${to.x},${to.z}, amount=$amount"
         )
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+        plugin.schedulerAdapter.runAsync(Runnable {
             val result = try { plugin.databaseHandler.purchaseChunk(operation, plot.expansionLevel, limits, account, ::valid) }
             catch (failure: Exception) {
                 plugin.logger.err("Chunk purchase ${operation.id}: ${failure.message}")
                 ChunkPurchaseService.Result.REVIEW_REQUIRED
             }
-            if (plugin.isEnabled) plugin.server.scheduler.runTask(plugin, Runnable {
+            if (plugin.isEnabled) plugin.schedulerAdapter.runForPlayer(player, Runnable {
                 val completionStarted = System.nanoTime()
                 if (!player.isOnline) return@Runnable
                 submitted = false

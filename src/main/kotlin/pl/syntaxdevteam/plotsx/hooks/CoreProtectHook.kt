@@ -116,7 +116,7 @@ class CoreProtectHook(private val plugin: PlotsX) : Listener {
         val centerY = world.spawnLocation.y
         val center = Location(world, plot.x.toDouble(), centerY, plot.z.toDouble())
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
+        plugin.schedulerAdapter.runAsync(Runnable {
             api.performRestore(
                 seconds,
                 null,
@@ -171,7 +171,7 @@ class CoreProtectHook(private val plugin: PlotsX) : Listener {
         val centerY = world.spawnLocation.y
         val center = Location(world, plot.x.toDouble(), centerY, plot.z.toDouble())
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable {
+        plugin.schedulerAdapter.runAsync(Runnable {
             api.performRollback(
                 seconds,
                 player?.let { listOf(it.name) },

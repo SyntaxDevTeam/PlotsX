@@ -51,7 +51,7 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
                     return@UnclaimConfirmGUI
                 }
                 val actor = p.uniqueId
-                plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                plugin.schedulerAdapter.runAsync(Runnable {
                     // JDBC deletion and the audit write must never run on the server thread.
                     val success = try { plugin.databaseHandler.deletePlot(plotId) }
                     catch (failure: Exception) {
@@ -68,7 +68,7 @@ class UnclaimCMD(private val plugin: PlotsX) : BasicCommand {
                         }
                     }
                     if (!plugin.isEnabled) return@Runnable
-                    plugin.server.scheduler.runTask(plugin, Runnable {
+                    plugin.schedulerAdapter.runForPlayer(p, Runnable {
                         if (!p.isOnline) return@Runnable
                         p.sendMessage(plugin.messageHandler.stringMessageToComponent(
                             if (success) "plots" else "error",

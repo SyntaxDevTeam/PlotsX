@@ -13,7 +13,7 @@ import java.util.*
 
 class GUIHandler(private val plugin: PlotsX) : Listener {
 
-    private val openGuis: MutableMap<UUID, GUI> = mutableMapOf()
+    private val openGuis: MutableMap<UUID, GUI> = java.util.concurrent.ConcurrentHashMap()
 
     fun registerGui(player: Player, gui: GUI) {
         openGuis[player.uniqueId] = gui
@@ -28,7 +28,8 @@ class GUIHandler(private val plugin: PlotsX) : Listener {
     fun close() {
         val players = openGuis.keys.mapNotNull(plugin.server::getPlayer)
         openGuis.clear()
-        players.forEach(Player::closeInventory)
+        // Disable runs on the global region; inventory ownership belongs to each player.
+        players.filter { org.bukkit.Bukkit.isOwnedByCurrentRegion(it) }.forEach(Player::closeInventory)
     }
 
     fun openLegacy(player: Player, gui: GUI) {

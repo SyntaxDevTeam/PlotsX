@@ -192,7 +192,7 @@ internal class ChunkRemoveGUI(
             target = selected,
             expectedRevision = current.geometryRevision
         )
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+        plugin.schedulerAdapter.runAsync(Runnable {
             val result = try {
                 plugin.databaseHandler.removeChunkAtomically(request)
             } catch (failure: Exception) {

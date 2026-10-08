@@ -105,7 +105,7 @@ class FlagsGUI(
         val actor = player.uniqueId
 
         // JDBC/cache publication stays entirely on the worker. Bukkit event/UI returns to the server thread.
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+        plugin.schedulerAdapter.runAsync(Runnable {
             val success = try {
                 plugin.databaseHandler.updatePlotFlag(plot.id, flagKey, next).also { updated ->
                     if (updated) plugin.databaseHandler.logPlotAction(
@@ -117,7 +117,7 @@ class FlagsGUI(
                 false
             }
             if (!plugin.isEnabled) return@Runnable
-            plugin.server.scheduler.runTask(plugin, Runnable {
+            plugin.schedulerAdapter.runForPlayer(player, Runnable {
                 if (!player.isOnline) return@Runnable
                 if (!success) {
                     player.sendMessage(message.stringMessageToComponent("error", "flag_update_failed"))

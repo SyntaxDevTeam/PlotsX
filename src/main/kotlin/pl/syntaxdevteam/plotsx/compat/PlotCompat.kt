@@ -1,5 +1,6 @@
 package pl.syntaxdevteam.plotsx.compat
 
+import pl.syntaxdevteam.plotsx.compatibility.SemanticVersion
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -67,8 +68,8 @@ internal interface PlotPlatformAdapter {
 
 internal object PlotPlatformAdapters {
     fun forMinecraftVersion(version: String): PlotPlatformAdapter {
-        val major = version.substringBefore('.').toIntOrNull()
-        return if (major != null && major >= 26) Modern26Adapter else Legacy120Adapter
+        val major = SemanticVersion.parse(version).major
+        return if (major >= 26) Modern26Adapter else Legacy120Adapter
     }
 }
 

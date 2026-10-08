@@ -169,7 +169,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
             if (!paid) { player.sendMessage(error("expand_payment_failed")); return }
         }
         // Only JDBC/cache publication runs here. Economy and every Bukkit call stay on the server thread.
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+        plugin.schedulerAdapter.runAsync(Runnable {
             val result = try {
                 plugin.databaseHandler.expandPlotAtomically(
                     plot.id, ownerUuid, ownerUuid, direction, source, target,
@@ -180,7 +180,7 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
                 DatabaseHandler.ExpandResult.DatabaseError
             }
             if (!plugin.isEnabled) return@Runnable
-            plugin.server.scheduler.runTask(plugin, Runnable {
+            plugin.schedulerAdapter.runForPlayer(player, Runnable {
                 val completionStarted = System.nanoTime()
                 if (result !is DatabaseHandler.ExpandResult.Success && account != null) {
                     val refunded = try { account.refund() } catch (ex: Exception) {
@@ -197,6 +197,10 @@ class ExpandGUI(private val plugin: PlotsX, private val plotId: Int) : AbstractG
                         "${"%.3f".format(java.util.Locale.ROOT, (System.nanoTime() - completionStarted) / 1_000_000.0)} ms, " +
                         "plot=${plot.id}, result=$result"
                 )
+            }, Runnable {
+                if (result !is DatabaseHandler.ExpandResult.Success && account != null) {
+                    plugin.logger.err("REFUND REQUIRED: player=$ownerUuid plot=${plot.id} amount=$price (player disconnected before refund)")
+                }
             })
         })
     }

@@ -11,7 +11,7 @@ interface SchedulerAdapter {
     fun runSync(task: Runnable)
     fun runSyncLater(delayTicks: Long, task: Runnable)
     fun runRegionally(location: Location, task: Runnable)
-    fun runForPlayer(player: Player, task: Runnable)
+    fun runForPlayer(player: Player, task: Runnable, retired: Runnable? = null)
     fun runRegionallyLater(location: Location, delayTicks: Long, task: Runnable)
     fun runForSender(sender: CommandSender, task: Runnable) {
         if (sender is Player) runForPlayer(sender, task) else runSync(task)
@@ -58,9 +58,9 @@ class BukkitSchedulerAdapter(
         }
     }
 
-    override fun runForPlayer(player: Player, task: Runnable) {
+    override fun runForPlayer(player: Player, task: Runnable, retired: Runnable?) {
         if (foliaBased) {
-            player.scheduler.execute(plugin, task, null, 1L)
+            if (!player.scheduler.execute(plugin, task, retired, 1L)) retired?.run()
         } else {
             runSync(task)
         }

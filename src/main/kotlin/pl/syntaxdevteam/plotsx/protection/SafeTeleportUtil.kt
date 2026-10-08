@@ -10,6 +10,8 @@ import pl.syntaxdevteam.plotsx.compat.PlotCompat
 import pl.syntaxdevteam.plotsx.databases.PlotData
 import pl.syntaxdevteam.plotsx.databases.PlotTeleportSpawn
 import java.util.ArrayDeque
+import java.util.concurrent.CompletableFuture
+import pl.syntaxdevteam.plotsx.PlotsX
 
 object SafeTeleportUtil {
     private val unsafeBlocks: Set<Material> by lazy {
@@ -120,13 +122,50 @@ object SafeTeleportUtil {
      * Teleportuje gracza najpierw do zapisanego punktu działki, a jeśli ten nie jest już
      * bezpieczny lub nie należy do geometrii, używa dotychczasowego wyszukiwania awaryjnego.
      */
-    fun safeTeleport(player: Player, plot: PlotData): Boolean {
-        val world = Bukkit.getWorld(plot.world) ?: return false
-        val loc = configuredSpawn(world, plot)
-            ?: findSafeLocation(world, plot.x, plot.z, plot.radius ?: 16, plot.y, plot::contains)
-        return loc?.let {
-            player.teleport(it)
-            true
-        } ?: false
+    fun safeTeleport(plugin: PlotsX, player: Player, plot: PlotData, completion: (Boolean) -> Unit) {
+        val world = Bukkit.getWorld(plot.world)
+        if (world == null) { completion(false); return }
+        val radius = plot.radius ?: 16
+        val chunks = linkedSetOf<Pair<Int, Int>>()
+        plot.teleportSpawn?.let { chunks.add(Math.floorDiv(it.x, 16) to Math.floorDiv(it.z, 16)) }
+        chunks.add(Math.floorDiv(plot.x, 16) to Math.floorDiv(plot.z, 16))
+        for (x in Math.floorDiv(plot.x - radius, 16)..Math.floorDiv(plot.x + radius, 16)) {
+            for (z in Math.floorDiv(plot.z - radius, 16)..Math.floorDiv(plot.z + radius, 16)) chunks.add(x to z)
+        }
+        val iterator = chunks.iterator()
+        fun searchNext(): CompletableFuture<Location?> {
+            if (!plugin.isEnabled || !iterator.hasNext()) return CompletableFuture.completedFuture(null)
+            val (chunkX, chunkZ) = iterator.next()
+            return world.getChunkAtAsync(chunkX, chunkZ).thenCompose {
+                val found = CompletableFuture<Location?>()
+                if (!plugin.isEnabled) return@thenCompose CompletableFuture.completedFuture<Location?>(null)
+                plugin.server.regionScheduler.execute(plugin, world, chunkX, chunkZ) {
+                    try {
+                        val spawn = plot.teleportSpawn
+                        val configured = if (spawn != null && Math.floorDiv(spawn.x, 16) == chunkX &&
+                            Math.floorDiv(spawn.z, 16) == chunkZ) configuredSpawn(world, plot) else null
+                        found.complete(configured ?: findSafeLocation(world, chunkX * 16 + 8, chunkZ * 16 + 8, 8, plot.y) { x, z ->
+                            x.toLong() in (plot.x.toLong() - radius)..(plot.x.toLong() + radius) &&
+                            z.toLong() in (plot.z.toLong() - radius)..(plot.z.toLong() + radius) &&
+                            Math.floorDiv(x, 16) == chunkX && Math.floorDiv(z, 16) == chunkZ && plot.contains(x, z)
+                        })
+                    } catch (failure: Exception) { found.completeExceptionally(failure) }
+                }
+                found
+            }.thenCompose { location ->
+                if (location != null) CompletableFuture.completedFuture(location) else searchNext()
+            }
+        }
+        searchNext().whenComplete { location, failure ->
+            if (!plugin.isEnabled) return@whenComplete
+            plugin.schedulerAdapter.runForPlayer(player, Runnable {
+                if (failure != null || location == null) { completion(false); return@Runnable }
+                player.teleportAsync(location).whenComplete { success, teleportFailure ->
+                    if (plugin.isEnabled) plugin.schedulerAdapter.runForPlayer(player, Runnable {
+                        completion(teleportFailure == null && success == true)
+                    })
+                }
+            })
+        }
     }
 }

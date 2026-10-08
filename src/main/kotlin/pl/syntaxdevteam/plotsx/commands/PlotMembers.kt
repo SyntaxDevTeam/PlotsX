@@ -132,14 +132,14 @@ class PlotMembers(private val plugin: PlotsX) {
         successValues: Map<String, String> = emptyMap(),
         operation: () -> MemberUpdateResult
     ): Boolean {
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+        plugin.schedulerAdapter.runAsync(Runnable {
             val result = try { operation() }
             catch (failure: Exception) {
                 plugin.logger.err("Plot member operation failed: ${failure.message}")
                 MemberUpdateResult.DATABASE_ERROR
             }
             if (!plugin.isEnabled) return@Runnable
-            plugin.server.scheduler.runTask(plugin, Runnable {
+            plugin.schedulerAdapter.runForSender(sender, Runnable {
                 if (result == MemberUpdateResult.UPDATED) reply(sender, successMessage, successValues)
                 else reportFailure(sender, result)
                 onComplete()

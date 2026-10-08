@@ -33,7 +33,7 @@ class RenamePlotService(private val plugin: PlotsX) {
             return
         }
 
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+        plugin.schedulerAdapter.runAsync(Runnable {
             val success = try { plugin.databaseHandler.updatePlotDetails(plot.id, name) }
             catch (failure: Exception) {
                 plugin.logger.err("Rename failed for plot ${plot.id}: ${failure.message}")

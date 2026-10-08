@@ -57,7 +57,7 @@ class CacheManager(private val plugin: PlotsX) {
     fun reloadMembersSync(plotId: Int) {
         reloadPlotSync(plotId)
     }
-    private fun async(task: () -> Unit) = plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable(task))
+    private fun async(task: () -> Unit) = plugin.schedulerAdapter.runAsync(Runnable(task))
     fun refreshAllCachesAsync() { async { reloadAllCachesSync() } }
     // A new plot must not become visible before its flags and membership are available.
     fun refreshPlotCacheAsync() { async { reloadAllCachesSync() } }
@@ -71,7 +71,7 @@ class CacheManager(private val plugin: PlotsX) {
     fun updateFlagCacheAsync(plotId: Int, onComplete: () -> Unit = {}) {
         async {
             reloadFlagsSync(plotId)
-            plugin.server.scheduler.runTask(plugin, onComplete)
+            plugin.schedulerAdapter.runSync(Runnable(onComplete))
         }
     }
     fun updateMemberCacheAsync(plotId: Int) { async { reloadMembersSync(plotId) } }

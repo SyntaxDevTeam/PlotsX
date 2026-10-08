@@ -134,7 +134,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                     plugin.hookHandler.getChunkMaxTotalArea(p) else limits.maxTotalArea
                 val actor = p.uniqueId
                 val namePrefix = "Działka ${p.name}"
-                plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+                plugin.schedulerAdapter.runAsync(Runnable {
                     val result = try { dbh.claimPlotAtomically(
                         ownerUuid = uuid,
                         actorUuid = actor,
@@ -153,7 +153,7 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                         DatabaseHandler.ClaimResult.DatabaseError
                     }
                     if (!plugin.isEnabled) return@Runnable
-                    plugin.server.scheduler.runTask(plugin, Runnable {
+                    plugin.schedulerAdapter.runForPlayer(p, Runnable {
                         if (!p.isOnline) return@Runnable
                         when (result) {
                             is DatabaseHandler.ClaimResult.Success -> {

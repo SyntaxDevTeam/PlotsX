@@ -415,12 +415,18 @@ class DatabaseHandler(private val plugin: PlotsX) {
                 check(!closing.get()) { "PlotsX is shutting down" }
                 val future = CompletableFuture<T>()
                 pendingServerCalls.add(future)
-                plugin.server.scheduler.runTask(plugin, Runnable {
+                val player = plugin.server.getPlayer(operation.actor)
+                if (player == null) {
+                    pendingServerCalls.remove(future)
+                    error("Purchase actor is no longer online")
+                }
+                val scheduled = player.scheduler.run(plugin, {
                     val callbackStarted = System.nanoTime()
                     if (!future.isDone && !closing.get()) try { future.complete(action()) }
                     catch (failure: Throwable) { future.completeExceptionally(failure) }
                     finally { serverCallbackNanos.addAndGet(System.nanoTime() - callbackStarted) }
-                })
+                }, { future.completeExceptionally(IllegalStateException("Purchase actor disconnected")) })
+                if (scheduled == null) future.completeExceptionally(IllegalStateException("Purchase actor disconnected"))
                 try { return future.get(30, java.util.concurrent.TimeUnit.SECONDS) }
                 catch (failure: Exception) { future.cancel(false); throw failure }
                 finally { pendingServerCalls.remove(future) }

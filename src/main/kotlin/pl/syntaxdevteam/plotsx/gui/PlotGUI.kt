@@ -147,11 +147,12 @@ class PlotGUI(
 
             tpaIndex -> {
                 player.scheduler.run(plugin, {
-                    val success = SafeTeleportUtil.safeTeleport(player, pd)
-                    if (success) {
-                        player.sendMessage(message.stringMessageToComponent("plots", "teleport"))
-                    } else {
-                        player.sendMessage(message.stringMessageToComponent("plots", "teleport_failed"))
+                    SafeTeleportUtil.safeTeleport(plugin, player, pd) { success ->
+                        if (success) {
+                            player.sendMessage(message.stringMessageToComponent("plots", "teleport"))
+                        } else {
+                            player.sendMessage(message.stringMessageToComponent("plots", "teleport_failed"))
+                        }
                     }
                 }, null)
             }
@@ -231,7 +232,7 @@ class PlotGUI(
         }
 
         val owner = player.uniqueId
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+        plugin.schedulerAdapter.runAsync(Runnable {
             val result = PlotSpawnRepository.save(plugin, plot.id, owner, owner, spawn)
             if (result == PlotSpawnRepository.SaveResult.Success) {
                 try {

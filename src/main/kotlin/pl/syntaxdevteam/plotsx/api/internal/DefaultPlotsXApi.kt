@@ -23,7 +23,7 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     @Volatile private var active = true
     override val apiVersion = 2
     private val access = PlotAccess(plugin)
-    private val providers = mutableMapOf<String, Plugin>()
+    private val providers = java.util.concurrent.ConcurrentHashMap<String, Plugin>()
     private fun ready() = check(active) { "PlotsX API is disabled; obtain a new provider from ServicesManager" }
     private fun serverThread() { ready(); check(Bukkit.isPrimaryThread()) { "This API operation requires the Paper server thread" } }
     private fun PlotData.snapshot() = PlotSnapshot(id, ownerUuid, world, x, y, z, radius, name, creationTime,
@@ -73,8 +73,14 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
         }
     }
 
+    private fun actorThread(actor: CommandSender) {
+        ready()
+        if (actor is Player) check(Bukkit.isOwnedByCurrentRegion(actor)) { "This API operation requires the actor entity thread" }
+        else serverThread()
+    }
+
     override fun canManage(actor: CommandSender, plotId: Int, action: String): Boolean {
-        serverThread()
+        actorThread(actor)
         if (action !in access.actions) return false
         val plot = plugin.databaseHandler.getPlotById(plotId) ?: return false
         return access.allowed(actor, plot, action)
@@ -91,7 +97,7 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     override fun transferOwnership(actor: CommandSender, plotId: Int, recipient: UUID) = changeMember(actor, plotId, recipient, "transfer")
 
     private fun changeMember(actor: CommandSender, plotId: Int, target: UUID, action: String, role: String = "member"): MemberUpdateResult {
-        serverThread()
+        actorThread(actor)
         try {
             val plot = plugin.databaseHandler.getPlotById(plotId) ?: return MemberUpdateResult.PLOT_NOT_FOUND
             val permitted = when (action) {
@@ -136,7 +142,7 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     }
 
     override fun setRolePermission(actor: CommandSender, plotId: Int, role: String, action: String, allowed: Boolean): MemberUpdateResult {
-        serverThread()
+        actorThread(actor)
         try {
             val plot = plugin.databaseHandler.getPlotById(plotId) ?: return MemberUpdateResult.PLOT_NOT_FOUND
             if (!access.owner(actor, plot)) return MemberUpdateResult.DENIED
@@ -152,7 +158,7 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
         }
     }
     override fun setFlag(actor: CommandSender, plotId: Int, flag: String, value: Boolean): FlagUpdateResult {
-        serverThread()
+        actorThread(actor)
         val definition = PlotFlagRegistry.allFlags[flag] ?: return FlagUpdateResult.UNKNOWN_FLAG
         val plot = plugin.databaseHandler.getPlotById(plotId) ?: return FlagUpdateResult.PLOT_NOT_FOUND
         if (!access.allowed(actor, plot, "flag.$flag")) return FlagUpdateResult.DENIED

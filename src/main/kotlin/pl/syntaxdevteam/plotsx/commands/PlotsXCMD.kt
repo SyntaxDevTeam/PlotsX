@@ -45,11 +45,13 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
                 args[0].equals("reload", ignoreCase = true) -> {
                     try {
                         plugin.onReload { failure ->
+                            plugin.schedulerAdapter.runForSender(stack.sender, Runnable {
                             if (failure == null) {
                                 stack.sender.sendMessage(mH.miniMessageFormat("<green>The configuration file has been reloaded.</green>"))
                             } else {
                                 stack.sender.sendMessage("Reload unavailable: ${failure.message}")
                             }
+                            })
                         }
                     } catch (failure: IllegalArgumentException) {
                         stack.sender.sendMessage("Reload rejected: ${failure.message}")
@@ -89,7 +91,7 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
 
     /** Heavy backup/restore work is never allowed to occupy the Paper server thread. */
     private fun databaseTask(sender: CommandSender, operationName: String, operation: () -> String) {
-        plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
+        plugin.schedulerAdapter.runAsync(Runnable {
             val result = try {
                 Result.success(operation())
             } catch (exception: Exception) {
@@ -97,7 +99,7 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
                 Result.failure(exception)
             }
             if (!plugin.isEnabled) return@Runnable
-            plugin.server.scheduler.runTask(plugin, Runnable {
+            plugin.schedulerAdapter.runForSender(sender, Runnable {
                 result.fold(
                     onSuccess = { message -> sender.sendMessage(message) },
                     onFailure = { failure -> sender.sendMessage("$operationName failed: ${failure.message}") }
