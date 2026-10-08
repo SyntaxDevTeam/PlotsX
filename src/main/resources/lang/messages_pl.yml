@@ -323,9 +323,13 @@ flags:
     description: "Pozwala obcym używać /home i /sethome."
     not_allowed: "<red>Nie możesz używać komend /home ani /sethome na tej działce.</red>"
   smart-door:
-    name: "Żelazne i podwójne drzwi"
-    description: "Pozwala otwierać żelazne drzwi bez redstone oraz podwójne drzwi jednocześnie."
-    not_allowed: "<red>Nie możesz otwierać żelaznych drzwi na tej działce.</red>"
+    name: "Podwójne drzwi"
+    description: "Otwiera oba skrzydła drzwi jednocześnie. Żelazne drzwi wymagają także flagi iron-door."
+    not_allowed: "<red>Podwójne drzwi są wyłączone na tej działce.</red>"
+  iron-door:
+    name: "Żelazne drzwi"
+    description: "Pozwala otwierać żelazne drzwi kliknięciem, bez redstone."
+    not_allowed: "<red>Nie możesz otwierać żelaznych drzwi kliknięciem na tej działce.</red>"
   use-potions:
     name: "Używanie mikstur"
     description: "Pozwala na używanie mikstur."

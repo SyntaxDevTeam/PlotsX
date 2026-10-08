@@ -322,9 +322,13 @@ flags:
     description: "Allows non-members to use /home and /sethome."
     not_allowed: "<red>You can't use /home or /sethome on this plot.</red>"
   smart-door:
-    name: "Iron and Double Doors"
-    description: "Allows opening iron doors without redstone and double doors together."
-    not_allowed: "<red>You can't open iron doors on this plot.</red>"
+    name: "Double Doors"
+    description: "Opens both door leaves together. Iron doors also require the iron-door flag."
+    not_allowed: "<red>Double doors are disabled on this plot.</red>"
+  iron-door:
+    name: "Iron Doors"
+    description: "Allows opening iron doors by clicking, without redstone."
+    not_allowed: "<red>You can't open iron doors by clicking on this plot.</red>"
   use-potions:
     name: "Potion Usage"
     description: "Allows the use of potions."

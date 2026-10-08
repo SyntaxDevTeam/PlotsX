@@ -11,7 +11,7 @@ class BuiltInFlagBehaviorsTest {
             add(true, FlagType.WHITELIST,
                 "grave-create", "spawn-animals", "animal-interact", "command-use")
             add(false, FlagType.WHITELIST,
-                "build", "path-create", "log-strip", "pvp", "smart-door", "redstone", "pistons", "utility",
+                "build", "path-create", "log-strip", "pvp", "smart-door", "iron-door", "redstone", "pistons", "utility",
                 "spawn-monsters", "passives", "flow-damage", "allow-home", "use-potions", "iceform-player",
                 "iceform-world", "allow-spawners", "decorations", "portal-create", "portal-use", "projectiles",
                 "item-pickup", "item-drop", "crop-trample", "animal-leash", "animal-ride", "animal-breed",

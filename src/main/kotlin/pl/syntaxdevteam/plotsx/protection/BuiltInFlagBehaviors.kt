@@ -7,7 +7,7 @@ internal object BuiltInFlagBehaviors {
     val all: Map<String, FlagBehavior> = buildMap {
         whitelist(defaultValue = true, "grave-create", "spawn-animals", "animal-interact", "command-use")
         whitelist(defaultValue = false,
-            "build", "path-create", "log-strip", "pvp", "smart-door", "redstone", "pistons", "utility",
+            "build", "path-create", "log-strip", "pvp", "smart-door", "iron-door", "redstone", "pistons", "utility",
             "spawn-monsters", "passives", "flow-damage", "allow-home", "use-potions", "iceform-player",
             "iceform-world", "allow-spawners", "decorations", "portal-create", "portal-use", "projectiles",
             "item-pickup", "item-drop", "crop-trample", "animal-leash", "animal-ride", "animal-breed",

@@ -8,6 +8,7 @@ import org.bukkit.block.BlockFace
 import org.bukkit.block.Dispenser
 import org.bukkit.block.data.Directional
 import org.bukkit.block.data.Openable
+import org.bukkit.block.data.type.Door
 import org.bukkit.entity.EntityType
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
@@ -86,9 +87,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     private val logger = plugin.logger
     private val message = plugin.messageHandler
-    private val playerLastPlot = mutableMapOf<UUID, Int?>()
-    private val approachingPlotWarnings = mutableMapOf<UUID, Int?>()
-    private val toggling: MutableSet<Block> = mutableSetOf()
+    private val playerLastPlot = java.util.concurrent.ConcurrentHashMap<UUID, Int>()
+    private val approachingPlotWarnings = java.util.concurrent.ConcurrentHashMap<UUID, Int>()
+    private val toggling: MutableSet<Block> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     private val aggressiveMobs: Set<EntityType> by lazy { PlotCompat.loadAggressiveMobs() }
     private val passiveMobs: Set<EntityType>   by lazy { PlotCompat.loadPassiveMobs() }
     private val doorsAndGates: Set<Material>   by lazy { PlotCompat.loadDoorsAndGates() }
@@ -270,7 +271,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val newPlotId = newPlot?.id
 
         if (oldPlotId != newPlotId) {
-            playerLastPlot[uuid] = newPlotId
+            if (newPlotId == null) playerLastPlot.remove(uuid) else playerLastPlot[uuid] = newPlotId
 
             if (oldPlotId != null) {
                 val oldPlot = plugin.cacheManager.getCachedPlots().firstOrNull { it.id == oldPlotId }
@@ -342,9 +343,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             logger.debug("Block należy do spawnerBlocks")
             if (plot != null && !hasPlotPermission(player, plot, "allow-spawners")) {
                 event.isCancelled = true
-                plugin.server.scheduler.runTaskLater(plugin, Runnable {
+                plugin.schedulerAdapter.runRegionallyLater(block.location, 1L, Runnable {
                     cancelAndRestore(event.block)
-                }, 1L)
+                })
                 player.sendMessage(message.stringMessageToComponent("flags", "allow-spawners.not_allowed"))
             }else{
                 plugin.coreProtectHook.logBlockPlace(player, block)
@@ -355,9 +356,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         if (plot != null && !hasPlotPermission(player, plot, "build")) {
             logger.debug("BlockPlaceEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
             event.isCancelled = true
-            plugin.server.scheduler.runTaskLater(plugin, Runnable {
+            plugin.schedulerAdapter.runRegionallyLater(block.location, 1L, Runnable {
                 cancelAndRestore(event.block)
-            }, 1L)
+            })
             player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
         }
 
@@ -368,7 +369,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             val existingProtection = plugin.privateChestManager.getProtection(block, plot.id)
             if (existingProtection != null && existingProtection.owner != player.uniqueId && !hasBypass(player)) {
                 event.isCancelled = true
-                plugin.server.scheduler.runTaskLater(plugin, Runnable { cancelAndRestore(block) }, 1L)
+                plugin.schedulerAdapter.runRegionallyLater(block.location, 1L, Runnable { cancelAndRestore(block) })
                 player.sendMessage(message.stringMessageToComponent("private_chest", "join_denied"))
                 return
             }
@@ -411,9 +412,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             logger.debug("Block należy do spawnerBlocks")
             if (plot != null && !hasPlotPermission(player, plot, "allow-spawners")) {
                 event.isCancelled = true
-                plugin.server.scheduler.runTaskLater(plugin, Runnable {
+                plugin.schedulerAdapter.runRegionallyLater(block.location, 1L, Runnable {
                     cancelAndRestore(event.block)
-                }, 1L)
+                })
                 player.sendMessage(message.stringMessageToComponent("flags", "allow-spawners.not_allowed"))
             }else{
                 plugin.coreProtectHook.logBlockBreak(player, block)
@@ -424,9 +425,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         if (plot != null && !hasPlotPermission(player, plot, "build")) {
             logger.debug("BlockBreakEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
             event.isCancelled = true
-            plugin.server.scheduler.runTaskLater(plugin, Runnable {
+            plugin.schedulerAdapter.runRegionallyLater(block.location, 1L, Runnable {
                 cancelAndRestore(event.block)
-            }, 1L)
+            })
             player.sendMessage(message.stringMessageToComponent("flags", "build.break_not_allowed"))
         }else{
             plugin.coreProtectHook.logBlockBreak(player, block)
@@ -747,8 +748,8 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         }
 
         // Doors are Openable/Powerable and may also be classified by broader compatibility
-        // groups. Resolve their dedicated flags first. smart-door augments an allowed door;
-        // it must never bypass the door flag on its own.
+        // groups. Resolve their dedicated flags first. Door features must never
+        // bypass the door permission or the plot's feature settings.
         if (mat in doorsAndGates) {
             if (!hasPlotPermission(player, plot, "door")) {
                 event.isCancelled = true
@@ -757,15 +758,27 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             }
 
             val data = block.blockData
-            if (data is Openable && hasPlotPermission(player, plot, "smart-door")) {
+            val doubleDoors = isFlagAllowed(plot.id, "smart-door")
+            val ironDoor = mat == Material.IRON_DOOR
+            val ironDoors = isFlagAllowed(plot.id, "iron-door")
+            // These flags enable plot features; owner/member/bypass permissions
+            // must not activate disabled features. Iron doors need their own opt-in.
+            if (data is Door && (if (ironDoor) ironDoors else doubleDoors)) {
                 if (!toggling.add(block)) return
-                plugin.server.scheduler.runTaskLater(plugin, Runnable { toggling.remove(block) }, 20L)
+                plugin.schedulerAdapter.runRegionallyLater(block.location, 20L, Runnable { toggling.remove(block) })
 
-                toggleOpenState(block)
-                for (face in listOf(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)) {
+                val open = !data.isOpen
+                setOpenState(block, open)
+                if (doubleDoors) for (face in listOf(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)) {
                     val neighbour = block.getRelative(face)
-                    if (neighbour.type == mat) {
-                        toggleOpenState(neighbour)
+                    val neighbourData = neighbour.blockData as? Door ?: continue
+                    if (neighbour.type == mat && neighbourData.facing == data.facing &&
+                        neighbourData.hinge != data.hinge && neighbourData.half == data.half &&
+                        face != data.facing && face != data.facing.oppositeFace
+                    ) {
+                        val neighbourPlot = plotAt(neighbour)
+                        if (neighbourPlot?.id != plot.id) continue
+                        setOpenState(neighbour, open)
                         break
                     }
                 }
@@ -834,9 +847,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     }
 
-    private fun toggleOpenState(block: Block) {
+    private fun setOpenState(block: Block, open: Boolean) {
         val openable = block.blockData as? Openable ?: return
-        openable.isOpen = !openable.isOpen
+        openable.isOpen = open
         block.blockData = openable
     }
 
