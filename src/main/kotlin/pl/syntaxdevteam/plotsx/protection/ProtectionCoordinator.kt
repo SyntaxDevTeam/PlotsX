@@ -11,26 +11,49 @@ import kotlin.concurrent.withLock
  * different: protection fails closed until an explicit recovery successfully publishes a replacement.
  */
 class ProtectionCoordinator {
+    class PurchaseInProgressException : IllegalStateException("A plot purchase is in progress; retry after it finishes")
+
+    private val readyListeners = mutableMapOf<Any, () -> Unit>()
     private val lock = ReentrantReadWriteLock(true)
     @Volatile private var recoveryRequired = false
     @Volatile private var staleSnapshotReadable = false
     @Volatile private var purchase: Any? = null
+
+    /** Registration and completion share the lock, so completion cannot be missed. */
+    fun whenAvailable(key: Any, ready: () -> Unit) {
+        val available = lock.writeLock().withLock {
+            if (purchase == null && !recoveryRequired) true
+            else { readyListeners[key] = ready; false }
+        }
+        if (available) ready()
+    }
+
+    private fun notifyAvailable() {
+        val listeners = lock.writeLock().withLock {
+            if (purchase != null || recoveryRequired) emptyList()
+            else readyListeners.values.toList().also { readyListeners.clear() }
+        }
+        listeners.forEach { runCatching(it) }
+    }
 
     /** Cross-thread reservation; no JVM lock is held while waiting for the server/economy thread. */
     fun reservePurchase(): Any? = lock.writeLock().withLock {
         if (recoveryRequired || purchase != null) null else Any().also { purchase = it }
     }
 
-    fun finishPurchase(token: Any, publish: () -> Unit) = lock.writeLock().withLock {
-        check(purchase === token)
-        beginPublication(allowPreviousSnapshot = true)
-        try {
-            publish()
-            recoveryRequired = false
-        } finally {
-            staleSnapshotReadable = false
-            purchase = null
+    fun finishPurchase(token: Any, publish: () -> Unit) {
+        lock.writeLock().withLock {
+            check(purchase === token)
+            beginPublication(allowPreviousSnapshot = true)
+            try {
+                publish()
+                recoveryRequired = false
+            } finally {
+                staleSnapshotReadable = false
+                purchase = null
+            }
         }
+        notifyAvailable()
     }
 
     /**
@@ -50,7 +73,7 @@ class ProtectionCoordinator {
         if (lock.isWriteLockedByCurrentThread) return action()
         lock.writeLock().lock()
         try {
-            check(purchase == null) { "A plot purchase is in progress; retry after it finishes" }
+            if (purchase != null) throw PurchaseInProgressException()
             check(!recoveryRequired) { "Protection cache requires recovery before another mutation" }
             try {
                 return action()
@@ -68,17 +91,20 @@ class ProtectionCoordinator {
         }
     }
 
-    fun recover(publish: () -> Unit) = lock.writeLock().withLock {
-        check(purchase == null) { "Cannot reload protection during a purchase" }
-        // A routine reload may keep serving its known-good snapshot. Recovery after a failed publication
-        // must remain fail-closed until the replacement has actually been published.
-        beginPublication(allowPreviousSnapshot = !recoveryRequired)
-        try {
-            publish()
-            recoveryRequired = false
-        } finally {
-            staleSnapshotReadable = false
+    fun recover(publish: () -> Unit) {
+        lock.writeLock().withLock {
+            check(purchase == null) { "Cannot reload protection during a purchase" }
+            // A routine reload may keep serving its known-good snapshot. Recovery after a failed publication
+            // must remain fail-closed until the replacement has actually been published.
+            beginPublication(allowPreviousSnapshot = !recoveryRequired)
+            try {
+                publish()
+                recoveryRequired = false
+            } finally {
+                staleSnapshotReadable = false
+            }
         }
+        notifyAvailable()
     }
 
     private fun beginPublication(allowPreviousSnapshot: Boolean) {

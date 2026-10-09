@@ -296,6 +296,10 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
     }
 
+    internal fun relocatePlot(expected: PlotData, target: PlotRelocation.Target, actor: UUID): PlotRelocation.Result = protectedMutation {
+        (getConnection() ?: error("No database connection")).use { PlotRelocation.move(it, expected, target, actor) }
+    }
+
     fun deletePlot(plotId: Int): Boolean = protectedMutation { performDeletePlot(plotId) }
 
     private fun performDeletePlot(plotId: Int): Boolean {

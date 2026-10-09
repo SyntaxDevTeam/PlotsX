@@ -126,6 +126,7 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
         "/plot transfer <player> confirm" to "transfer",
         "/plot admin list <player|UUID>" to "admin_list",
         "/plot admin <id> [action ...]" to "admin",
+        "/plot admin <id> move confirm" to "admin_move",
         "/privatechest lock" to "lock",
         "/privatechest unlock" to "unlock",
         "/privatechest trust|share <player>" to "trust",

@@ -31,8 +31,13 @@ Komendy wymagają `plotsx.cmd.plot` i stania na działce, do której gracz ma do
 | `/plot permission <rola> <grant> <true\|false>` | Ustawia grant roli dla tej działki; tylko właściciel/administrator. |
 | `/plot transfer <gracz> confirm` | Przekazuje własność obecnemu członkowi, który jest online; tylko właściciel/administrator. Sprawdza limity liczby, promienia i powierzchni odbiorcy oraz konflikt nazwy działki. |
 | `/plot admin list <gracz/UUID>` | Wypisuje wszystkie działki właściciela (także offline): ID, nazwę, świat, pozycję i promień. Działa z konsoli i w grze; wymaga `plotsx.admin.manage`. |
+| `/plot admin <id> move confirm` | Przenosi ochronę i ustawienia działki do pozycji administratora; wymaga `plotsx.admin.manage` i wykonania w grze. |
 | `/plot admin <id>` | Otwiera panel członków wskazanej działki; wymaga `plotsx.admin.manage`. |
 | `/plot admin <id> <podkomenda> [argumenty]` | Wykonuje powyższe operacje na wskazanej działce, także z konsoli. Wymaga `plotsx.admin.manage`, bez osobnego wymogu `plotsx.cmd.plot`. `members` wypisuje listę. |
+
+Migracja: odczytaj ID przez `/plot admin list <gracz/UUID>`, stań na nowym terenie i użyj `/plot admin <id> move`, aby przeczytać opis, a następnie `/plot admin <id> move confirm`. Zachowane zostają ID, właściciel, nazwa, członkowie, flagi, powierzchnia i układ powiększeń. Działka klasyczna otrzymuje środek w pozycji administratora; chunkowa przesuwa się o pełne chunki, tak aby chunk pierwotnego punktu działki trafił do chunku administratora. Punkt teleportacji jest resetowany do domyślnego punktu działki. Migracja sprawdza dozwolony świat, regiony WorldGuard i kolizje z innymi działkami. Nie kopiuje bloków, budowli ani kontenerów: stary teren traci ochronę działki. Zapis odbywa się w jednej transakcji, a zmieniona w międzyczasie geometria powoduje odrzucenie operacji.
+
+Jeśli `/claim` zostanie zablokowane przez trwający zakup powiększenia, gracz otrzyma komunikat o oczekiwaniu, a po zakończeniu operacji i odświeżeniu ochrony — powiadomienie o możliwości ponowienia `/claim`. Ponowienie jest ręczne. Powiadomienia trafiają do graczy pozostających online; błąd odświeżenia ochrony wstrzymuje je do skutecznego odzyskania cache.
 
 Przykłady: `/plot permission builder flag.build true`, `/plot role Alex manager`, `/plot admin 12 members`.
 Granty to `invite`, `kick`, `rename` i `flag.<identyfikator>`; nie obsługują `flag.*`.

@@ -43,6 +43,10 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             if (id == null) { members.reply(sender, "admin_usage"); return }
             val plot = plugin.cacheManager.getPlot(id)
             if (plot == null) { members.reply(sender, "stand_on_plot"); return }
+            if (args.getOrNull(2).equals("move", true)) {
+                relocate(sender, plot, args)
+                return
+            }
             if (args.size == 2 && sender is Player) {
                 plugin.guiHandler.registerGui(sender, MembersGUI(plugin, id))
             } else members.execute(sender, id, args.drop(2))
@@ -92,7 +96,8 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
                 it.world == p.world.name && it.contains(p.location.blockX, p.location.blockZ)
             } }
         val candidates = when {
-            words.size <= 1 -> actions + (if (!admin && plugin.config.getBoolean(
+            words.size == 2 && admin && words[0].equals("move", true) -> listOf("confirm")
+            words.size <= 1 -> actions + (if (admin) listOf("move") else emptyList()) + (if (!admin && plugin.config.getBoolean(
                     "plots.chunks.expansion.standingCommand", true)) listOf("expand") else emptyList()) +
                 (if (!admin && access.admin(sender)) listOf("admin") else emptyList())
             plot == null || !access.canOpen(sender, plot) -> emptyList()
@@ -109,6 +114,51 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             else -> emptyList()
         }
         return candidates.filter { it.startsWith(words.lastOrNull().orEmpty(), true) }.distinct().sorted()
+    }
+
+    private fun relocate(sender: org.bukkit.command.CommandSender, plot: pl.syntaxdevteam.plotsx.databases.PlotData,
+                         args: Array<String>) {
+        fun reply(key: String) = sender.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", key,
+            mapOf("id" to plot.id.toString())))
+        val player = sender as? Player ?: run { reply("move_player_only"); return }
+        if (args.size != 4 || !args[3].equals("confirm", true)) { reply("move_usage"); return }
+        val loc = player.location
+        val target = pl.syntaxdevteam.plotsx.databases.PlotRelocation.Target(loc.world.name, loc.blockX, loc.blockY, loc.blockZ)
+        val moved = try { pl.syntaxdevteam.plotsx.databases.PlotRelocation.translated(plot, target) }
+            catch (_: IllegalArgumentException) { reply("move_invalid"); return }
+            catch (_: ArithmeticException) { reply("move_invalid"); return }
+        val configured = plugin.config.get("plots.world")
+        val worlds = when (configured) {
+            null -> listOf("*")
+            is String -> if (configured.isBlank()) listOf("*") else listOf(configured)
+            is List<*> -> configured.filterIsInstance<String>()
+            else -> emptyList()
+        }
+        if (worlds.none { it.trim() == "*" || it.trim().equals(target.world, true) }) {
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "claim_world_not_allowed")); return
+        }
+        if (moved.geometry.regions().any { plugin.regionProtectionHook?.overlapsBounds(loc.world, it) == true }) {
+            player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "worldguard_collision")); return
+        }
+        val actor = player.uniqueId
+        reply("move_started")
+        plugin.schedulerAdapter.runAsync(Runnable {
+            val key = try {
+                when (plugin.databaseHandler.relocatePlot(plot, target, actor)) {
+                    pl.syntaxdevteam.plotsx.databases.PlotRelocation.Result.SUCCESS -> "move_success"
+                    pl.syntaxdevteam.plotsx.databases.PlotRelocation.Result.STALE -> "move_stale"
+                    pl.syntaxdevteam.plotsx.databases.PlotRelocation.Result.COLLISION -> "move_collision"
+                }
+            } catch (_: pl.syntaxdevteam.plotsx.protection.ProtectionCoordinator.PurchaseInProgressException) {
+                "move_busy"
+            } catch (failure: Exception) {
+                plugin.logger.err("Plot relocation failed: ${failure.message}")
+                "move_failed"
+            }
+            if (plugin.isEnabled) plugin.schedulerAdapter.runForPlayer(player, Runnable {
+                if (player.isOnline) reply(key)
+            })
+        })
     }
 
     private fun expandStandingChunk(player: Player, args: Array<String>) {

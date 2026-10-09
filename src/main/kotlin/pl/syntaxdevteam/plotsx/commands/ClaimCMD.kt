@@ -148,7 +148,20 @@ class ClaimCMD(private var plugin: PlotsX) : BasicCommand {
                         namePrefix = namePrefix,
                         maxChunksPerPlot = maxChunksPerPlot,
                         maxChunksOwned = maxChunksOwned
-                    ) } catch (failure: Exception) {
+                    ) } catch (_: pl.syntaxdevteam.plotsx.protection.ProtectionCoordinator.PurchaseInProgressException) {
+                        if (plugin.isEnabled) plugin.schedulerAdapter.runForPlayer(p, Runnable {
+                            if (!p.isOnline) return@Runnable
+                            p.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "claim_purchase_busy"))
+                            plugin.schedulerAdapter.runAsync(Runnable {
+                                plugin.protectionCoordinator.whenAvailable(uuid) {
+                                    if (plugin.isEnabled) plugin.schedulerAdapter.runForPlayer(p, Runnable {
+                                        if (p.isOnline) p.sendMessage(plugin.messageHandler.stringMessageToComponent("plots", "claim_retry_ready"))
+                                    })
+                                }
+                            })
+                        })
+                        return@Runnable
+                    } catch (failure: Exception) {
                         plugin.logger.err("Claim failed: ${failure.message}")
                         DatabaseHandler.ClaimResult.DatabaseError
                     }

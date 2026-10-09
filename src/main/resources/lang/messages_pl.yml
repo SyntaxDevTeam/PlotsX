@@ -9,6 +9,7 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 
 # Wiadomości obsługi błędów
 error:
+  claim_purchase_busy: "Trwa zakup powiększenia działki. Powiadomimy Cię, gdy będzie można ponowić /claim."
   chunk_purchase_busy: "Trwa inna operacja działki. Spróbuj ponownie za chwilę."
   chunk_purchase_review: "Płatność wymaga wyjaśnienia. Operacja: <operation>"
   chunk_expand_command_usage: "<yellow>Użycie: /plot expand — stań na wolnym chunku obok swojej działki.</yellow>"
@@ -55,6 +56,16 @@ error:
   reload: "<red>Wystąpił błąd podczas przeładowania konfiguracji:</red> "
 
 plots:
+  move_usage: "Użycie: /plot admin <id> move confirm — przenosi ochronę działki do Twojej pozycji. Budowle zostają na miejscu; punkt teleportacji jest resetowany. Działki chunkowe przesuwane są o pełne chunki."
+  move_player_only: "Migrację wykonuje gracz stojący w miejscu docelowym."
+  move_invalid: "Docelowe granice działki wykraczają poza obsługiwane współrzędne."
+  move_started: "Rozpoczęto przenoszenie działki #<id>."
+  move_success: "Przeniesiono ochronę i ustawienia działki #<id>. Punkt teleportacji został zresetowany. Budowle pozostały na starym terenie."
+  move_stale: "Działka została zmieniona lub usunięta. Sprawdź ją i ponów migrację."
+  move_collision: "Teren docelowy koliduje z inną działką. Migracja anulowana."
+  move_busy: "Trwa zakup powiększenia. Ponów migrację po jego zakończeniu."
+  move_failed: "Nie udało się zakończyć migracji. Administrator powinien sprawdzić logi i stan działki."
+  claim_retry_ready: "Operacja działki zakończona. Możesz ponownie użyć /claim."
   rename_rejected: "<red>Nazwa musi mieć od 1 do 255 znaków, nie może zawierać znaków sterujących ani słów zabronionych przez CleanerX.</red>"
   rename_filter_unavailable: "<red>CleanerX jest niedostępny. Nazwa nie została zmieniona; skontaktuj się z administracją.</red>"
   claim_cancelled: "<yellow>Anulowano tworzenie działki.</yellow>"
@@ -105,7 +116,7 @@ members:
   admin_list_header: "Działki gracza <player>: <count> (ID | nazwa | świat i pozycja | promień)"
   usage: "Użycie: /plot members | add/remove <gracz> | role <gracz> <ranga> | permission <ranga> <akcja> <true/false> | transfer <gracz> confirm"
   stand_on_plot: "Nie znaleziono działki. Stań na działce, którą możesz zarządzać."
-  admin_usage: "Użycie: /plot admin list <gracz/UUID> lub /plot admin <id> [members | add/remove <gracz> | role <gracz> <ranga> | permission <ranga> <akcja> <true/false> | transfer <gracz> confirm]"
+  admin_usage: "Użycie: /plot admin list <gracz/UUID> lub /plot admin <id> [members | add/remove <gracz> | role <gracz> <ranga> | permission <ranga> <akcja> <true/false> | transfer <gracz> confirm | move confirm]"
   denied: "Nie masz uprawnień do tej operacji na działce."
   updated: "Zapisano ustawienia rangi."
   recipient_offline: "Nowy właściciel musi być online, aby sprawdzić jego limity działek."
@@ -500,6 +511,7 @@ help:
   previous: "<white>[Poprzednia]</white>"
   next: "<white>[Następna]</white>"
   commands:
+    admin_move: "Przenosi ochronę i ustawienia działki do pozycji administratora (bez budowli)."
     help: "Wyświetla pomoc i wybraną stronę."
     version: "Wyświetla informacje o pluginie."
     reload: "Przeładowuje konfigurację; nie przełącza połączenia z bazą."

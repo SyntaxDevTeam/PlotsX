@@ -9,6 +9,7 @@ prefix: "<gradient:#11ff00:#d4ffde:#70e672:#d4ffde:#11ff00>[<b>PlotsX</b>]</grad
 
 # Error messages
 error:
+  claim_purchase_busy: "A plot expansion purchase is in progress. We will notify you when you can retry /claim."
   chunk_purchase_busy: "Another plot operation is in progress. Please retry shortly."
   chunk_purchase_review: "Payment requires review. Operation: <operation>"
   chunk_expand_command_usage: "<yellow>Usage: /plot expand — stand on a free chunk next to your plot.</yellow>"
@@ -56,6 +57,16 @@ error:
   reload: "<red>An error occurred while reloading the configuration:</red> "
 
 plots:
+  move_usage: "Usage: /plot admin <id> move confirm — moves plot protection to your position. Buildings stay in place; the teleport spawn is reset. Chunk plots move by whole chunks."
+  move_player_only: "Run the migration as a player standing at the destination."
+  move_invalid: "The destination exceeds the supported coordinate range."
+  move_started: "Moving plot #<id>."
+  move_success: "Protection and settings of plot #<id> moved. Teleport spawn reset. Buildings remain at the old location."
+  move_stale: "The plot changed or was removed. Check it and retry the migration."
+  move_collision: "The destination overlaps another plot. Migration cancelled."
+  move_busy: "An expansion purchase is in progress. Retry the migration once it finishes."
+  move_failed: "Migration could not be completed. An administrator should check the logs and plot state."
+  claim_retry_ready: "The plot operation has finished. You can run /claim again."
   rename_rejected: "<red>The name must contain 1–255 characters, with no control characters or words banned by CleanerX.</red>"
   rename_filter_unavailable: "<red>CleanerX is unavailable. The name was not changed; contact an administrator.</red>"
   claim_cancelled: "<yellow>Plot creation cancelled.</yellow>"
@@ -105,7 +116,7 @@ members:
   admin_list_header: "Plots owned by <player>: <count> (ID | name | world and position | radius)"
   usage: "Usage: /plot members | add/remove <player> | role <player> <rank> | permission <rank> <action> <true/false> | transfer <player> confirm"
   stand_on_plot: "Plot not found. Stand on a plot you can manage."
-  admin_usage: "Usage: /plot admin list <player/UUID> or /plot admin <id> [members | add/remove <player> | role <player> <rank> | permission <rank> <action> <true/false> | transfer <player> confirm]"
+  admin_usage: "Usage: /plot admin list <player/UUID> or /plot admin <id> [members | add/remove <player> | role <player> <rank> | permission <rank> <action> <true/false> | transfer <player> confirm | move confirm]"
   denied: "You do not have permission for this plot operation."
   updated: "Role settings saved."
   recipient_offline: "The new owner must be online so their plot limits can be checked."
@@ -499,6 +510,7 @@ help:
   previous: "<white>[Previous]</white>"
   next: "<white>[Next]</white>"
   commands:
+    admin_move: "Moves plot protection and settings to the administrator position (without buildings)."
     help: "Displays help and the selected page."
     version: "Displays plugin information."
     reload: "Reloads configuration; does not reconnect to the database."
