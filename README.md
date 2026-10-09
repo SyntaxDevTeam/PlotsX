@@ -7,9 +7,9 @@
   </p>
 
 [![Build](https://github.com/SyntaxDevTeam/PlotsX/actions/workflows/buildexplorer.yml/badge.svg?branch=main)](https://github.com/SyntaxDevTeam/PlotsX/actions/workflows/buildexplorer.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/SyntaxDevTeam/PlotsX/blob/main/LICENSE)
 
-**[Features](#-features)** · **[Quick start](#-quick-start)** · **[Documentation](#-documentation)** · **[API](docs/api.md)** · **[Discord](https://discord.gg/Zk6mxv7eMh)**
+**[Features](#-features)** · **[Quick start](#-quick-start)** · **[Documentation](#-documentation)** · **[API](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/api.md)** · **[Discord](https://discord.gg/Zk6mxv7eMh)**
 
 </div>
 
@@ -129,7 +129,7 @@ For players, the basic flow is intentionally short:
 | Manage private containers | `/privatechest ...` / `/pchest ...` | `plotsx.cmd.privatechest` |
 | Administration / reload / backup | `/ptx ...` / `/plotsx ...` | `plotsx.cmd.ptx` |
 
-The administrator interface also supports listing and managing plots belonging to offline players. See the full **[command reference](docs/wiki/Komendy.md)** and **[permission reference](docs/wiki/Uprawnienia.md)** for exact syntax and limit nodes.
+The administrator interface also supports listing and managing plots belonging to offline players. See the full **[command reference](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Commands.md)** and **[permission reference](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Permissions.md)** for exact syntax and limit nodes.
 
 ## 🧩 Player interface
 
@@ -157,25 +157,26 @@ Administrators can export and import PlotsX data with `/ptx export` and `/ptx im
 
 ## 📚 Documentation
 
-The detailed administrator and player documentation is currently maintained in Polish:
+The PlotsX wiki is maintained in both English and Polish. Language versions are kept side by side and cover the same user and administrator topics.
 
-| Reference | Documentation |
-| --- | --- |
-| Getting started | [Pierwsze kroki](docs/wiki/Pierwsze-kroki.md) |
-| Installation | [Instalacja](docs/wiki/Instalacja.md) |
-| Configuration | [Konfiguracja](docs/wiki/Konfiguracja.md) |
-| Plot panel | [Panel działki](docs/wiki/Panel-dzialki.md) |
-| Expansion | [Rozszerzanie](docs/wiki/Rozszerzanie.md) |
-| Protection and flags | [Ochrona i flagi](docs/wiki/Ochrona-i-flagi.md) |
-| Members and shared play | [Wspólna gra](docs/wiki/Wspolna-gra.md) |
-| Private containers | [Prywatne skrzynie](docs/wiki/Prywatne-skrzynie.md) |
-| Integrations | [Integracje](docs/wiki/Integracje.md) |
-| Commands | [Komendy](docs/wiki/Komendy.md) |
-| Permissions | [Uprawnienia](docs/wiki/Uprawnienia.md) |
-| FAQ | [FAQ](docs/wiki/FAQ.md) |
-| Developer API | [API v2](docs/api.md) |
-| Paper dialogs | [Dialog integration](docs/dialogs.md) |
-| Folia notes | [Folia compatibility](docs/folia-compatibility.md) |
+| Reference | 🇬🇧 English | 🇵🇱 Polski |
+| --- | --- | --- |
+| Wiki home | [Home](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Home.md) | [Strona główna](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Home.md) |
+| Getting started | [Getting Started](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Getting-Started.md) | [Pierwsze kroki](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Pierwsze-kroki.md) |
+| Installation | [Installation](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Installation.md) | [Instalacja](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Instalacja.md) |
+| Configuration | [Configuration](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Configuration.md) | [Konfiguracja](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Konfiguracja.md) |
+| Plot panel | [Plot Panel](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Plot-Panel.md) | [Panel działki](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Panel-dzialki.md) |
+| Expansion | [Expansion and Limits](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Expansion.md) | [Rozszerzanie](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Rozszerzanie.md) |
+| Protection and flags | [Protection and Flags](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Protection-and-Flags.md) | [Ochrona i flagi](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Ochrona-i-flagi.md) |
+| Members and shared play | [Playing Together](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Playing-Together.md) | [Wspólna gra](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Wspolna-gra.md) |
+| Private containers | [Private Chests](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Private-Chests.md) | [Prywatne skrzynie](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Prywatne-skrzynie.md) |
+| Integrations | [Integrations](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Integrations.md) | [Integracje](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Integracje.md) |
+| Commands | [Commands](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Commands.md) | [Komendy](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Komendy.md) |
+| Permissions | [Permissions](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Permissions.md) | [Uprawnienia](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Uprawnienia.md) |
+| Administration | [Administration](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Administration.md) | [Administracja](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Administracja.md) |
+| FAQ | [FAQ and Troubleshooting](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/FAQ.md) | [Pytania i problemy](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/FAQ.md) |
+
+Developer documentation: **[API v2](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/api.md)**.
 
 ## 🛠️ Build from source
 
@@ -203,4 +204,4 @@ The API JAR is for integration developers and is **not** a server plugin.
 
 For support, join the **[SyntaxDevTeam Discord](https://discord.gg/Zk6mxv7eMh)**. Reproducible bugs can be reported through **[GitHub Issues](https://github.com/SyntaxDevTeam/PlotsX/issues)** with the PlotsX version, server platform/version, relevant logs and steps to reproduce.
 
-Contributions and feedback are welcome. PlotsX is released under the **[MIT License](LICENSE)**.
+Contributions and feedback are welcome. PlotsX is released under the **[MIT License](https://github.com/SyntaxDevTeam/PlotsX/blob/main/LICENSE)**.
