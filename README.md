@@ -3,7 +3,7 @@
   <p><strong>Claim land, grow it naturally, and manage everything from one clean interface.</strong></p>
   <p>
     <a href="#-compatibility"><img src="https://cdn.jsdelivr.net/npm/@intergrav/devins-badges@3.2.0/assets/cozy/supported/paper_vector.svg" alt="Supports Paper" height="56"></a>
-    <a href="#-compatibility"><img src="https://github.com/SyntaxDevTeam/PunisherX/raw/main/assets/badges/folia.svg" alt="Supports Folia" height="28"></a>
+    <a href="#-compatibility"><img src="https://github.com/SyntaxDevTeam/PunisherX/raw/main/assets/badges/folia.svg" alt="Supports Folia" height="56"></a>
   </p>
 
 [![Build](https://github.com/SyntaxDevTeam/PlotsX/actions/workflows/buildexplorer.yml/badge.svg?branch=main)](https://github.com/SyntaxDevTeam/PlotsX/actions/workflows/buildexplorer.yml)
