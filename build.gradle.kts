@@ -37,6 +37,9 @@ repositories {
 }
 
 dependencies {
+    testImplementation(libs.aether.api)
+    testImplementation(libs.snakeyaml)
+    testImplementation(libs.paper.api)
     testImplementation(libs.junit4)
     testImplementation(libs.sqlite)
     testImplementation(libs.h2)
