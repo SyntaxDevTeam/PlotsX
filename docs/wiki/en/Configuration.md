@@ -7,6 +7,60 @@ For rank-based limits and multi-world configuration, see:
 
 Settings are stored in `plugins/PlotsX/config.yml`. A value of `true` means “yes” and `false` means “no”. Preserve indentation and use spaces instead of tabs.
 
+## Versioned loading and reload
+
+PlotsX initializes SyntaxCore first and reuses `SyntaxCore.logger`. Its configuration
+is then loaded by SyntaxCore's ConfigManager before plot/database services start:
+
+```kotlin
+SyntaxCore.init(this, versionType = "paper")
+logger = SyntaxCore.logger
+// PluginInitializer.setupConfig():
+configManager = ConfigManager(
+    plugin = this,
+    logger = logger,
+    initialVersion = 100,
+    targetVersion = 103
+).registerMigrations(ConfigMigrations.steps())
+configManager.load()
+reloadConfig() // refresh Bukkit's separate view used by PlotsX services
+pluginConfig = config
+```
+
+The current bundled schema is **103**. Existing unversioned files are treated as 100.
+Steps 100 → 101 → 102 → 103 preserve user settings and add missing template fields;
+101/102 were documentation changes, so there is no automatic database conversion or
+backend switch. Keep your actual database selection and credentials. Unsupported
+backends fail through normal database validation.
+
+Before migration, ConfigManager creates a backup such as `config.yml.102.bak`.
+It validates the staged YAML before atomically replacing the live file. Failed migration
+leaves the original file intact. Files already at schema 103 or a newer schema are
+read without rewriting or downgrading. New installations use the current template.
+Do not manually raise `config-version` to skip a required migration.
+
+`/ptx reload` uses the same loader and refreshes Bukkit's view before rebuilding
+runtime caches. Changes to `plots.claiming.mode` still require a restart. A failed
+configuration load keeps existing runtime caches; correct the YAML and try again.
+Startup-only services, including the database connection and SyntaxCore's own startup
+settings, require a restart to apply changes. Core services start before PlotsX's
+migration; configuration reload does not automatically reinitialize them.
+
+Backup is per migration attempt/chain, not per individual version step. Retries create
+unique backups and retain previous copies. If backup creation fails, migration callbacks
+do not run. Parse validation happens before backup/mutation: malformed YAML is rejected
+without replacing it with a default file. Current/future schemas do not trigger a backup
+because no migration occurs. Missing fields in a current/future file are not automatically
+written back; add a new versioned step when evolving the schema.
+
+Language files and the reload prevalidation use strict Bukkit YAML parsing as well:
+syntax errors propagate and leave the original bytes intact. They cannot be converted
+into an empty document and overwritten with defaults after a parse failure.
+
+Language-file completion remains separate from the versioned main configuration.
+For adding a field or renaming a path in a future release, raise the template and
+`targetVersion` together and add the corresponding step in `ConfigMigrations`.
+
 ## Full default configuration
 
 ```yaml

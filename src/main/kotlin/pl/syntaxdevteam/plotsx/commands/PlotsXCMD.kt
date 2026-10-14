@@ -57,6 +57,9 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
                         stack.sender.sendMessage("Reload rejected: ${failure.message}")
                     } catch (failure: IllegalStateException) {
                         stack.sender.sendMessage("Reload unavailable: ${failure.message}")
+                    } catch (failure: Exception) {
+                        plugin.logger.err("Config reload failed: ${failure.message}")
+                        stack.sender.sendMessage("Reload failed; check the server log and configuration file.")
                     }
                 }
 
