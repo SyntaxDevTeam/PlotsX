@@ -1,28 +1,46 @@
 package pl.syntaxdevteam.plotsx.databases
 
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import pl.syntaxdevteam.plotsx.PlotsX
-import java.io.File
-import java.sql.*
-import java.util.*
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
-import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 import pl.syntaxdevteam.plotsx.identity.IdentityMigrationBridgeResult
 import pl.syntaxdevteam.plotsx.identity.IdentityMigrationBridgeStatus
 import pl.syntaxdevteam.plotsx.identity.IdentityMigrationStore
+import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
+import pl.syntaxdevteam.syntaxdb.Database
+import pl.syntaxdevteam.syntaxdb.config.DatabaseType
+import java.io.File
+import java.sql.Connection
+import java.sql.SQLException
+import java.util.Locale
+import java.util.UUID
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
+/**
+ * PlotsX persistence facade.
+ *
+ * SyntaxDB owns the pool, JDBC drivers and lifecycle. The remaining Connection-based helpers are
+ * intentionally scoped through SyntaxDB's managed JDBC interoperability API while they are gradually
+ * moved to the higher-level query/CRUD API.
+ */
 class DatabaseHandler(private val plugin: PlotsX) {
-    private var dataSource: HikariDataSource? = null
+    private var syntaxDb: Database? = null
     private var logger = plugin.logger
-    private val dbType = plugin.config.getString("database.type")?.lowercase() ?: "sqlite"
+    private val configuredDbType = plugin.config.getString("database.type")?.trim()?.lowercase(Locale.ROOT) ?: "sqlite"
+    /** PlotsX SQL schema dialect. MariaDB remains a backwards-compatible alias for MySQL. */
+    private val dbType = when (configuredDbType) {
+        "mariadb" -> "mysql"
+        else -> configuredDbType
+    }
     private val claimLocks = ConcurrentHashMap<String, ReentrantLock>()
     private val closing = AtomicBoolean(false)
     private val pendingServerCalls = ConcurrentHashMap.newKeySet<CompletableFuture<*>>()
+
+    private val jdbcScope = object : JdbcConnectionScope {
+        override fun <T> withConnection(block: (Connection) -> T): T = withJdbcConnection(block)
+    }
 
     sealed interface ClaimResult {
         data class Success(val plotId: Int) : ClaimResult
@@ -43,171 +61,125 @@ class DatabaseHandler(private val plugin: PlotsX) {
         data object DatabaseError : ExpandResult
     }
 
-    init {
-        setupDataSource()
-    }
+    /** Starts one SyntaxDB instance for the plugin lifecycle. */
+    @Synchronized
+    fun openConnection() {
+        closing.set(false)
+        if (syntaxDb?.isReady == true) return
+        syntaxDb?.let { previous ->
+            runCatching { previous.close() }
+                .onFailure { logger.warning("Previous SyntaxDB instance could not be closed cleanly: ${it.message}") }
+        }
+        syntaxDb = null
 
-    /**
-     * Configures the HikariCP data source for database connections.
-     *
-     * This method sets up the data source based on the database type defined in the plugin configuration.
-     * It supports the following database types:
-     * - MySQL/MariaDB
-     * - PostgreSQL
-     * - SQLite
-     * - H2
-     *
-     * For SQLite databases, specific pool settings are applied to minimize resource usage.
-     * For other database types, the pool is configured with more robust settings suitable for production.
-     *
-     * @throws IllegalArgumentException If the database type is unsupported.
-     * @throws Exception If an error occurs during data source initialization.
-     */
+        val type = when (dbType) {
+            "mysql" -> DatabaseType.MYSQL
+            "postgresql" -> DatabaseType.POSTGRESQL
+            "sqlite" -> DatabaseType.SQLITE
+            "h2" -> throw IllegalArgumentException(
+                "database.type=h2 is no longer a runtime backend after the SyntaxDB migration. " +
+                    "Use sqlite, mysql/mariadb or postgresql; legacy H2 backup conversion remains available."
+            )
+            else -> throw IllegalArgumentException(
+                "Unsupported database type '$configuredDbType'. Supported by PlotsX: sqlite, mysql, mariadb, postgresql."
+            )
+        }
 
-    private fun setupDataSource() {
-        val hikariConfig = HikariConfig()
         val dbName = plugin.config.getString("database.sql.dbname") ?: plugin.name
         val user = plugin.config.getString("database.sql.username") ?: "ROOT"
         val password = plugin.config.getString("database.sql.password") ?: "U5eV3ryStr0ngP4ssw0rd"
-        when (dbType) {
-            "mysql", "mariadb" -> {
-                hikariConfig.jdbcUrl =
-                    "jdbc:mariadb://${plugin.config.getString("database.sql.host")}:${plugin.config.getString("database.sql.port")}/$dbName"
-                hikariConfig.username = user
-                hikariConfig.password = password
-                hikariConfig.driverClassName = "org.mariadb.jdbc.Driver"
-            }
+        val host = plugin.config.getString("database.sql.host") ?: "localhost"
+        val configuredPort = plugin.config.getInt("database.sql.port", if (type == DatabaseType.POSTGRESQL) 5432 else 3306)
 
-            "postgresql" -> {
-                hikariConfig.jdbcUrl =
-                    "jdbc:postgresql://${plugin.config.getString("database.sql.host")}:${plugin.config.getString("database.sql.port")}/$dbName"
-                hikariConfig.username = user
-                hikariConfig.password = password
-                hikariConfig.driverClassName = "org.postgresql.Driver"
-            }
-
-            "sqlite" -> {
-                hikariConfig.jdbcUrl = "jdbc:sqlite:${plugin.dataFolder}/$dbName.db"
-                hikariConfig.driverClassName = "org.sqlite.JDBC"
-            }
-
-            "h2" -> {
-                hikariConfig.jdbcUrl = "jdbc:h2:./${plugin.dataFolder}/$dbName"
-                hikariConfig.username = user
-                hikariConfig.password = password
-                hikariConfig.driverClassName = "org.h2.Driver"
-            }
-
-            else -> throw IllegalArgumentException("Unsupported database type: $dbType")
+        if (configuredDbType == "mariadb") {
+            logger.info("database.type=mariadb is using SyntaxDB's MySQL-compatible dialect and Connector/J runtime.")
         }
-        if (dbType == "sqlite") {
-            hikariConfig.maximumPoolSize = 2
-            hikariConfig.minimumIdle = 1
-            hikariConfig.connectionTimeout = 30000
-            hikariConfig.idleTimeout = 10000
-            hikariConfig.maxLifetime = 60000
-            hikariConfig.keepaliveTime = 30000
-        } else {
-            hikariConfig.maximumPoolSize = 20
-            hikariConfig.minimumIdle = 2
-            hikariConfig.connectionTimeout = 30000
-            hikariConfig.idleTimeout = 600000
-            hikariConfig.maxLifetime = 1800000
-            hikariConfig.keepaliveTime = 900000
-            hikariConfig.leakDetectionThreshold = 2000
+        logger.debug("Starting SyntaxDB for database type: $configuredDbType (dialect=$dbType)")
+
+        syntaxDb = Database.connect(type) {
+            when (type) {
+                DatabaseType.SQLITE -> {
+                    file = File(plugin.dataFolder, "$dbName.db").absolutePath
+                    // Applied to every physical SQLite connection, including high-level SyntaxDB CRUD calls.
+                    property("foreign_keys", "true")
+                    property("journal_mode", "WAL")
+                    property("busy_timeout", "30000")
+                }
+                DatabaseType.MYSQL, DatabaseType.POSTGRESQL -> {
+                    this.host = host
+                    port = configuredPort
+                    database = dbName
+                    username = user
+                    this.password = password
+                }
+                DatabaseType.SQL_SERVER -> error("SQL Server schema support is not enabled in PlotsX")
+            }
+            pool {
+                poolName = "PlotsX-SyntaxDB"
+                connectionTimeoutMs = 30_000
+                if (type == DatabaseType.SQLITE) {
+                    maximumPoolSize = 2
+                    minimumIdle = 1
+                    idleTimeoutMs = 10_000
+                    maxLifetimeMs = 60_000
+                    leakDetectionThresholdMs = 0
+                } else {
+                    maximumPoolSize = 20
+                    minimumIdle = 2
+                    idleTimeoutMs = 600_000
+                    maxLifetimeMs = 1_800_000
+                    leakDetectionThresholdMs = 2_000
+                }
+            }
+            lifecycle {
+                validateOnStart = true
+                validationTimeoutSeconds = 5
+                shutdownTimeoutMs = 30_000
+            }
         }
 
-        logger.debug("Setting up data source for database type: $dbType")
-        try {
-            dataSource = HikariDataSource(hikariConfig)
-            logger.debug("HikariCP data source initialized successfully for $dbType.")
-        } catch (e: Exception) {
-            logger.err("Failed to initialize HikariCP data source: ${e.message}")
-            throw e
-        }
+        logger.success("SyntaxDB initialized successfully for $configuredDbType.")
     }
 
-    /**
-     * Ensures that the database connection is open.
-     *
-     * If the data source is not initialized, this method will invoke `setupDataSource`
-     * to configure and start the connection pool.
-     */
-    fun openConnection() {
-        closing.set(false)
-        if (dataSource == null) {
-            setupDataSource()
-        }
-    }
-
-    /**
-     * Closes the HikariCP connection pool.
-     *
-     * This method gracefully shuts down the data source, releasing all resources associated with
-     * the connection pool. It also logs the pool's statistics, such as total, active, and idle connections.
-     *
-     * Any errors encountered during shutdown are logged but do not interrupt the process.
-     */
+    /** Stops admission of new work and lets SyntaxDB gracefully drain/close its owned pool. */
     fun closeConnection() {
         if (!closing.compareAndSet(false, true)) return
         pendingServerCalls.forEach { it.completeExceptionally(IllegalStateException("PlotsX is shutting down")) }
         pendingServerCalls.clear()
         claimLocks.clear()
-        val source = dataSource
-        dataSource = null
+        val database = syntaxDb
+        syntaxDb = null
         try {
-            val pool = source?.hikariPoolMXBean
-            val totals = "Total=${pool?.totalConnections}, Active=${pool?.activeConnections}, Idle=${pool?.idleConnections}"
-            source?.close()
-            logger.info("HikariCP pool shut down. $totals")
-        } catch (e: Exception) {
-            logger.err("Error while closing HikariCP pool: ${e.message}")
+            database?.close()
+            logger.info("SyntaxDB database lifecycle stopped.")
+        } catch (failure: Exception) {
+            logger.err("Error while closing SyntaxDB: ${failure.message}")
         }
     }
 
-    /**
-     * Obtains a connection from the HikariCP data source.
-     *
-     * This method retrieves a connection from the pool and, if the database type is SQLite,
-     * enables Write-Ahead Logging (WAL) mode to improve performance.
-     *
-     * Connections must be properly closed after use to avoid resource leaks.
-     *
-     * @return A valid `Connection` object, or `null` if the connection could not be established.
-     */
-    private fun getConnection(): Connection? {
-        if (closing.get()) return null
-        return try {
-            val connection = dataSource?.connection
-            if (connection != null && dbType == "sqlite") {
-                enableSQLiteWAL(connection)
-            }
-            logger.debug("Connection obtained: Active=${dataSource?.hikariPoolMXBean?.activeConnections}, Idle=${dataSource?.hikariPoolMXBean?.idleConnections}")
-            connection
-        } catch (e: SQLException) {
-            logger.err("Failed to get connection. ${e.message}")
-            null
-        }
+    private fun database(): Database {
+        check(!closing.get()) { "PlotsX database is shutting down" }
+        return syntaxDb?.takeIf { it.isReady } ?: error("SyntaxDB is not connected")
     }
 
     /**
-     * Enables Write-Ahead Logging (WAL) mode for SQLite.
-     *
-     * WAL mode improves SQLite's performance by allowing concurrent reads and writes.
-     * This method executes the `PRAGMA journal_mode=WAL;` statement on the provided connection.
-     *
-     * @param connection The active SQLite connection.
+     * Scoped JDBC bridge for existing atomic persistence helpers. A Connection never escapes SyntaxDB's
+     * lifecycle admission and is returned to the managed pool automatically after [block].
      */
-    private fun enableSQLiteWAL(connection: Connection) {
-        //logger.debug("SQLite connection detected! I'm enabling WAL mode")
+    internal fun <T> withJdbcConnection(block: (Connection) -> T): T = database().withConnection { connection ->
+        if (dbType == "sqlite") enableSQLitePragmas(connection)
+        block(connection)
+    }
+
+    private fun enableSQLitePragmas(connection: Connection) {
         try {
             connection.createStatement().use { statement ->
                 statement.execute("PRAGMA journal_mode=WAL;")
                 statement.execute("PRAGMA foreign_keys=ON;")
-                //logger.debug("SQLite WAL mode enabled.")
+                statement.execute("PRAGMA busy_timeout=30000;")
             }
-        } catch (e: SQLException) {
-            logger.err("Failed to enable SQLite WAL mode. ${e.message}")
+        } catch (failure: SQLException) {
+            logger.err("Failed to configure SQLite connection. ${failure.message}")
         }
     }
 
@@ -215,43 +187,44 @@ class DatabaseHandler(private val plugin: PlotsX) {
         plugin.protectionCoordinator.mutate({ plugin.cacheManager.reloadAllCachesSync() }, action)
 
     fun createTables() {
-        getConnection()?.use { conn ->
+        withJdbcConnection { conn ->
             conn.createStatement().use { statement ->
                 DatabaseSchema.statements(dbType).forEach { statement.executeUpdate(it) }
             }
             DatabaseMigrations.migrate(conn, dbType)
             OperationJournal.migrate(conn)
+            PlotSpawnRepository.migrate(conn)
             IdentityMigrationStore.migrateSchema(conn)
             plugin.identityAliasRegistry.replaceAll(IdentityMigrationStore.loadAliases(conn))
             reportInterruptedOperations(conn)
-        } ?: error("No database connection.")
+        }
     }
 
     private fun reportInterruptedOperations(conn: Connection) {
         for (operation in OperationJournal.recoverInterrupted(conn, System.currentTimeMillis())) logger.err(
             "PAYMENT RECONCILIATION REQUIRED: operation=${operation.id} plot=${operation.plotId} " +
-                "owner=${operation.owner} provider=${operation.provider} amount=${operation.amount} currency=${operation.currency} state=${operation.state}"
+                "owner=${operation.owner} provider=${operation.provider} amount=${operation.amount} " +
+                "currency=${operation.currency} state=${operation.state}"
         )
     }
 
     internal fun loadPlotCacheData(plotId: Int? = null): PlotCacheData =
-        (getConnection() ?: error("No database connection for protection cache.")).use { PlotCacheLoader.load(it, plotId) }
+        withJdbcConnection { PlotCacheLoader.load(it, plotId) }
 
     internal fun inspectIdentityMigration(
         migrationId: UUID,
         sourceUuid: UUID,
         targetUuid: UUID,
-    ): IdentityMigrationBridgeResult =
-        (getConnection() ?: error("No database connection for identity migration inspection.")).use {
-            IdentityMigrationStore.inspect(it, migrationId, sourceUuid, targetUuid)
-        }
+    ): IdentityMigrationBridgeResult = withJdbcConnection {
+        IdentityMigrationStore.inspect(it, migrationId, sourceUuid, targetUuid)
+    }
 
     internal fun migrateIdentity(
         migrationId: UUID,
         sourceUuid: UUID,
         targetUuid: UUID,
     ): IdentityMigrationBridgeResult = protectedMutation {
-        (getConnection() ?: error("No database connection for identity migration.")).use { connection ->
+        withJdbcConnection { connection ->
             val result = IdentityMigrationStore.migrate(connection, migrationId, sourceUuid, targetUuid)
             if (result.status == IdentityMigrationBridgeStatus.SUCCESS) {
                 plugin.identityAliasRegistry.put(sourceUuid, targetUuid)
@@ -265,7 +238,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         sourceUuid: UUID,
         targetUuid: UUID,
     ): IdentityMigrationBridgeResult = protectedMutation {
-        (getConnection() ?: error("No database connection for identity migration rollback.")).use { connection ->
+        withJdbcConnection { connection ->
             val result = IdentityMigrationStore.rollback(connection, migrationId, sourceUuid, targetUuid)
             if (result.status == IdentityMigrationBridgeStatus.ROLLED_BACK) {
                 plugin.identityAliasRegistry.remove(sourceUuid, targetUuid)
@@ -274,143 +247,116 @@ class DatabaseHandler(private val plugin: PlotsX) {
         }
     }
 
-    fun claimPlotAtomically(ownerUuid: UUID, actorUuid: UUID, world: String, x: Int, z: Int, y: Int,
-                            radius: Int, maxPlots: Int, maxTotalArea: Long, namePrefix: String,
-                            maxChunksPerPlot: Int = Int.MAX_VALUE, maxChunksOwned: Int = Int.MAX_VALUE): ClaimResult = protectedMutation {
-        (getConnection() ?: return@protectedMutation ClaimResult.DatabaseError).use { conn ->
-            try {
+    fun claimPlotAtomically(
+        ownerUuid: UUID,
+        actorUuid: UUID,
+        world: String,
+        x: Int,
+        z: Int,
+        y: Int,
+        radius: Int,
+        maxPlots: Int,
+        maxTotalArea: Long,
+        namePrefix: String,
+        maxChunksPerPlot: Int = Int.MAX_VALUE,
+        maxChunksOwned: Int = Int.MAX_VALUE,
+    ): ClaimResult = protectedMutation {
+        try {
+            withJdbcConnection { conn ->
                 val shape = pl.syntaxdevteam.plotsx.claiming.ClaimGeometryFactory.create(plugin.claimMode, x, z, radius)
-                when (val result = ClaimTransaction.create(conn, ownerUuid, actorUuid, world, x, y, z, shape,
+                when (val result = ClaimTransaction.create(
+                    conn, ownerUuid, actorUuid, world, x, y, z, shape,
                     maxPlots, maxTotalArea, maxChunksPerPlot, maxChunksOwned, namePrefix,
-                    PlotFlagRegistry.allFlags.values.associate { it.name to it.defaultValue })) {
+                    PlotFlagRegistry.allFlags.values.associate { it.name to it.defaultValue },
+                )) {
                     is ClaimTransaction.Result.Success -> ClaimResult.Success(result.id)
                     ClaimTransaction.Result.PlotLimit -> ClaimResult.LimitReached
                     ClaimTransaction.Result.AreaLimit -> ClaimResult.AreaLimitReached
                     ClaimTransaction.Result.ChunkLimit -> ClaimResult.ChunkLimitReached
                     ClaimTransaction.Result.Overlap -> ClaimResult.Overlap
                 }
-            } catch (failure: Exception) {
-                logger.err("Claim transaction failed: ${failure.message}")
-                ClaimResult.DatabaseError
             }
+        } catch (failure: Exception) {
+            logger.err("Claim transaction failed: ${failure.message}")
+            ClaimResult.DatabaseError
         }
     }
 
-    internal fun relocatePlot(expected: PlotData, target: PlotRelocation.Target, actor: UUID): PlotRelocation.Result = protectedMutation {
-        (getConnection() ?: error("No database connection")).use { PlotRelocation.move(it, expected, target, actor) }
-    }
+    internal fun relocatePlot(expected: PlotData, target: PlotRelocation.Target, actor: UUID): PlotRelocation.Result =
+        protectedMutation { withJdbcConnection { PlotRelocation.move(it, expected, target, actor) } }
 
     fun deletePlot(plotId: Int): Boolean = protectedMutation { performDeletePlot(plotId) }
 
-    private fun performDeletePlot(plotId: Int): Boolean {
-        val connection = getConnection() ?: run {
-            logger.err("Brak połączenia z bazą danych.")
-            return false
+    private fun performDeletePlot(plotId: Int): Boolean = try {
+        val affectedRows = database().delete("plots") { "plot_id" eq plotId }
+        if (affectedRows == 0) {
+            logger.warning("Nie znaleziono działki do usunięcia: plot_id=$plotId")
+            false
+        } else {
+            logger.debug("Działka plot_id=$plotId została usunięta przez SyntaxDB.")
+            true
         }
-        logger.debug("Próba nawiązania połączenie z deletePlot()")
-        try {
-            connection.use { conn ->
-                conn.autoCommit = false
-
-                // Usunięcie działki — reszta powiązanych danych usunie się kaskadowo
-                val deleteSql = "DELETE FROM plots WHERE plot_id = ?"
-
-                conn.prepareStatement(deleteSql).use { stmt ->
-                    stmt.setInt(1, plotId)
-                    val affectedRows = stmt.executeUpdate()
-                    if (affectedRows == 0) {
-                        conn.rollback()
-                        logger.warning("Nie znaleziono działki do usunięcia: plot_id=$plotId")
-                        return false
-                    }
-                }
-
-                conn.commit()
-                logger.debug("Działka plot_id=$plotId została usunięta.")
-                return true
-            }
-        } catch (ex: SQLException) {
-            logger.err("Błąd podczas usuwania działki: ${ex.message}")
-            return false
-        }
+    } catch (failure: Exception) {
+        logger.err("Błąd podczas usuwania działki: ${failure.message}")
+        false
     }
 
-    fun updatePlotDetails(plotId: Int, newName: String? = null, newRadius: Int? = null): Boolean = protectedMutation { performUpdatePlotDetails(plotId, newName, newRadius) }
+    fun updatePlotDetails(plotId: Int, newName: String? = null, newRadius: Int? = null): Boolean =
+        protectedMutation { performUpdatePlotDetails(plotId, newName, newRadius) }
 
     private fun performUpdatePlotDetails(plotId: Int, newName: String? = null, newRadius: Int? = null): Boolean {
         if (newRadius != null) {
             val plot = getPlotById(plotId) ?: return false
             if (plot.radius == null || newRadius < 1) return false
             val candidate = plot.copy(radius = newRadius).geometry
-            if (getPlotsFromAllUsers().any { it.id != plotId && it.world.equals(plot.world, true) && it.geometry.intersects(candidate) }) return false
+            if (getPlotsFromAllUsers().any {
+                    it.id != plotId && it.world.equals(plot.world, true) && it.geometry.intersects(candidate)
+                }) return false
         }
-        val connection = getConnection() ?: run {
-            logger.err("Brak połączenia z bazą danych.")
-            return false
-        }
+        if (newName == null && newRadius == null) return false
 
-        if (newName == null && newRadius == null) {
-            logger.debug("Brak danych do aktualizacji dla plot_id=$plotId.")
-            return false
-        }
-
-        val updates = mutableListOf<String>()
-        val params = mutableListOf<Any>()
-
-        newName?.let {
-            updates.add("name = ?")
-            params.add(it)
-        }
-
+        val assignments = mutableListOf<String>()
+        val parameters = mutableListOf<Any?>()
+        newName?.let { assignments += "name = ?"; parameters += it }
         newRadius?.let {
-            updates.add("radius = ?")
-            updates.add("geometry_revision = geometry_revision + 1")
-            params.add(it)
+            assignments += "radius = ?"
+            assignments += "geometry_revision = geometry_revision + 1"
+            parameters += it
         }
+        parameters += plotId
 
-        val sql = "UPDATE plots SET ${updates.joinToString(", ")} WHERE plot_id = ?"
-        logger.debug("Próba nawiązania połączenie z updatePlotDetails()")
-        try {
-            connection.use { conn ->
-                conn.prepareStatement(sql).use { stmt ->
-                    params.forEachIndexed { index, param ->
-                        when (param) {
-                            is String -> stmt.setString(index + 1, param)
-                            is Int -> stmt.setInt(index + 1, param)
-                        }
-                    }
-                    stmt.setInt(params.size + 1, plotId)
-
-                    val rows = stmt.executeUpdate()
-                    if (rows == 0) {
-                        logger.warning("Nie znaleziono działki do aktualizacji: plot_id=$plotId")
-                        return false
-                    }
-
-                    logger.debug("Działka plot_id=$plotId została zaktualizowana.")
-                    return true
-                }
-            }
-        } catch (ex: SQLException) {
-            logger.err("Błąd podczas aktualizacji działki: ${ex.message}")
-            return false
+        return try {
+            val rows = database().execute(
+                "UPDATE plots SET ${assignments.joinToString(", ")} WHERE plot_id = ?",
+                parameters,
+            )
+            if (rows == 0) logger.warning("Nie znaleziono działki do aktualizacji: plot_id=$plotId")
+            rows > 0
+        } catch (failure: Exception) {
+            logger.err("Błąd podczas aktualizacji działki: ${failure.message}")
+            false
         }
     }
 
     private fun readSegments(conn: Connection, plotId: Int): List<PlotSegment> =
         conn.prepareStatement("SELECT x, z, radius FROM plot_segments WHERE plot_id = ?").use { stmt ->
             stmt.setInt(1, plotId)
-            stmt.executeQuery().use { rs -> buildList {
-                while (rs.next()) add(PlotSegment(rs.getInt(1), rs.getInt(2), rs.getInt(3)))
-            } }
+            stmt.executeQuery().use { rs ->
+                buildList {
+                    while (rs.next()) add(PlotSegment(rs.getInt(1), rs.getInt(2), rs.getInt(3)))
+                }
+            }
         }
 
     /** Worker-thread purchase entry point; Bukkit and economy calls return to the server thread. */
-    internal fun purchaseExpansion(operation: OperationJournal.Operation, level: Int,
-                               limits: ChunkExpansionTransaction.Limits,
-                               account: pl.syntaxdevteam.plotsx.hooks.ExpansionEconomy.Account?,
-                               validate: () -> Boolean,
-                               classicLimits: ClassicExpansionTransaction.Limits? = null): ExpansionPurchaseService.Result {
+    internal fun purchaseExpansion(
+        operation: OperationJournal.Operation,
+        level: Int,
+        limits: ChunkExpansionTransaction.Limits,
+        account: pl.syntaxdevteam.plotsx.hooks.ExpansionEconomy.Account?,
+        validate: () -> Boolean,
+        classicLimits: ClassicExpansionTransaction.Limits? = null,
+    ): ExpansionPurchaseService.Result {
         check(!org.bukkit.Bukkit.isPrimaryThread()) { "Expansion purchases must run off the server thread" }
         val workflowStarted = System.nanoTime()
         val serverCallbackNanos = java.util.concurrent.atomic.AtomicLong()
@@ -422,13 +368,21 @@ class DatabaseHandler(private val plugin: PlotsX) {
                 pendingServerCalls.add(future)
                 try {
                     plugin.schedulerAdapter.runSync(Runnable {
-                        if (!future.isDone && !closing.get()) try { future.complete(action()) }
-                        catch (failure: Throwable) { future.completeExceptionally(failure) }
+                        if (!future.isDone && !closing.get()) try {
+                            future.complete(action())
+                        } catch (failure: Throwable) {
+                            future.completeExceptionally(failure)
+                        }
                     })
                     return future.get(30, java.util.concurrent.TimeUnit.SECONDS)
-                } catch (failure: Exception) { future.cancel(false); throw failure }
-                finally { pendingServerCalls.remove(future) }
+                } catch (failure: Exception) {
+                    future.cancel(false)
+                    throw failure
+                } finally {
+                    pendingServerCalls.remove(future)
+                }
             }
+
             override fun <T> call(action: () -> T): T {
                 check(!closing.get()) { "PlotsX is shutting down" }
                 val future = CompletableFuture<T>()
@@ -440,24 +394,40 @@ class DatabaseHandler(private val plugin: PlotsX) {
                 }
                 val scheduled = player.scheduler.run(plugin, {
                     val callbackStarted = System.nanoTime()
-                    if (!future.isDone && !closing.get()) try { future.complete(action()) }
-                    catch (failure: Throwable) { future.completeExceptionally(failure) }
-                    finally { serverCallbackNanos.addAndGet(System.nanoTime() - callbackStarted) }
+                    if (!future.isDone && !closing.get()) try {
+                        future.complete(action())
+                    } catch (failure: Throwable) {
+                        future.completeExceptionally(failure)
+                    } finally {
+                        serverCallbackNanos.addAndGet(System.nanoTime() - callbackStarted)
+                    }
                 }, { future.completeExceptionally(IllegalStateException("Purchase actor disconnected")) })
                 if (scheduled == null) future.completeExceptionally(IllegalStateException("Purchase actor disconnected"))
-                try { return future.get(30, java.util.concurrent.TimeUnit.SECONDS) }
-                catch (failure: Exception) { future.cancel(false); throw failure }
-                finally { pendingServerCalls.remove(future) }
+                try {
+                    return future.get(30, java.util.concurrent.TimeUnit.SECONDS)
+                } catch (failure: Exception) {
+                    future.cancel(false)
+                    throw failure
+                } finally {
+                    pendingServerCalls.remove(future)
+                }
             }
         }
-        val result = ExpansionPurchaseService({ getConnection() ?: error("No purchase database connection") },
-            plugin.protectionCoordinator, {
+
+        val result = ExpansionPurchaseService(
+            jdbcScope,
+            plugin.protectionCoordinator,
+            {
                 val publicationStarted = System.nanoTime()
-                // An expansion purchase changes one plot only. Do not re-read every plot, chunk,
-                // flag and member row just to publish that one changed geometry.
-                try { plugin.cacheManager.reloadPlotSync(operation.plotId) }
-                finally { cachePublicationNanos.addAndGet(System.nanoTime() - publicationStarted) }
-            }, calls, { logger.err(it) }).purchase(operation, level, limits, account, validate, classicLimits)
+                try {
+                    plugin.cacheManager.reloadPlotSync(operation.plotId)
+                } finally {
+                    cachePublicationNanos.addAndGet(System.nanoTime() - publicationStarted)
+                }
+            },
+            calls,
+            { logger.err(it) },
+        ).purchase(operation, level, limits, account, validate, classicLimits)
         logger.debug(
             "PlotsX expansion timings: database workflow=${formatMillis(System.nanoTime() - workflowStarted)} ms [worker], " +
                 "cache publication=${formatMillis(cachePublicationNanos.get())} ms [worker], " +
@@ -471,21 +441,14 @@ class DatabaseHandler(private val plugin: PlotsX) {
     /** Internal persistence entry point. Do not expose as a paid purchase before journal integration. */
     internal fun expandChunkAtomically(
         request: ChunkExpansionTransaction.Request,
-        limits: ChunkExpansionTransaction.Limits
+        limits: ChunkExpansionTransaction.Limits,
     ): ChunkExpansionTransaction.Result = protectedMutation {
-        (getConnection() ?: error("No database connection for chunk expansion")).use {
-            ChunkExpansionTransaction.expand(it, request, limits)
-        }
+        withJdbcConnection { ChunkExpansionTransaction.expand(it, request, limits) }
     }
 
     /** Removes exactly one chunk while publishing the new protection snapshot atomically. */
-    internal fun removeChunkAtomically(
-        request: ChunkRemovalTransaction.Request
-    ): ChunkRemovalTransaction.Result = protectedMutation {
-        (getConnection() ?: error("No database connection for chunk removal")).use {
-            ChunkRemovalTransaction.remove(it, request)
-        }
-    }
+    internal fun removeChunkAtomically(request: ChunkRemovalTransaction.Request): ChunkRemovalTransaction.Result =
+        protectedMutation { withJdbcConnection { ChunkRemovalTransaction.remove(it, request) } }
 
     fun expandPlotAtomically(
         plotId: Int,
@@ -496,19 +459,27 @@ class DatabaseHandler(private val plugin: PlotsX) {
         expectedSegment: PlotSegment,
         maxRadius: Int,
         maxTotalArea: Long,
-        expectedSegmentCount: Int
+        expectedSegmentCount: Int,
     ): ExpandResult {
         var transactionNanos = 0L
         var publicationNanos = 0L
         val result = plugin.protectionCoordinator.mutate({
             val started = System.nanoTime()
-            try { plugin.cacheManager.reloadPlotSync(plotId) }
-            finally { publicationNanos = System.nanoTime() - started }
+            try {
+                plugin.cacheManager.reloadPlotSync(plotId)
+            } finally {
+                publicationNanos = System.nanoTime() - started
+            }
         }, {
             val started = System.nanoTime()
-            try { performExpandPlotAtomically(plotId, ownerUuid, actorUuid, direction, sourceSegment, expectedSegment,
-                maxRadius, maxTotalArea, expectedSegmentCount) }
-            finally { transactionNanos = System.nanoTime() - started }
+            try {
+                performExpandPlotAtomically(
+                    plotId, ownerUuid, actorUuid, direction, sourceSegment, expectedSegment,
+                    maxRadius, maxTotalArea, expectedSegmentCount,
+                )
+            } finally {
+                transactionNanos = System.nanoTime() - started
+            }
         })
         logger.debug(
             "PlotsX expansion timings: classic database transaction=${formatMillis(transactionNanos)} ms [worker], " +
@@ -526,95 +497,110 @@ class DatabaseHandler(private val plugin: PlotsX) {
         expectedSegment: PlotSegment,
         maxRadius: Int,
         maxTotalArea: Long,
-        expectedSegmentCount: Int
+        expectedSegmentCount: Int,
     ): ExpandResult {
         val plot = getPlotById(plotId) ?: return ExpandResult.PlotNotFound
         if (plot.radius == null) return ExpandResult.DatabaseError
         val lock = claimLocks.computeIfAbsent(plot.world.lowercase(Locale.ROOT)) { ReentrantLock() }
         return lock.withLock {
-            val connection = getConnection() ?: return@withLock ExpandResult.DatabaseError
-            connection.use { conn ->
-                try {
+            try {
+                withJdbcConnection { conn ->
                     conn.transactionIsolation = Connection.TRANSACTION_SERIALIZABLE
                     conn.autoCommit = false
-                    val current = conn.prepareStatement(
-                        "SELECT owner_uuid, x, z, radius, world FROM plots WHERE plot_id = ?"
-                    ).use { stmt ->
-                        stmt.setInt(1, plotId)
-                        stmt.executeQuery().use { rs ->
-                            if (!rs.next()) null else arrayOf<Any>(
-                                rs.getString("owner_uuid"), rs.getInt("x"), rs.getInt("z"),
-                                rs.getInt("radius"), rs.getString("world")
-                            )
+                    try {
+                        val current = conn.prepareStatement(
+                            "SELECT owner_uuid, x, z, radius, world FROM plots WHERE plot_id = ?"
+                        ).use { stmt ->
+                            stmt.setInt(1, plotId)
+                            stmt.executeQuery().use { rs ->
+                                if (!rs.next()) null else arrayOf<Any>(
+                                    rs.getString("owner_uuid"), rs.getInt("x"), rs.getInt("z"),
+                                    rs.getInt("radius"), rs.getString("world"),
+                                )
+                            }
+                        } ?: run {
+                            conn.rollback()
+                            return@withJdbcConnection ExpandResult.PlotNotFound
                         }
-                    } ?: run {
-                        conn.rollback()
-                        return@withLock ExpandResult.PlotNotFound
-                    }
 
-                    if (current[0] != ownerUuid.toString()) {
-                        conn.rollback()
-                        return@withLock ExpandResult.NotOwner
-                    }
-                    val x = current[1] as Int
-                    val z = current[2] as Int
-                    val oldRadius = current[3] as Int
-                    val world = current[4] as String
-                    val fresh = plot.copy(x = x, z = z, radius = oldRadius, extensions = readSegments(conn, plotId))
-                    val target = fresh.expansion(direction, sourceSegment)
-                    if (target == null || target != expectedSegment || fresh.extensions.size != expectedSegmentCount) {
-                        conn.rollback()
-                        return@withLock ExpandResult.DatabaseError
-                    }
-                    val extent = (fresh.segments + target).maxOf {
-                        maxOf(kotlin.math.abs(it.x.toLong() - x), kotlin.math.abs(it.z.toLong() - z)) + it.radius
-                    }
-                    if (extent > maxRadius) {
-                        conn.rollback()
-                        return@withLock ExpandResult.RadiusLimitReached
-                    }
+                        if (current[0] != ownerUuid.toString()) {
+                            conn.rollback()
+                            return@withJdbcConnection ExpandResult.NotOwner
+                        }
+                        val x = current[1] as Int
+                        val z = current[2] as Int
+                        val oldRadius = current[3] as Int
+                        val world = current[4] as String
+                        val fresh = plot.copy(x = x, z = z, radius = oldRadius, extensions = readSegments(conn, plotId))
+                        val target = fresh.expansion(direction, sourceSegment)
+                        if (target == null || target != expectedSegment || fresh.extensions.size != expectedSegmentCount) {
+                            conn.rollback()
+                            return@withJdbcConnection ExpandResult.DatabaseError
+                        }
+                        val extent = (fresh.segments + target).maxOf {
+                            maxOf(kotlin.math.abs(it.x.toLong() - x), kotlin.math.abs(it.z.toLong() - z)) + it.radius
+                        }
+                        if (extent > maxRadius) {
+                            conn.rollback()
+                            return@withJdbcConnection ExpandResult.RadiusLimitReached
+                        }
 
-                    val allPlots = PlotRepository.readAll(conn)
-                    val totalArea = allPlots.filter { it.ownerUuid == ownerUuid }.fold(0L) { total, p -> ClaimTransaction.saturatedAdd(total, p.geometry.area) }
-                    val proposedArea = target.area
-                    if (totalArea > maxTotalArea - proposedArea) {
-                        conn.rollback()
-                        return@withLock ExpandResult.AreaLimitReached
-                    }
+                        val allPlots = PlotRepository.readAll(conn)
+                        val totalArea = allPlots.filter { it.ownerUuid == ownerUuid }.fold(0L) { total, candidate ->
+                            ClaimTransaction.saturatedAdd(total, candidate.geometry.area)
+                        }
+                        val proposedArea = target.area
+                        if (totalArea > maxTotalArea - proposedArea) {
+                            conn.rollback()
+                            return@withJdbcConnection ExpandResult.AreaLimitReached
+                        }
 
-                    val candidateShape = pl.syntaxdevteam.plotsx.geometry.ClassicGeometry(target)
-                    val overlap = allPlots.any { it.id != plotId && it.world.equals(world, true) && it.geometry.intersects(candidateShape) }
-                    if (overlap) {
-                        conn.rollback()
-                        return@withLock ExpandResult.Overlap
-                    }
+                        val candidateShape = pl.syntaxdevteam.plotsx.geometry.ClassicGeometry(target)
+                        val overlap = allPlots.any {
+                            it.id != plotId && it.world.equals(world, true) && it.geometry.intersects(candidateShape)
+                        }
+                        if (overlap) {
+                            conn.rollback()
+                            return@withJdbcConnection ExpandResult.Overlap
+                        }
 
-                    conn.prepareStatement("INSERT INTO plot_segments (plot_id, x, z, radius) VALUES (?, ?, ?, ?)").use { stmt ->
-                        stmt.setInt(1, plotId)
-                        stmt.setInt(2, target.x)
-                        stmt.setInt(3, target.z)
-                        stmt.setInt(4, target.radius)
-                        stmt.executeUpdate()
+                        conn.prepareStatement(
+                            "INSERT INTO plot_segments (plot_id, x, z, radius) VALUES (?, ?, ?, ?)"
+                        ).use { stmt ->
+                            stmt.setInt(1, plotId)
+                            stmt.setInt(2, target.x)
+                            stmt.setInt(3, target.z)
+                            stmt.setInt(4, target.radius)
+                            stmt.executeUpdate()
+                        }
+                        conn.prepareStatement(
+                            "INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp) VALUES (?, ?, ?, ?)"
+                        ).use { stmt ->
+                            stmt.setInt(1, plotId)
+                            stmt.setString(2, "EXPAND:${direction.name}:${target.x},${target.z},${target.radius}")
+                            stmt.setString(3, actorUuid.toString())
+                            stmt.setLong(4, System.currentTimeMillis())
+                            stmt.executeUpdate()
+                        }
+                        conn.prepareStatement(
+                            "UPDATE plots SET geometry_revision = geometry_revision + 1 WHERE plot_id = ?"
+                        ).use {
+                            it.setInt(1, plotId)
+                            it.executeUpdate()
+                        }
+                        conn.commit()
+                        ExpandResult.Success(target)
+                    } catch (failure: SQLException) {
+                        try {
+                            conn.rollback()
+                        } catch (_: SQLException) {
+                        }
+                        throw failure
                     }
-                    conn.prepareStatement(
-                        "INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp) VALUES (?, ?, ?, ?)"
-                    ).use { stmt ->
-                        stmt.setInt(1, plotId)
-                        stmt.setString(2, "EXPAND:${direction.name}:${target.x},${target.z},${target.radius}")
-                        stmt.setString(3, actorUuid.toString())
-                        stmt.setLong(4, System.currentTimeMillis())
-                        stmt.executeUpdate()
-                    }
-                    conn.prepareStatement("UPDATE plots SET geometry_revision = geometry_revision + 1 WHERE plot_id = ?").use {
-                        it.setInt(1, plotId); it.executeUpdate()
-                    }
-                    conn.commit()
-                    ExpandResult.Success(target)
-                } catch (exception: SQLException) {
-                    try { conn.rollback() } catch (_: SQLException) { }
-                    logger.err("Błąd podczas rozszerzania działki $plotId: ${exception.message}")
-                    ExpandResult.DatabaseError
                 }
+            } catch (failure: SQLException) {
+                logger.err("Błąd podczas rozszerzania działki $plotId: ${failure.message}")
+                ExpandResult.DatabaseError
             }
         }
     }
@@ -629,414 +615,216 @@ class DatabaseHandler(private val plugin: PlotsX) {
         return if (Long.MAX_VALUE - sum < area) Long.MAX_VALUE else sum + area
     }
 
-    /**
-     * Aktualizacja flag do sprawdzenia, czy nie pomyliłem czegoś!
-     *
-     * Muszę pamiętać o sposobie użycia np.
-     *
-     * `updatePlotFlag(plotId = 42, flagName = "pvp", flagValue = true)`
-     **/
     fun updatePlotFlag(plotId: Int, flagName: String, flagValue: Boolean): Boolean =
         plugin.protectionCoordinator.mutate({ plugin.cacheManager.reloadPlotSync(plotId) }) {
             performUpdatePlotFlag(plotId, flagName, flagValue)
         }
 
-    private fun performUpdatePlotFlag(plotId: Int, flagName: String, flagValue: Boolean): Boolean {
-        val connection = getConnection() ?: run {
-            logger.err("Brak połączenia z bazą danych.")
-            return false
-        }
-
-        val sql = when (dbType) {
-            "postgresql" -> """
-            INSERT INTO plot_flags (plot_id, flag_name, flag_value)
-            VALUES (?, ?, ?)
-            ON CONFLICT (plot_id, flag_name) DO UPDATE SET flag_value = EXCLUDED.flag_value;
-        """
-            "sqlite" -> """
-            INSERT INTO plot_flags (plot_id, flag_name, flag_value)
-            VALUES (?, ?, ?)
-            ON CONFLICT(plot_id, flag_name) DO UPDATE SET flag_value = excluded.flag_value;
-        """
-            "mysql", "mariadb" -> """
-            INSERT INTO plot_flags (plot_id, flag_name, flag_value)
-            VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE flag_value = VALUES(flag_value);
-        """
-            else -> """
-            MERGE INTO plot_flags (plot_id, flag_name, flag_value)
-            KEY (plot_id, flag_name)
-            VALUES (?, ?, ?);
-        """ // dla H2, ale chyba zmienię w przyszłości miejscami na MySQL
-        }.trimIndent()
-        logger.debug("Próba nawiązania połączenie z updatePlotFlag()")
-        try {
-            connection.use { conn ->
-                conn.prepareStatement(sql).use { stmt ->
-                    stmt.setInt(1, plotId)
-                    stmt.setString(2, flagName)
-                    stmt.setString(3, flagValue.toString())
-                    val rows = stmt.executeUpdate()
-                    logger.debug("Zmieniono flagę '$flagName' na '$flagValue' dla plot_id=$plotId (rows=$rows).")
-                    return true
-                }
-            }
-        } catch (ex: SQLException) {
-            logger.err("Błąd przy aktualizacji flagi '$flagName' dla plot_id=$plotId: ${ex.message}")
-            return false
-        }
+    private fun performUpdatePlotFlag(plotId: Int, flagName: String, flagValue: Boolean): Boolean = try {
+        database().upsert(
+            "plot_flags",
+            linkedMapOf(
+                "plot_id" to plotId,
+                "flag_name" to flagName,
+                "flag_value" to flagValue.toString(),
+            ),
+            conflictColumns = listOf("plot_id", "flag_name"),
+            updateColumns = listOf("flag_value"),
+        )
+        true
+    } catch (failure: Exception) {
+        logger.err("Błąd przy aktualizacji flagi '$flagName' dla plot_id=$plotId: ${failure.message}")
+        false
     }
 
-    /**
-     * Pobranie flag działki
-     *
-     * @param plotId
-     * @return `List<PlotFlagData>`
-     */
-    fun getPlotFlags(plotId: Int): List<PlotFlagData> {
-        val flags = mutableListOf<PlotFlagData>()
-        val connection = getConnection() ?: run {
-            logger.err("Brak połączenia z bazą danych.")
-            return flags
-        }
-
-        val sql = "SELECT flag_name, flag_value FROM plot_flags WHERE plot_id = ?"
-
-        logger.debug("Próba nawiązania połączenie z getPlotFlags()")
-        try {
-            connection.use { conn ->
-                conn.prepareStatement(sql).use { stmt ->
-                    stmt.setInt(1, plotId)
-                    stmt.executeQuery().use { rs ->
-                        while (rs.next()) {
-                            val name = rs.getString("flag_name")
-                            val value = rs.getString("flag_value")
-                            flags.add(PlotFlagData(plotId, name, value))
-                        }
-                    }
-                }
+    fun getPlotFlags(plotId: Int): List<PlotFlagData> = try {
+        database().select("plot_flags")
+            .columns("flag_name", "flag_value")
+            .where { "plot_id" eq plotId }
+            .fetch()
+            .map { row ->
+                PlotFlagData(
+                    plotId,
+                    requireNotNull(row.string("flag_name")),
+                    requireNotNull(row.string("flag_value")),
+                )
             }
-        } catch (ex: SQLException) {
-            logger.err("Błąd podczas pobierania flag działki plot_id=$plotId: ${ex.message}")
-        }
-        return flags
+    } catch (failure: Exception) {
+        logger.err("Błąd podczas pobierania flag działki plot_id=$plotId: ${failure.message}")
+        emptyList()
     }
 
-    /**
-     * Pobranie pojedynczej flagi danej działki
-     *
-     * @param plotId
-     * @param flagName
-     * @return `String?`
-     */
-    fun getPlotFlag(plotId: Int, flagName: String): PlotFlagData? {
-        val sql = "SELECT flag_value FROM plot_flags WHERE plot_id = ? AND flag_name = ?"
-
-        logger.debug("Próba nawiązania połączenie z getPlotFlag()")
-        getConnection()?.use { conn ->
-            conn.prepareStatement(sql).use { stmt ->
-                stmt.setInt(1, plotId)
-                stmt.setString(2, flagName)
-
-                stmt.executeQuery().use { rs ->
-                    return if (rs.next()) {
-                        PlotFlagData(plotId, flagName, rs.getString("flag_value"))
-                    } else null
-                }
-            }
-        }
-        return null
+    fun getPlotFlag(plotId: Int, flagName: String): PlotFlagData? = try {
+        database().get("plot_flags") {
+            "plot_id" eq plotId
+            "flag_name" eq flagName
+        }?.let { row -> PlotFlagData(plotId, flagName, requireNotNull(row.string("flag_value"))) }
+    } catch (failure: Exception) {
+        logger.err("Błąd podczas pobierania flagi '$flagName' dla plot_id=$plotId: ${failure.message}")
+        null
     }
 
+    fun addPlotMember(plotId: Int, memberUuid: UUID, role: String = "member"): Boolean =
+        protectedMutation { performAddPlotMember(plotId, memberUuid, role) }
 
-    /**
-     * Dodanie gracza do działki
-     *
-     * @param plotId
-     * @param memberUuid
-     * @param role
-     * @return `Boolean`
-     */
-    fun addPlotMember(plotId: Int, memberUuid: UUID, role: String = "member"): Boolean = protectedMutation { performAddPlotMember(plotId, memberUuid, role) }
-
-    private fun performAddPlotMember(plotId: Int, memberUuid: UUID, role: String = "member"): Boolean {
-        val connection = getConnection() ?: run {
-            logger.err("Brak połączenia z bazą danych.")
-            return false
-        }
-
-        val sql = when (dbType.lowercase()) {
-            "sqlite", "postgresql" -> """
-            INSERT INTO plot_members (plot_id, member_uuid, role)
-            VALUES (?, ?, ?)
-            ON CONFLICT(plot_id, member_uuid) DO UPDATE SET role = excluded.role
-        """.trimIndent()
-
-            "h2" -> """
-            MERGE INTO plot_members (plot_id, member_uuid, role)
-            KEY (plot_id, member_uuid)
-            VALUES (?, ?, ?)
-        """.trimIndent()
-
-            else -> """
-            INSERT INTO plot_members (plot_id, member_uuid, role)
-            VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE role = VALUES(role)
-        """.trimIndent() // domyślnie MySQL/MariaDB
-        }
-
-        logger.debug("Próba nawiązania połączenie z addPlotMember()")
-        try {
-            connection.use { conn ->
-                conn.prepareStatement(sql).use { stmt ->
-                    stmt.setInt(1, plotId)
-                    stmt.setString(2, memberUuid.toString())
-                    stmt.setString(3, role)
-                    stmt.executeUpdate()
-                    logger.debug("Dodano członka działki: $memberUuid do plot_id=$plotId jako $role")
-                    return true
-                }
-            }
-        } catch (ex: SQLException) {
-            logger.err("Błąd podczas dodawania członka do działki: ${ex.message}")
-            return false
-        }
+    private fun performAddPlotMember(plotId: Int, memberUuid: UUID, role: String = "member"): Boolean = try {
+        database().upsert(
+            "plot_members",
+            linkedMapOf(
+                "plot_id" to plotId,
+                "member_uuid" to memberUuid.toString(),
+                "role" to role,
+            ),
+            conflictColumns = listOf("plot_id", "member_uuid"),
+            updateColumns = listOf("role"),
+        )
+        true
+    } catch (failure: Exception) {
+        logger.err("Błąd podczas dodawania członka do działki: ${failure.message}")
+        false
     }
 
-    fun removePlotMember(plotId: Int, memberUuid: UUID): Boolean = protectedMutation { performRemovePlotMember(plotId, memberUuid) }
+    fun removePlotMember(plotId: Int, memberUuid: UUID): Boolean =
+        protectedMutation { performRemovePlotMember(plotId, memberUuid) }
 
-    private fun performRemovePlotMember(plotId: Int, memberUuid: UUID): Boolean {
-        val connection = getConnection() ?: run {
-            logger.err("Brak połączenia z bazą danych.")
-            return false
-        }
-
-        val sql = """
-        DELETE FROM plot_members
-        WHERE plot_id = ? AND member_uuid = ?
-    """.trimIndent()
-
-        logger.debug("Próba nawiązania połączenie z removePlotMember()")
-        try {
-            connection.use { conn ->
-                conn.prepareStatement(sql).use { stmt ->
-                    stmt.setInt(1, plotId)
-                    stmt.setString(2, memberUuid.toString())
-                    val affectedRows = stmt.executeUpdate()
-                    logger.debug("Usunięto członka $memberUuid z działki $plotId (zmienione wiersze: $affectedRows)")
-                    return affectedRows > 0
-                }
-            }
-        } catch (ex: SQLException) {
-            logger.err("Błąd podczas usuwania członka działki: ${ex.message}")
-            return false
-        }
+    private fun performRemovePlotMember(plotId: Int, memberUuid: UUID): Boolean = try {
+        database().delete("plot_members") {
+            "plot_id" eq plotId
+            "member_uuid" eq memberUuid.toString()
+        } > 0
+    } catch (failure: Exception) {
+        logger.err("Błąd podczas usuwania członka działki: ${failure.message}")
+        false
     }
 
-    fun transferPlotOwnership(plotId: Int, expectedOwner: UUID, recipient: UUID,
-                              maxPlots: Int, maxRadius: Int, maxArea: Long, maxChunksPerPlot: Int = Int.MAX_VALUE, maxChunksOwned: Int = Int.MAX_VALUE): Boolean = protectedMutation { performTransferPlotOwnership(plotId, expectedOwner, recipient, maxPlots, maxRadius, maxArea, maxChunksPerPlot, maxChunksOwned) }
+    fun transferPlotOwnership(
+        plotId: Int,
+        expectedOwner: UUID,
+        recipient: UUID,
+        maxPlots: Int,
+        maxRadius: Int,
+        maxArea: Long,
+        maxChunksPerPlot: Int = Int.MAX_VALUE,
+        maxChunksOwned: Int = Int.MAX_VALUE,
+    ): Boolean = protectedMutation {
+        performTransferPlotOwnership(
+            plotId, expectedOwner, recipient, maxPlots, maxRadius, maxArea, maxChunksPerPlot, maxChunksOwned,
+        )
+    }
 
-    private fun performTransferPlotOwnership(plotId: Int, expectedOwner: UUID, recipient: UUID,
-                              maxPlots: Int, maxRadius: Int, maxArea: Long, maxChunksPerPlot: Int, maxChunksOwned: Int): Boolean {
+    private fun performTransferPlotOwnership(
+        plotId: Int,
+        expectedOwner: UUID,
+        recipient: UUID,
+        maxPlots: Int,
+        maxRadius: Int,
+        maxArea: Long,
+        maxChunksPerPlot: Int,
+        maxChunksOwned: Int,
+    ): Boolean {
         val plot = getPlotById(plotId) ?: return false
         return claimLocks.computeIfAbsent(plot.world.lowercase(Locale.ROOT)) { ReentrantLock() }.withLock {
-            (getConnection() ?: return@withLock false).use {
-                OwnershipTransfer.transfer(it, plotId, expectedOwner, recipient, maxPlots, maxRadius, maxArea, maxChunksPerPlot, maxChunksOwned)
+            withJdbcConnection {
+                OwnershipTransfer.transfer(
+                    it, plotId, expectedOwner, recipient, maxPlots, maxRadius, maxArea,
+                    maxChunksPerPlot, maxChunksOwned,
+                )
             }
         }
     }
 
-    /**
-     * Zmiana roli członka działki
-     *
-     * @param plotId
-     * @param memberUuid
-     * @param newRole
-     * @return `Boolean`
-     */
-    fun updatePlotMemberRole(plotId: Int, memberUuid: UUID, newRole: String): Boolean = protectedMutation { performUpdatePlotMemberRole(plotId, memberUuid, newRole) }
+    fun updatePlotMemberRole(plotId: Int, memberUuid: UUID, newRole: String): Boolean =
+        protectedMutation { performUpdatePlotMemberRole(plotId, memberUuid, newRole) }
 
-    private fun performUpdatePlotMemberRole(plotId: Int, memberUuid: UUID, newRole: String): Boolean {
-        val connection = getConnection() ?: run {
-            logger.err("Brak połączenia z bazą danych.")
-            return false
-        }
-
-        val sql = """
-        UPDATE plot_members
-        SET role = ?
-        WHERE plot_id = ? AND member_uuid = ?
-    """.trimIndent()
-
-        logger.debug("Próba nawiązania połączenie z updatePlotMemberRole()")
-        try {
-            connection.use { conn ->
-                conn.prepareStatement(sql).use { stmt ->
-                    stmt.setString(1, newRole)
-                    stmt.setInt(2, plotId)
-                    stmt.setString(3, memberUuid.toString())
-                    val affectedRows = stmt.executeUpdate()
-                    logger.debug("Zmieniono rolę członka $memberUuid na $newRole w działce $plotId (zmienione wiersze: $affectedRows)")
-                    return affectedRows > 0
-                }
-            }
-        } catch (ex: SQLException) {
-            logger.err("Błąd podczas aktualizacji roli członka działki: ${ex.message}")
-            return false
-        }
+    private fun performUpdatePlotMemberRole(plotId: Int, memberUuid: UUID, newRole: String): Boolean = try {
+        database().update("plot_members", mapOf("role" to newRole)) {
+            "plot_id" eq plotId
+            "member_uuid" eq memberUuid.toString()
+        } > 0
+    } catch (failure: Exception) {
+        logger.err("Błąd podczas aktualizacji roli członka działki: ${failure.message}")
+        false
     }
 
-    /**
-     * Pobranie listy członków działki
-     *
-     * @param plotId
-     * @return `Map<UUID, String>`
-     */
-    fun getPlotMembers(plotId: Int): List<PlotMemberData> {
-        val result = mutableListOf<PlotMemberData>()
-        val sql = "SELECT member_uuid, role FROM plot_members WHERE plot_id = ?"
-
-        logger.debug("Próba nawiązania połączenie z getPlotMembers()")
-        getConnection()?.use { conn ->
-            conn.prepareStatement(sql).use { stmt ->
-                stmt.setInt(1, plotId)
-
-                stmt.executeQuery().use { rs ->
-                    while (rs.next()) {
-                        result.add(
-                            PlotMemberData(
-                                plotId = plotId,
-                                memberUuid = rs.getString("member_uuid"),
-                                memberRole = rs.getString("role")
-                            )
-                        )
-                    }
-                }
+    fun getPlotMembers(plotId: Int): List<PlotMemberData> = try {
+        database().select("plot_members")
+            .columns("member_uuid", "role")
+            .where { "plot_id" eq plotId }
+            .fetch()
+            .map { row ->
+                PlotMemberData(
+                    plotId = plotId,
+                    memberUuid = requireNotNull(row.string("member_uuid")),
+                    memberRole = requireNotNull(row.string("role")),
+                )
             }
-        }
-        return result
+    } catch (failure: Exception) {
+        logger.err("Błąd podczas pobierania członków działki plot_id=$plotId: ${failure.message}")
+        emptyList()
     }
 
     fun getPlotsFromAllUsers(): List<PlotData> = loadPlotCacheData().plots
 
-    /**
-     * Sprawdzenie, czy gracz posiada już działkę
-     *
-     * @param ownerUuid
-     * @return `Boolean`
-     */
-    fun playerOwnsPlot(ownerUuid: UUID): Boolean {
-        val query = "SELECT 1 FROM plots WHERE owner_uuid = ? LIMIT 1"
-
-        logger.debug("Próba nawiązania połączenie z playerOwnsPlot()")
-        getConnection()?.use { conn ->
-            conn.prepareStatement(query).use { stmt ->
-                stmt.setString(1, ownerUuid.toString())
-                stmt.executeQuery().use { rs ->
-                    return rs.next()
-                }
-            }
-        }
-        return false
+    fun playerOwnsPlot(ownerUuid: UUID): Boolean = try {
+        database().exists("plots") { "owner_uuid" eq ownerUuid.toString() }
+    } catch (failure: Exception) {
+        logger.err("Błąd podczas sprawdzania działek gracza: ${failure.message}")
+        false
     }
 
-    /**
-     * Sprawdzenie, czy działka, a raczej jej teren istnieje w danej lokalizacji X, Z
-     *
-     * @param world
-     * @param x
-     * @param z
-     * @return `Boolean`
-     */
     fun getPlotAtLocation(world: String, x: Int, z: Int): PlotData? =
         loadPlotCacheData().plots.firstOrNull { it.world.equals(world, true) && it.contains(x, z) }
 
-    /**
-     * Pobranie działki po nazwie
-     *
-     * @param name
-     * @param ownerUuid
-     * @return `PlotData?`
-     */
     fun getPlotByName(name: String, ownerUuid: UUID): PlotData? =
         loadPlotCacheData().plots.firstOrNull { it.ownerUuid == ownerUuid && it.name.equals(name, true) }
 
-    /**
-     * Pobranie wszystkich działek gracza (których jest właścicielem lub członkiem)
-     *
-     * @param uuid
-     * @return `List<PlotData>`
-     */
     fun getPlayerPlots(uuid: UUID): List<PlotData> {
         val loaded = loadPlotCacheData()
-        return loaded.plots.filter { it.ownerUuid == uuid || loaded.members[it.id].orEmpty().any { member -> member.memberUuid == uuid.toString() } }
+        return loaded.plots.filter {
+            it.ownerUuid == uuid || loaded.members[it.id].orEmpty().any { member -> member.memberUuid == uuid.toString() }
+        }
     }
 
     fun getPlotsByOwner(owner: UUID): List<PlotData> = loadPlotCacheData().plots.filter { it.ownerUuid == owner }
 
     fun getPlotById(plotId: Int): PlotData? = loadPlotCacheData(plotId).plots.singleOrNull()
 
-    /**
-     * Sprawdzenie, czy działka nie koliduje z innymi działkami w danym świecie
-     *
-     * @param x
-     * @param z
-     * @param radius
-     * @param world
-     * @return `Boolean`
-     */
     fun doesPlotOverlap(x: Int, z: Int, radius: Int, world: String): Boolean {
         val candidate = pl.syntaxdevteam.plotsx.geometry.ClassicGeometry(PlotSegment(x, z, radius))
         return loadPlotCacheData().plots.any { it.world.equals(world, true) && it.geometry.intersects(candidate) }
     }
 
-    /**
-     * Logowanie akcji na działce
-     *
-     */
     fun logPlotAction(entry: PlotLogEntry) {
-        val sql = when (dbType) {
-            "sqlite", "h2" -> """
-            INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp)
-            VALUES (?, ?, ?, ?)
-        """.trimIndent()
-
-            "postgresql" -> """
-            INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp)
-            VALUES (?, ?, ?, ?)
-        """.trimIndent()
-
-            else -> """
-            INSERT INTO plot_logs (plot_id, action, actor_uuid, timestamp)
-            VALUES (?, ?, ?, ?)
-        """.trimIndent()
-        }
-        logger.debug("Próba nawiązania połączenie z logPlotAction()")
-
-        getConnection()?.use { conn ->
-            conn.prepareStatement(sql).use { stmt ->
-                stmt.setInt(1, entry.plotId)
-                stmt.setString(2, entry.action)
-                stmt.setString(3, entry.actorUUID.toString())
-                stmt.setLong(4, entry.timestamp)
-
-                stmt.executeUpdate()
-            }
+        try {
+            database().insert(
+                "plot_logs",
+                linkedMapOf(
+                    "plot_id" to entry.plotId,
+                    "action" to entry.action,
+                    "actor_uuid" to entry.actorUUID.toString(),
+                    "timestamp" to entry.timestamp,
+                ),
+            )
+        } catch (failure: Exception) {
+            logger.err("Błąd podczas zapisywania logu działki ${entry.plotId}: ${failure.message}")
         }
     }
 
-    fun exportDatabase(dialect: String = dbType): File {
+    fun exportDatabase(dialect: String = if (configuredDbType == "mariadb") "mariadb" else dbType): File {
         val target = SqlBackup.dialect(dialect)
-        return (getConnection() ?: error("No database connection.")).use { conn ->
-            SqlBackup.export(conn, target, File(plugin.dataFolder, "dump"))
-        }
+        return withJdbcConnection { conn -> SqlBackup.export(conn, target, File(plugin.dataFolder, "dump")) }
     }
 
     fun importDatabase() = protectedMutation { performImportDatabase() }
 
     private fun performImportDatabase() {
-        (getConnection() ?: error("No database connection.")).use { conn ->
-            SqlBackup.restore(conn, SqlBackup.dialect(dbType), File(plugin.dataFolder, "dump/backup.sql"), allowChunkPlots = true)
+        withJdbcConnection { conn ->
+            SqlBackup.restore(
+                conn,
+                SqlBackup.dialect(dbType),
+                File(plugin.dataFolder, "dump/backup.sql"),
+                allowChunkPlots = true,
+            )
             IdentityMigrationStore.migrateSchema(conn)
             plugin.identityAliasRegistry.replaceAll(IdentityMigrationStore.loadAliases(conn))
             if (OperationJournal.exists(conn)) reportInterruptedOperations(conn)

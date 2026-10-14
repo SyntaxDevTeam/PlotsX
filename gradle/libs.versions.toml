@@ -6,6 +6,7 @@ plugin-deployer = "1.0.6-R0.2-SNAPSHOT"
 foojay-resolver = "1.0.0"
 paper = "1.21.11-R0.1-SNAPSHOT"
 syntaxcore = "1.4.1-R0.1-SNAPSHOT"
+syntaxdb = "0.1.0-R0.1-SNAPSHOT"
 messagehandler = "1.3.0-R0.2-SNAPSHOT"
 cleanerx = "1.5.8"
 aether = "1.1.0"
@@ -16,7 +17,6 @@ mariadb = "3.5.10"
 sqlite = "3.53.4.0"
 postgresql = "42.7.14"
 h2 = "2.5.252"
-hikari = "7.1.0"
 caffeine = "3.3.0"
 ant = "1.10.18"
 luckperms = "5.5"
@@ -33,6 +33,7 @@ junit4 = "4.13.2"
 [libraries]
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paper" }
 syntaxcore = { module = "pl.syntaxdevteam:syntaxcore", version.ref = "syntaxcore" }
+syntaxdb = { module = "pl.syntaxdevteam:syntaxdb", version.ref = "syntaxdb" }
 messagehandler-paper = { module = "pl.syntaxdevteam:messageHandler-paper", version.ref = "messagehandler" }
 cleanerx = { module = "pl.syntaxdevteam:cleanerx", version.ref = "cleanerx" }
 aether-api = { module = "org.eclipse.aether:aether-api", version.ref = "aether" }
@@ -47,7 +48,6 @@ mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version.ref = "mari
 sqlite = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
-hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
 ant = { module = "org.apache.ant:ant", version.ref = "ant" }
 luckperms = { module = "net.luckperms:api", version.ref = "luckperms" }

@@ -15,25 +15,17 @@ description = "Lightweight and versatile player plot protection plugin"
 repositories {
     mavenCentral()
     gradlePluginPortal()
-    maven("https://repo.papermc.io/repository/maven-public/") {
-        name = "papermc-repo"
-    }
-    maven("https://oss.sonatype.org/content/groups/public/") {
-        name = "sonatype"
-    }
+    maven("https://repo.papermc.io/repository/maven-public/") { name = "papermc-repo" }
+    maven("https://oss.sonatype.org/content/groups/public/") { name = "sonatype" }
     maven("https://maven.playpro.com/")
     maven("https://maven.enginehub.org/repo/")
-
-    maven("https://nexus.syntaxdevteam.pl/repository/maven-snapshots/") //SyntaxDevTeam
-    maven("https://nexus.syntaxdevteam.pl/repository/maven-releases/") //SyntaxDevTeam
-
-    maven("https://repo.extendedclip.com/releases/") // PlaceholderAPI
-    maven("https://repo.codemc.org/repository/maven-public/") // VaultUnlockedAPI
-    maven("https://jitpack.io") // VaultAPI
-    maven("https://repo.essentialsx.net/releases/") // EssentialsX
-    maven("https://repo.leavesmc.org/snapshots/") {
-        name = "leavesmc-repo"
-    }
+    maven("https://nexus.syntaxdevteam.pl/repository/maven-snapshots/")
+    maven("https://nexus.syntaxdevteam.pl/repository/maven-releases/")
+    maven("https://repo.extendedclip.com/releases/")
+    maven("https://repo.codemc.org/repository/maven-public/")
+    maven("https://jitpack.io")
+    maven("https://repo.essentialsx.net/releases/")
+    maven("https://repo.leavesmc.org/snapshots/") { name = "leavesmc-repo" }
 }
 
 dependencies {
@@ -41,6 +33,8 @@ dependencies {
     testImplementation(libs.snakeyaml)
     testImplementation(libs.paper.api)
     testImplementation(libs.junit4)
+    testImplementation(libs.syntaxdb)
+    // Direct JDBC dependencies remain test-only for low-level persistence contract tests.
     testImplementation(libs.sqlite)
     testImplementation(libs.h2)
     testRuntimeOnly(libs.mariadb)
@@ -48,6 +42,7 @@ dependencies {
 
     compileOnly(libs.paper.api)
     compileOnly(libs.syntaxcore)
+    compileOnly(libs.syntaxdb)
     compileOnly(libs.messagehandler.paper)
     compileOnly(libs.cleanerx)
     compileOnly(libs.aether.api)
@@ -58,40 +53,23 @@ dependencies {
     compileOnly(libs.adventure.gson)
     compileOnly(libs.adventure.plain)
     compileOnly(libs.adventure.ansi)
-    compileOnly(libs.mariadb)
-    compileOnly(libs.sqlite)
-    compileOnly(libs.postgresql)
-    compileOnly(libs.h2)
-    compileOnly(libs.hikari)
     compileOnly(libs.luckperms)
     compileOnly(libs.placeholderapi)
     compileOnly(libs.miniplaceholders)
     compileOnly(libs.vault)
     compileOnly(libs.vault.unlocked)
     compileOnly(libs.coreprotect)
-    compileOnly(libs.worldguard.bukkit) {
-        isTransitive = false
-    }
-    compileOnly(libs.worldguard.core) {
-        isTransitive = false
-    }
+    compileOnly(libs.worldguard.bukkit) { isTransitive = false }
+    compileOnly(libs.worldguard.core) { isTransitive = false }
     // WorldEdit 7.4.x is compiled for Java 25. PlotsX still targets Java 21.
-    compileOnly(libs.worldedit.bukkit) {
-        isTransitive = false
-    }
-    compileOnly(libs.worldedit.core) {
-        isTransitive = false
-    }
+    compileOnly(libs.worldedit.bukkit) { isTransitive = false }
+    compileOnly(libs.worldedit.core) { isTransitive = false }
 }
 
-kotlin {
-    jvmToolchain(21)
-}
+kotlin { jvmToolchain(21) }
 
 tasks {
-    build {
-        dependsOn("shadowJar")
-    }
+    build { dependsOn("shadowJar") }
     runServer {
         minecraftVersion("1.20.6")
         runDirectory(file("run/paper"))
@@ -101,6 +79,7 @@ tasks {
 
 val runtimeLibraryVersions = mapOf(
     "syntaxcoreVersion" to libs.versions.syntaxcore.get(),
+    "syntaxdbVersion" to libs.versions.syntaxdb.get(),
     "messagehandlerVersion" to libs.versions.messagehandler.get(),
     "caffeineVersion" to libs.versions.caffeine.get(),
     "aetherVersion" to libs.versions.aether.get(),
@@ -108,23 +87,14 @@ val runtimeLibraryVersions = mapOf(
     "gsonVersion" to libs.versions.gson.get(),
     "adventureVersion" to libs.versions.adventure.get(),
     "antVersion" to libs.versions.ant.get(),
-    "mariadbVersion" to libs.versions.mariadb.get(),
-    "sqliteVersion" to libs.versions.sqlite.get(),
-    "postgresqlVersion" to libs.versions.postgresql.get(),
-    "h2Version" to libs.versions.h2.get(),
-    "hikariVersion" to libs.versions.hikari.get(),
 )
 
 tasks.processResources {
     val props = mapOf("version" to project.version, "description" to project.description)
     inputs.properties(props + runtimeLibraryVersions)
     filteringCharset = "UTF-8"
-    filesMatching("paper-plugin.yml") {
-        expand(props)
-    }
-    filesMatching("paper-libraries.yml") {
-        expand(runtimeLibraryVersions)
-    }
+    filesMatching("paper-plugin.yml") { expand(props) }
+    filesMatching("paper-libraries.yml") { expand(runtimeLibraryVersions) }
 }
 
 tasks.named<ShadowJar>("shadowJar") {
@@ -133,13 +103,8 @@ tasks.named<ShadowJar>("shadowJar") {
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     mergeServiceFiles()
-
-    filesMatching("META-INF/services/**") {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
-    filesMatching("META-INF/*.kotlin_module") {
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
+    filesMatching("META-INF/services/**") { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
+    filesMatching("META-INF/*.kotlin_module") { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
 }
 
 tasks.register("buildAll") {
@@ -159,8 +124,8 @@ val apiJar = tasks.register<Jar>("apiJar") {
 tasks.named("assemble") { dependsOn(apiJar) }
 
 plugindeployer {
-    paper { dir = "/home/debian/poligon/Paper/26.2/plugins" } //ostatnia wersja dla Paper
-    folia { dir = "/home/debian/poligon/Folia/26.2/plugins" } //ostatnia wersja dla Folia
+    paper { dir = "/home/debian/poligon/Paper/26.2/plugins" }
+    folia { dir = "/home/debian/poligon/Folia/26.2/plugins" }
 }
 
 val compileLiveTest = tasks.register<JavaCompile>("compileLiveTest") {

@@ -8,6 +8,7 @@ repositories:
 
 libraries:
   - pl.syntaxdevteam:syntaxcore:${syntaxcoreVersion}
+  - pl.syntaxdevteam:syntaxdb:${syntaxdbVersion}
   - pl.syntaxdevteam:messageHandler-paper:${messagehandlerVersion}
   - com.github.ben-manes.caffeine:caffeine:${caffeineVersion}
   - org.eclipse.aether:aether-api:${aetherVersion}
@@ -19,8 +20,3 @@ libraries:
   - net.kyori:adventure-text-serializer-plain:${adventureVersion}
   - net.kyori:adventure-text-serializer-ansi:${adventureVersion}
   - org.apache.ant:ant:${antVersion}
-  - org.mariadb.jdbc:mariadb-java-client:${mariadbVersion}
-  - org.xerial:sqlite-jdbc:${sqliteVersion}
-  - org.postgresql:postgresql:${postgresqlVersion}
-  - com.h2database:h2:${h2Version}
-  - com.zaxxer:HikariCP:${hikariVersion}

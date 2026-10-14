@@ -2,7 +2,6 @@ package pl.syntaxdevteam.plotsx.databases
 
 import pl.syntaxdevteam.plotsx.PlotsX
 import java.sql.Connection
-import java.sql.DriverManager
 import java.util.UUID
 
 /** Player-selected teleport point stored independently from plot geometry. */
@@ -53,7 +52,7 @@ internal object PlotSpawnRepository {
                     while (rows.next()) {
                         put(
                             rows.getInt("plot_id"),
-                            PlotTeleportSpawn(rows.getInt("x"), rows.getInt("y"), rows.getInt("z"))
+                            PlotTeleportSpawn(rows.getInt("x"), rows.getInt("y"), rows.getInt("z")),
                         )
                     }
                 }
@@ -61,54 +60,21 @@ internal object PlotSpawnRepository {
         }
     }
 
-    /**
-     * Rare metadata write. The caller must invoke this off the server thread.
-     * A short dedicated JDBC connection avoids exposing DatabaseHandler internals while ordinary
-     * protection and teleport reads remain entirely cache-backed.
-     */
+    /** Rare metadata write. The caller invokes this off the server thread; SyntaxDB owns the connection. */
     fun save(
         plugin: PlotsX,
         plotId: Int,
         expectedOwner: UUID,
         actor: UUID,
-        spawn: PlotTeleportSpawn
+        spawn: PlotTeleportSpawn,
     ): SaveResult = try {
-        openConnection(plugin).use { conn ->
-            migrate(conn)
-            save(conn, plotId, expectedOwner, actor, spawn)
+        plugin.databaseHandler.withJdbcConnection { connection ->
+            migrate(connection)
+            save(connection, plotId, expectedOwner, actor, spawn)
         }
     } catch (failure: Exception) {
         plugin.logger.err("Teleport spawn update failed for plot $plotId: ${failure.message}")
         SaveResult.DatabaseError
-    }
-
-    private fun openConnection(plugin: PlotsX): Connection {
-        val type = plugin.config.getString("database.type")?.lowercase() ?: "sqlite"
-        val dbName = plugin.config.getString("database.sql.dbname") ?: plugin.name
-        val user = plugin.config.getString("database.sql.username") ?: "ROOT"
-        val password = plugin.config.getString("database.sql.password") ?: "U5eV3ryStr0ngP4ssw0rd"
-        val connection = when (type) {
-            "mysql", "mariadb" -> DriverManager.getConnection(
-                "jdbc:mariadb://${plugin.config.getString("database.sql.host")}:${plugin.config.getString("database.sql.port")}/$dbName",
-                user,
-                password
-            )
-            "postgresql" -> DriverManager.getConnection(
-                "jdbc:postgresql://${plugin.config.getString("database.sql.host")}:${plugin.config.getString("database.sql.port")}/$dbName",
-                user,
-                password
-            )
-            "sqlite" -> DriverManager.getConnection("jdbc:sqlite:${plugin.dataFolder}/$dbName.db")
-            "h2" -> DriverManager.getConnection("jdbc:h2:./${plugin.dataFolder}/$dbName", user, password)
-            else -> throw IllegalArgumentException("Unsupported database type: $type")
-        }
-        if (type == "sqlite") {
-            connection.createStatement().use {
-                it.execute("PRAGMA journal_mode=WAL;")
-                it.execute("PRAGMA foreign_keys=ON;")
-            }
-        }
-        return connection
     }
 
     private fun save(
@@ -116,9 +82,9 @@ internal object PlotSpawnRepository {
         plotId: Int,
         expectedOwner: UUID,
         actor: UUID,
-        spawn: PlotTeleportSpawn
+        spawn: PlotTeleportSpawn,
     ): SaveResult {
-        require(conn.autoCommit) { "Teleport-spawn update requires a dedicated auto-commit connection" }
+        require(conn.autoCommit) { "Teleport-spawn update requires an auto-commit connection" }
         conn.autoCommit = false
         try {
             conn.prepareStatement("DELETE FROM plot_spawns WHERE plot_id = ?").use {
