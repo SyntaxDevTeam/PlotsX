@@ -32,7 +32,7 @@ This README describes the current `main` branch and is intended to serve as the 
 | **Custom teleport point** | Plot owners can choose a safe location inside their plot to use as its teleport destination. |
 | **Native Paper dialogs** | Plot renaming uses Paper's native Dialog API on Paper 1.21.7+ with a compatible chat fallback on older servers. |
 | **Safe paid expansion** | Vault/VaultUnlocked economies can charge for expansion. Purchase state is journaled so land and money changes can be reconciled safely. |
-| **Multiple databases** | SQLite, H2, MySQL, MariaDB and PostgreSQL are supported. |
+| **Multiple databases** | SQLite, MySQL, MariaDB and PostgreSQL are supported through SyntaxDB. |
 | **Public API v2** | Java and Kotlin integrations can query and work with PlotsX through the dedicated API artifact. |
 
 ### Designed for player-owned worlds
@@ -149,7 +149,7 @@ On Paper 1.21.7+, renaming uses a native Minecraft dialog. Older versions retain
 
 ## 🗄️ Storage and reliability
 
-PlotsX keeps protection data cache-backed for normal gameplay and supports SQLite, H2, MySQL, MariaDB and PostgreSQL for persistent storage.
+PlotsX keeps protection data cache-backed for normal gameplay and supports SQLite, MySQL, MariaDB and PostgreSQL for persistent storage through SyntaxDB.
 
 Expansion purchases use a durable operation journal and transactional land commits. This makes failures easier to recover from and avoids treating an uncertain economy response as permission to repeat a debit blindly.
 

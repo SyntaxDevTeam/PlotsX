@@ -97,7 +97,7 @@ Nie używa się już `levels` ani `step`. Przy aktualizacji usuń `levels` i ust
 
 ## Zapis danych
 
-Warstwą połączeń, poolingiem, lifecycle oraz sterownikami JDBC zarządza teraz biblioteka **SyntaxDB**. PlotsX nie tworzy już własnego `HikariDataSource` ani osobnych połączeń przez `DriverManager` w runtime.
+Warstwą połączeń, poolingiem, lifecycle oraz sterownikami JDBC zarządza biblioteka **SyntaxDB**. PlotsX nie tworzy własnego `HikariDataSource` ani osobnych połączeń przez `DriverManager` w runtime.
 
 | Ustawienie | Znaczenie |
 | --- | --- |
@@ -110,9 +110,7 @@ Warstwą połączeń, poolingiem, lifecycle oraz sterownikami JDBC zarządza ter
 
 Na prosty start pozostaw SQLite. Przy domyślnej nazwie dane znajdują się w `plugins/PlotsX/my_database.db`. SQLite nie wymaga hosta, portu, loginu ani hasła. Dla SQLite SyntaxDB utrzymuje `WAL`, klucze obce oraz timeout oczekiwania na blokadę.
 
-**H2 nie jest już obsługiwane jako aktywna baza runtime PlotsX.** Format H2 pozostaje rozpoznawany przez mechanizm backupu/konwersji SQL, aby umożliwić migrację starszych danych. Jeżeli obecna instalacja używa `database.type: h2`, przed aktualizacją wyeksportuj dane i przenieś je do SQLite, MySQL/MariaDB albo PostgreSQL.
-
-Dla zewnętrznej bazy wpisz dane otrzymane od hostingu. Zmiana nazwy lub rodzaju bazy **nie przenosi działek**. Zrób kopię danych przed taką zmianą, a potem uruchom serwer ponownie.
+PlotsX akceptuje wyłącznie wymienione wyżej typy baz danych. Zmiana nazwy lub rodzaju bazy **nie przenosi działek**. Zrób kopię danych przed taką zmianą, a potem uruchom serwer ponownie.
 
 ## Język i skróty
 

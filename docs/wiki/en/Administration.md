@@ -22,7 +22,7 @@ Using a regular player account, create a plot, add a friend, protect a chest, an
 
 ## Backups
 
-`/ptx export [mysql|mariadb|sqlite|postgresql|h2]` writes a portable backup to `plugins/PlotsX/dump/backup.sql`. It includes classic and chunk plots, members, flags, history, and the operation journal. Without an argument, it uses the syntax of the current database. Keep a separate world backup as well — the PlotsX backup does not contain world blocks.
+`/ptx export [mysql|mariadb|sqlite|postgresql]` writes a portable backup to `plugins/PlotsX/dump/backup.sql`. It includes classic and chunk plots, members, flags, history, and the operation journal. Without an argument, it uses the syntax of the current database. Keep a separate world backup as well — the PlotsX backup does not contain world blocks.
 
 For the default SQLite setup:
 
@@ -32,7 +32,7 @@ For the default SQLite setup:
 4. Store the backup elsewhere, preferably with a date in its name.
 5. Start the server again.
 
-For H2, also make the backup while the server is stopped. With an external database, create an additional database-level backup using your hosting or database tools. Keep the plugin folder and worlds from the same point in time.
+With an external database, create an additional database-level backup using your hosting or database tools. Keep the plugin folder and worlds from the same point in time.
 
 To restore data, stop the server, preserve the current state as another backup, then restore matching plugin, database, and world data. Start the server and verify the plots.
 

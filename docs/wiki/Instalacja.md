@@ -24,11 +24,11 @@ Domyślna baza SQLite zapisuje dane lokalnie. Nie musisz zakładać osobnej bazy
 
 ## Kopia zapasowa SQL
 
-Komenda `/ptx export [mysql|mariadb|sqlite|postgresql|h2]` zapisuje działki, segmenty i chunki, członków, flagi, historię, dziennik płatności, aliasy tożsamości oraz punkty teleportacji do `plugins/PlotsX/dump/backup.sql`. Bez argumentu używa składni bieżącej bazy. Na przykład `/ptx export mysql` przygotowuje kopię dla MySQL lub MariaDB, również gdy obecnie korzystasz z SQLite. Kolejny udany eksport zastępuje plik, więc wcześniejsze kopie przenieś w inne miejsce.
+Komenda `/ptx export [mysql|mariadb|sqlite|postgresql]` zapisuje działki, segmenty i chunki, członków, flagi, historię, dziennik płatności, aliasy tożsamości oraz punkty teleportacji do `plugins/PlotsX/dump/backup.sql`. Bez argumentu używa składni bieżącej bazy. Na przykład `/ptx export mysql` przygotowuje kopię dla MySQL lub MariaDB, również gdy obecnie korzystasz z SQLite. Kolejny udany eksport zastępuje plik, więc wcześniejsze kopie przenieś w inne miejsce.
 
 `/ptx import` odtwarza ten plik w aktualnie skonfigurowanej bazie i **zastępuje obecne dane PlotsX**. Składnia kopii musi pasować do docelowego silnika. Przy migracji najpierw wykonaj eksport ze składnią docelową, zmień konfigurację bazy, uruchom serwer ponownie i wykonaj import. Import obsługuje format kopii generowany przez tę wersję PlotsX, nie dowolne pliki SQL. Wgrywaj wyłącznie zaufane kopie.
 
-Wykonuj kopie i przywracanie podczas prac administracyjnych, bez graczy i innych zapisów do bazy. Przed importem zachowaj kopię bieżącej bazy. Błąd ładowania danych wycofuje transakcję; tworzenie brakujących tabel i ustawianie liczników H2 nie jest częścią tej gwarancji. Po udanym imporcie plugin odświeża pamięć podręczną.
+Wykonuj kopie i przywracanie podczas prac administracyjnych, bez graczy i innych zapisów do bazy. Przed importem zachowaj kopię bieżącej bazy. Błąd ładowania danych wycofuje transakcję tam, gdzie pozwala na to silnik. Po udanym imporcie plugin odświeża pamięć podręczną.
 
 To kopia bazy PlotsX, a nie całego serwera: światy, konfigurację i dane innych pluginów kopiuj osobno. Komendy wymagają uprawnienia `plotsx.cmd.ptx`.
 

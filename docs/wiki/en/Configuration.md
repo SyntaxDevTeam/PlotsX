@@ -96,7 +96,7 @@ The old `levels` and `step` settings are no longer used. When upgrading, remove 
 
 ## Data storage
 
-Connection management, pooling, lifecycle handling, and JDBC drivers are now owned by **SyntaxDB**. PlotsX no longer creates its own `HikariDataSource` or opens separate runtime connections through `DriverManager`.
+Connection pooling, lifecycle, and JDBC driver management are handled by **SyntaxDB**. PlotsX no longer creates its own `HikariDataSource` or separate `DriverManager` connections at runtime.
 
 | Setting | Meaning |
 | --- | --- |
@@ -107,11 +107,9 @@ Connection management, pooling, lifecycle handling, and JDBC drivers are now own
 | `database.sql.username` | Database username. |
 | `database.sql.password` | Database password. |
 
-For a simple setup, keep SQLite. With the default name, data is stored in `plugins/PlotsX/my_database.db`. SQLite does not require a host, port, username, or password. SyntaxDB keeps WAL mode, foreign-key enforcement, and a lock wait timeout enabled for SQLite.
+For a simple setup, keep SQLite. With the default name, data is stored in `plugins/PlotsX/my_database.db`. SQLite does not require a host, port, username, or password. SyntaxDB keeps WAL mode, foreign keys, and a lock wait timeout enabled for SQLite.
 
-**H2 is no longer supported as a live PlotsX runtime backend.** The H2 format remains recognized by the SQL backup/conversion layer so older data can still be migrated. If the current installation uses `database.type: h2`, export the data before upgrading and move it to SQLite, MySQL/MariaDB, or PostgreSQL.
-
-For an external database, enter the credentials provided by your host. Changing the database name or engine **does not migrate plots**. Back up the data before making such a change, then restart the server.
+PlotsX accepts only the database types listed above. Changing the database name or engine **does not migrate plots**. Back up the data before making such a change, then restart the server.
 
 ## Language and aliases
 

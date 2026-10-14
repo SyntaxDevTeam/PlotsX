@@ -22,7 +22,7 @@ Zwykłym kontem gracza utwórz działkę, dodaj znajomego, zabezpiecz skrzynię 
 
 ## Kopie zapasowe
 
-`/ptx export [mysql|mariadb|sqlite|postgresql|h2]` zapisuje do
+`/ptx export [mysql|mariadb|sqlite|postgresql]` zapisuje do
 `plugins/PlotsX/dump/backup.sql` przenośny backup działek klasycznych i chunkowych,
 członków, flag, historii oraz dziennika operacji. Bez argumentu używa dialektu
 bieżącej bazy. Nadal zachowuj osobną kopię świata — backup PlotsX nie zawiera bloków.
@@ -35,7 +35,7 @@ Dla domyślnego SQLite:
 4. Zapisz kopię w osobnym miejscu, najlepiej z datą.
 5. Uruchom serwer.
 
-Dla H2 również wykonuj kopię przy wyłączonym serwerze. Przy zewnętrznej bazie zrób dodatkowo jej kopię narzędziem hostingu lub bazy. Zachowaj folder pluginu i światy z tego samego momentu.
+Przy zewnętrznej bazie zrób dodatkowo jej kopię narzędziem hostingu lub bazy. Zachowaj folder pluginu i światy z tego samego momentu.
 
 Aby przywrócić dane, wyłącz serwer, zachowaj kopię obecnego stanu, a następnie przywróć pasujące do siebie dane pluginu, bazy i światów. Uruchom serwer i sprawdź działki.
 

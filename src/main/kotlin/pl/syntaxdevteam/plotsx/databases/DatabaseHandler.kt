@@ -76,10 +76,6 @@ class DatabaseHandler(private val plugin: PlotsX) {
             "mysql" -> DatabaseType.MYSQL
             "postgresql" -> DatabaseType.POSTGRESQL
             "sqlite" -> DatabaseType.SQLITE
-            "h2" -> throw IllegalArgumentException(
-                "database.type=h2 is no longer a runtime backend after the SyntaxDB migration. " +
-                    "Use sqlite, mysql/mariadb or postgresql; legacy H2 backup conversion remains available."
-            )
             else -> throw IllegalArgumentException(
                 "Unsupported database type '$configuredDbType'. Supported by PlotsX: sqlite, mysql, mariadb, postgresql."
             )
