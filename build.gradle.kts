@@ -34,6 +34,7 @@ dependencies {
     testImplementation(libs.paper.api)
     testImplementation(libs.junit4)
     testImplementation(libs.syntaxdb)
+    testImplementation(libs.syntaxcore)
     // Direct JDBC dependencies remain test-only for low-level persistence contract tests.
     testImplementation(libs.sqlite)
     testRuntimeOnly(libs.mariadb)

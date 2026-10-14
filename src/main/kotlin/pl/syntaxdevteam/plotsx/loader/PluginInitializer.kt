@@ -27,7 +27,6 @@ import pl.syntaxdevteam.plotsx.listener.RenamePlotChatListener
 class PluginInitializer(private val plugin: PlotsX) {
 
     fun onEnable() {
-        setUpLogger()
         setupCompatibility()
         setupConfig()
         setupUUID()
@@ -42,11 +41,6 @@ class PluginInitializer(private val plugin: PlotsX) {
         plugin.logger.err(plugin.pluginMeta.name + " " + plugin.pluginMeta.version + " has been disabled ☹️")
     }
 
-    private fun setUpLogger() {
-        plugin.pluginConfig = plugin.config
-        plugin.logger = SyntaxCore.logger
-    }
-
     private fun setupCompatibility() {
         plugin.versionChecker = VersionChecker(plugin)
         plugin.versionCompatibility = VersionCompatibility(plugin.versionChecker)
@@ -54,7 +48,12 @@ class PluginInitializer(private val plugin: PlotsX) {
     }
 
     private fun setupConfig() {
-        plugin.saveDefaultConfig()
+        plugin.configManager = pl.syntaxdevteam.core.config.ConfigManager(
+            plugin = plugin,
+            logger = plugin.logger,
+            initialVersion = 100,
+            targetVersion = 103
+        ).registerMigrations(pl.syntaxdevteam.plotsx.common.ConfigMigrations.steps())
         plugin.configHandler = ConfigHandler(plugin)
         plugin.configHandler.verifyAndUpdateConfig()
         plugin.configHandler.verifyAndUpdateLanguageFiles()

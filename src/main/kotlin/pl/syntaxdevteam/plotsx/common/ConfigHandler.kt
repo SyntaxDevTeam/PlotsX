@@ -10,21 +10,10 @@ class ConfigHandler(private val plugin: PlotsX) {
     private val bundledLanguages = listOf("pl", "en")
 
     fun verifyAndUpdateConfig() {
-        val confFile = File(plugin.dataFolder, "config.yml")
-        val defaultConfStream = plugin.getResource("config.yml")
-
-        if (defaultConfStream == null) {
-            plugin.logger.err("Default $confFile file not found in plugin resources!")
-            return
-        }
-
-        val defaultConfig = YamlConfiguration.loadConfiguration(defaultConfStream.reader())
-        val currentConfig = YamlConfiguration.loadConfiguration(confFile)
-
-        if (synchronizeSections(defaultConfig, currentConfig)) {
-            plugin.logger.success("Updating $confFile file with missing entries.")
-            currentConfig.save(confFile)
-        }
+        plugin.configManager.load()
+        // PlotsX services consume Bukkit's view, not the separate BoostedYAML document.
+        plugin.reloadConfig()
+        plugin.pluginConfig = plugin.config
     }
 
     /**
@@ -43,14 +32,13 @@ class ConfigHandler(private val plugin: PlotsX) {
                 return@forEach
             }
 
+            val defaultMessages = defaultStream.reader().use { reader ->
+                YamlConfiguration.loadConfiguration(reader)
+            }
             if (!messageFile.exists()) {
                 messageFile.parentFile.mkdirs()
                 plugin.saveResource(resourcePath, false)
                 return@forEach
-            }
-
-            val defaultMessages = defaultStream.reader().use { reader ->
-                YamlConfiguration.loadConfiguration(reader)
             }
             val currentMessages = YamlConfiguration.loadConfiguration(messageFile)
 

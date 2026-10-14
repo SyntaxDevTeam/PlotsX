@@ -61,6 +61,7 @@ class PlotsX : JavaPlugin() {
     lateinit var pluginsManager: PluginManagerX
 
     lateinit var uuidManager: UUIDManager
+    lateinit var configManager: pl.syntaxdevteam.core.config.ConfigManager
     lateinit var configHandler: ConfigHandler
     lateinit var pluginConfig: FileConfiguration
     lateinit var statsCollector: StatsCollector
@@ -105,6 +106,7 @@ class PlotsX : JavaPlugin() {
             ModrinthSource("")
         )
         SyntaxCore.init(this, versionType = "paper")
+        logger = SyntaxCore.logger
         borderVisualizer = pl.syntaxdevteam.plotsx.visualization.PlotBorderVisualizer(this)
         server.pluginManager.registerEvents(borderVisualizer, this)
         pluginInitializer = PluginInitializer(this)
@@ -153,6 +155,7 @@ class PlotsX : JavaPlugin() {
 
         if (::databaseHandler.isInitialized) databaseHandler.closeConnection()
         if (::pluginInitializer.isInitialized) pluginInitializer.onDisable()
+        SyntaxCore.close()
     }
 
     /**
@@ -163,8 +166,8 @@ class PlotsX : JavaPlugin() {
     fun onReload(completion: (Exception?) -> Unit = {}) {
         val candidate = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(dataFolder, "config.yml"))
         require(validateClaimConfig(candidate) == claimMode) { "Changing plots.claiming.mode requires a server restart" }
+        configHandler.verifyAndUpdateConfig()
         if (::borderVisualizer.isInitialized) borderVisualizer.close()
-        super.reloadConfig()
 
         schedulerAdapter.runAsync(Runnable {
             val failure = try {
