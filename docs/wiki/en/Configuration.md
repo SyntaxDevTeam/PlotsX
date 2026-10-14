@@ -96,16 +96,20 @@ The old `levels` and `step` settings are no longer used. When upgrading, remove 
 
 ## Data storage
 
+Connection management, pooling, lifecycle handling, and JDBC drivers are now owned by **SyntaxDB**. PlotsX no longer creates its own `HikariDataSource` or opens separate runtime connections through `DriverManager`.
+
 | Setting | Meaning |
 | --- | --- |
-| `database.type` | Database engine: `sqlite`, `h2`, `mysql`, `mariadb`, or `postgresql`. |
+| `database.type` | Database engine: `sqlite`, `mysql`, `mariadb`, or `postgresql`. `mariadb` is handled as a MySQL-compatible dialect alias. |
 | `database.sql.host` | Address of the external database server. |
 | `database.sql.port` | Database port. Defaults to 3306; for a typical PostgreSQL setup use 5432. |
 | `database.sql.dbname` | Database name; for SQLite this is also the local filename without the `.db` suffix. |
 | `database.sql.username` | Database username. |
 | `database.sql.password` | Database password. |
 
-For a simple setup, keep SQLite. With the default name, data is stored in `plugins/PlotsX/my_database.db`. SQLite does not require a host, port, username, or password. H2 also stores data locally but uses login settings.
+For a simple setup, keep SQLite. With the default name, data is stored in `plugins/PlotsX/my_database.db`. SQLite does not require a host, port, username, or password. SyntaxDB keeps WAL mode, foreign-key enforcement, and a lock wait timeout enabled for SQLite.
+
+**H2 is no longer supported as a live PlotsX runtime backend.** The H2 format remains recognized by the SQL backup/conversion layer so older data can still be migrated. If the current installation uses `database.type: h2`, export the data before upgrading and move it to SQLite, MySQL/MariaDB, or PostgreSQL.
 
 For an external database, enter the credentials provided by your host. Changing the database name or engine **does not migrate plots**. Back up the data before making such a change, then restart the server.
 
