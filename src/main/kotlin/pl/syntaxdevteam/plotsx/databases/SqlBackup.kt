@@ -9,7 +9,7 @@ import pl.syntaxdevteam.plotsx.identity.IdentityMigrationStore
 
 /** Versioned, one-statement-per-line SQL. Text is UTF-8 hex so delimiters are unambiguous. */
 internal object SqlBackup {
-    val dialects = listOf("mysql", "mariadb", "sqlite", "postgresql", "h2")
+    val dialects = listOf("mysql", "mariadb", "sqlite", "postgresql")
     private val tables = listOf("plots", "plot_segments", "plot_expansion_levels", "plot_members", "plot_flags", "plot_logs")
 
     fun dialect(value: String): String {
@@ -24,6 +24,7 @@ internal object SqlBackup {
             while (rows.next()) if (rows.getString("TABLE_NAME").equals(table, true)) found = true
             found
         }
+
     private fun literal(value: Any?, dialect: String): String = when (value) {
         null -> "NULL"
         is Number -> value.toString()
@@ -33,7 +34,6 @@ internal object SqlBackup {
             when (dialect) {
                 "mysql" -> "CONVERT(X'$hex' USING utf8mb4)"
                 "postgresql" -> "convert_from(decode('$hex', 'hex'), 'UTF8')"
-                "h2" -> "CAST(X'$hex' AS VARCHAR)"
                 else -> "CAST(X'$hex' AS TEXT)"
             }
         }
@@ -85,7 +85,6 @@ internal object SqlBackup {
                             while (rows.next()) {
                                 val values = columns.mapIndexed { index, column ->
                                     val value = rows.getObject(index + 1)
-                                    // SQLite stores epoch times as TEXT; other schemas use BIGINT.
                                     if (value != null && (column == "creation_time" || column == "timestamp")) {
                                         value.toString().toLong().toString()
                                     } else literal(value, dialect)
@@ -98,13 +97,6 @@ internal object SqlBackup {
                 for ((table, column) in listOf("plots" to "plot_id", "plot_logs" to "id")) {
                     if (dialect == "postgresql") {
                         line("SELECT setval(pg_get_serial_sequence('$table', '$column'), COALESCE((SELECT MAX($column) FROM $table), 0) + 1, false);")
-                    } else if (dialect == "h2") {
-                        conn.createStatement().use { statement ->
-                            statement.executeQuery("SELECT COALESCE(MAX($column), 0) + 1 FROM $table").use { rows ->
-                                rows.next()
-                                line("ALTER TABLE $table ALTER COLUMN $column RESTART WITH ${rows.getLong(1)};")
-                            }
-                        }
                     }
                 }
                 line("COMMIT;")
@@ -123,7 +115,6 @@ internal object SqlBackup {
     }
 
     fun restore(conn: Connection, dialect: String, file: File, allowChunkPlots: Boolean = false) {
-        // Validate the entire file before modifying the database. Only our versioned format is supported.
         val lines = file.readLines(Charsets.UTF_8)
         val classicBackup = lines.firstOrNull() == "-- PlotsX SQL backup v6 dialect=$dialect"
         val spawnBackup = (classicBackup && lines.any { it.startsWith("CREATE TABLE IF NOT EXISTS plot_spawns ") }) || lines.firstOrNull() == "-- PlotsX SQL backup v5 dialect=$dialect"
@@ -156,9 +147,7 @@ internal object SqlBackup {
         if (journalBackup) OperationJournal.migrate(conn)
         if (identityBackup) IdentityMigrationStore.migrateSchema(conn)
         if (spawnBackup) PlotSpawnRepository.migrate(conn)
-        conn.createStatement().use { statement ->
-            schema.forEach { statement.execute(it) }
-        }
+        conn.createStatement().use { statement -> schema.forEach { statement.execute(it) } }
         val chunkTarget = DatabaseMigrations.isChunkSchema(conn)
         conn.autoCommit = false
         try {
@@ -168,8 +157,7 @@ internal object SqlBackup {
                 if (PlotSpawnRepository.exists(conn)) statement.execute("DELETE FROM plot_spawns")
                 if (chunkTarget) statement.execute("DELETE FROM plot_chunks")
                 statement.execute("DELETE FROM plot_segments")
-                // H2 ALTER TABLE commits implicitly: reset identities only after all data has loaded.
-                body.drop(1).filterNot { it.startsWith("ALTER TABLE ") }.forEach { statement.execute(it) }
+                body.drop(1).forEach { statement.execute(it) }
             }
             if (chunkTarget) {
                 val geometries = PlotGeometryRepository.readAll(conn)
@@ -188,9 +176,6 @@ internal object SqlBackup {
             throw failure
         } finally {
             conn.autoCommit = true
-        }
-        conn.createStatement().use { statement ->
-            body.filter { it.startsWith("ALTER TABLE ") }.forEach { statement.execute(it) }
         }
     }
 }

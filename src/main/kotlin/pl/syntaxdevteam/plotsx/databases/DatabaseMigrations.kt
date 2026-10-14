@@ -90,7 +90,7 @@ internal object DatabaseMigrations {
         }
     }
 
-    /** H2/MySQL DDL may commit implicitly: every step is repeatable; the marker is written last. */
+    /** Server DDL may commit implicitly; every step is repeatable and the marker is written last. */
     private fun migrateServerDatabase(conn: Connection, dialect: String) {
         val existing = columns(conn)
         if (existing.isNotEmpty()) {
@@ -141,14 +141,12 @@ internal object DatabaseMigrations {
 
     private fun finish(conn: Connection, dialect: String) {
         conn.createStatement().use { stmt -> DatabaseSchema.chunkStatements(dialect).forEach { stmt.execute(it) } }
-        val table = if (dialect == "h2") "PLOT_CHUNKS" else "plot_chunks"
-        val hasIndex = conn.metaData.getIndexInfo(conn.catalog, conn.schema, table, false, false).use { rows ->
+        val hasIndex = conn.metaData.getIndexInfo(conn.catalog, conn.schema, "plot_chunks", false, false).use { rows ->
             var found = false
             while (rows.next()) if (rows.getString("INDEX_NAME").equals("idx_plot_chunks_plot_id", true)) found = true
             found
         }
         if (!hasIndex) conn.createStatement().use { it.execute("CREATE INDEX idx_plot_chunks_plot_id ON plot_chunks(plot_id)") }
-        // Loading validates each geometry before marking the migration complete.
         PlotGeometryRepository.readAll(conn)
         conn.prepareStatement("SELECT name FROM schema_migrations WHERE version = ?").use { stmt ->
             stmt.setInt(1, VERSION)

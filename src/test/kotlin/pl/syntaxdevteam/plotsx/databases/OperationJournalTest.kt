@@ -13,18 +13,19 @@ import java.util.UUID
 class OperationJournalTest {
     private val owner = UUID.randomUUID()
     private val limits = ChunkExpansionTransaction.Limits(10000, 32, 64)
-    private fun connect(type: String): Connection = DriverManager.getConnection(
-        if (type == "sqlite") "jdbc:sqlite::memory:" else "jdbc:h2:mem:${UUID.randomUUID()}"
-    ).also { c ->
-        if (type == "sqlite") c.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
-        DatabaseMigrations.migrate(c, type); OperationJournal.migrate(c)
+    private fun connect(type: String): Connection {
+        require(type == "sqlite") { "Unsupported test database: $type" }
+        return DriverManager.getConnection("jdbc:sqlite::memory:").also { c ->
+            c.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
+            DatabaseMigrations.migrate(c, type); OperationJournal.migrate(c)
+        }
     }
     private fun databases(test: (Connection, String, OperationJournal.Operation) -> Unit) {
-        for (type in listOf("sqlite", "h2")) connect(type).use { c ->
+        connect("sqlite").use { c ->
             c.autoCommit = false
             val id = PlotRepository.insert(c, owner, "wórld", "home", -1, 64, -1, 0, ChunkGeometry(setOf(ChunkPosition(-1, -1))))
             c.commit(); c.autoCommit = true
-            test(c, type, OperationJournal.Operation(UUID.randomUUID(), id, owner, UUID.randomUUID(), "wórld",
+            test(c, "sqlite", OperationJournal.Operation(UUID.randomUUID(), id, owner, UUID.randomUUID(), "wórld",
                 ChunkPosition(-1, -1), ChunkPosition(0, -1), 0, BigDecimal("12.3400"), "Vault:TestProvider", "default", createdAt = 100))
         }
     }
@@ -63,7 +64,6 @@ class OperationJournalTest {
             OperationJournal.State.DEBITED, OperationJournal.State.REFUND_REQUESTED).withIndex()) {
             val op = template.copy(id = UUID.randomUUID(), owner = UUID.randomUUID(), plotId = 100 + index)
             OperationJournal.prepare(c, op)
-            // Simulate process death at each durable state, without calling any economy provider.
             c.prepareStatement("UPDATE plot_operations SET state = ? WHERE operation_id = ?").use {
                 it.setString(1, state.name); it.setString(2, op.id.toString()); it.executeUpdate()
             }
@@ -128,18 +128,18 @@ class OperationJournalTest {
         assertEquals(op.id, OperationJournal.recoverInterrupted(c, 103).single().id)
         assertTrue(PlotRepository.readAll(c).isEmpty())
     }
-    @Test fun `v6 transfers pending operations across sqlite and h2 and prevents overwriting live unresolved payments`() = databases { source, _, op ->
+    @Test fun `v6 transfers pending operations and prevents overwriting live unresolved payments`() = databases { source, _, op ->
         paid(source, op)
-        for (targetType in listOf("sqlite", "h2")) connect(targetType).use { target ->
+        connect("sqlite").use { target ->
             val dir = Files.createTempDirectory("plotsx-journal-backup").toFile()
             try {
-                val file = SqlBackup.export(source, targetType, dir)
-                assertTrue(file.readText().startsWith("-- PlotsX SQL backup v6 dialect=$targetType"))
-                SqlBackup.restore(target, targetType, file, allowChunkPlots = true)
+                val file = SqlBackup.export(source, "sqlite", dir)
+                assertTrue(file.readText().startsWith("-- PlotsX SQL backup v6 dialect=sqlite"))
+                SqlBackup.restore(target, "sqlite", file, allowChunkPlots = true)
                 val restored = OperationJournal.readAll(target).single()
                 assertEquals(OperationJournal.readAll(source).single().copy(state = OperationJournal.State.UNCERTAIN, updatedAt = restored.updatedAt), restored)
                 assertEquals(1, PlotRepository.readAll(target).size)
-                assertThrows(IllegalArgumentException::class.java) { SqlBackup.restore(target, targetType, file, allowChunkPlots = true) }
+                assertThrows(IllegalArgumentException::class.java) { SqlBackup.restore(target, "sqlite", file, allowChunkPlots = true) }
                 assertEquals(OperationJournal.State.UNCERTAIN, OperationJournal.readAll(target).single().state)
             } finally { dir.deleteRecursively() }
         }
@@ -149,7 +149,7 @@ class OperationJournalTest {
         val dir = Files.createTempDirectory("plotsx-invalid-journal").toFile()
         try {
             val file = SqlBackup.export(c, type, dir)
-            file.writeText(file.readText().replace("44454249544544", "424144")) // DEBITED -> BAD
+            file.writeText(file.readText().replace("44454249544544", "424144"))
             connect(type).use { target ->
                 assertThrows(IllegalArgumentException::class.java) { SqlBackup.restore(target, type, file, allowChunkPlots = true) }
                 assertTrue(OperationJournal.readAll(target).isEmpty())
@@ -168,8 +168,8 @@ class OperationJournalTest {
     }
     @Test fun `v1 and v2 backups still restore into a runtime journal schema`() = databases { target, type, op ->
         for (version in listOf(1, 2)) {
-            val sourceUrl = if (type == "sqlite") "jdbc:sqlite::memory:" else "jdbc:h2:mem:${UUID.randomUUID()}"
-            DriverManager.getConnection(sourceUrl).use { source ->
+            DriverManager.getConnection("jdbc:sqlite::memory:").use { source ->
+                source.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
                 if (version == 1) DatabaseSchema.statements(type).forEach { sql -> source.createStatement().use { it.execute(sql) } }
                 else DatabaseMigrations.migrate(source, type)
                 val dir = Files.createTempDirectory("plotsx-legacy-journal").toFile()
@@ -217,7 +217,6 @@ class OperationJournalTest {
             } finally { dir.deleteRecursively() }
         }
     }
-
     @Test fun `classic pending payment survives backup and restart with its exact source and radius`() = databases { source, type, template ->
         val op = template.copy(classicRadius = 2, target = ChunkPosition(template.source.x + 5, template.source.z))
         paid(source, op)
@@ -234,5 +233,4 @@ class OperationJournalTest {
             assertEquals(op.copy(state = OperationJournal.State.REFUND_REQUIRED, updatedAt = 200), recovered)
         } finally { dir.deleteRecursively() }
     }
-
 }

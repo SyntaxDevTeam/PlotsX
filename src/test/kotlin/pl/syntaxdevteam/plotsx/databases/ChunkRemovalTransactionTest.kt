@@ -20,13 +20,12 @@ class ChunkRemovalTransactionTest {
         geometry: ChunkGeometry = ChunkGeometry(setOf(anchor, east)),
         action: (Connection, Int) -> Unit
     ) {
-        for ((type, url) in listOf("sqlite" to "jdbc:sqlite::memory:", "h2" to "jdbc:h2:mem:${UUID.randomUUID()}")) {
-            DriverManager.getConnection(url).use { conn ->
-                DatabaseSchema.statements(type).forEach { sql -> conn.createStatement().use { it.execute(sql) } }
-                DatabaseMigrations.migrate(conn, type)
-                val id = insert(conn, geometry)
-                action(conn, id)
-            }
+        DriverManager.getConnection("jdbc:sqlite::memory:").use { conn ->
+            conn.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
+            DatabaseSchema.statements("sqlite").forEach { sql -> conn.createStatement().use { it.execute(sql) } }
+            DatabaseMigrations.migrate(conn, "sqlite")
+            val id = insert(conn, geometry)
+            action(conn, id)
         }
     }
 

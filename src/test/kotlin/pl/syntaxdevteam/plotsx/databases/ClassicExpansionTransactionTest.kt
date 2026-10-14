@@ -10,10 +10,9 @@ import java.util.UUID
 
 class ClassicExpansionTransactionTest {
     private fun databases(test: (Connection, OperationJournal.Operation) -> Unit) {
-        for (dialect in listOf("sqlite", "h2")) DriverManager.getConnection(
-            if (dialect == "sqlite") "jdbc:sqlite::memory:" else "jdbc:h2:mem:${UUID.randomUUID()}"
-        ).use { c ->
-            DatabaseMigrations.migrate(c, dialect); OperationJournal.migrate(c)
+        DriverManager.getConnection("jdbc:sqlite::memory:").use { c ->
+            c.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
+            DatabaseMigrations.migrate(c, "sqlite"); OperationJournal.migrate(c)
             val owner = UUID.randomUUID()
             c.autoCommit = false
             val id = PlotRepository.insert(c, owner, "world", "home", 0, 64, 0, 0, ClassicGeometry(PlotSegment(0, 0, 2)))

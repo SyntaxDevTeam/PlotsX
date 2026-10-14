@@ -62,7 +62,7 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
 
                 args[0].equals("export", ignoreCase = true) -> {
                     if (args.size > 2) {
-                        stack.sender.sendMessage("Usage: /ptx export [mysql|mariadb|sqlite|postgresql|h2]")
+                        stack.sender.sendMessage("Usage: /ptx export [mysql|mariadb|sqlite|postgresql]")
                         return
                     }
                     val dialect = args.getOrNull(1)
@@ -112,7 +112,7 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
         "/plx help [page]" to "help",
         "/plx version" to "version",
         "/plx reload" to "reload",
-        "/plx export [mysql|mariadb|sqlite|postgresql|h2]" to "export",
+        "/plx export [mysql|mariadb|sqlite|postgresql]" to "export",
         "/plx import" to "import",
         "/claim" to "claim",
         "/unclaim" to "unclaim",
@@ -147,7 +147,6 @@ class PlotsXCMD(private val plugin: PlotsX) : BasicCommand {
         line(text("header", mapOf("plugin" to plName)))
         line(net.kyori.adventure.text.Component.empty())
         helpEntries.drop((currentPage - 1) * helpPageSize).take(helpPageSize).forEach { (syntax, key) ->
-            // Command arguments are literal text, not MiniMessage tags.
             line(net.kyori.adventure.text.Component.text(syntax, net.kyori.adventure.text.format.NamedTextColor.GOLD)
                 .append(net.kyori.adventure.text.Component.text(" — ", net.kyori.adventure.text.format.NamedTextColor.GRAY))
                 .append(text("commands.$key").colorIfAbsent(net.kyori.adventure.text.format.NamedTextColor.WHITE)))

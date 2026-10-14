@@ -11,20 +11,17 @@ class OwnershipTransferTest {
     private val recipient = UUID.randomUUID()
 
     private fun databases(test: (Connection) -> Unit) {
-        listOf("jdbc:sqlite::memory:", "jdbc:h2:mem:${UUID.randomUUID()}").forEach { url ->
-            DriverManager.getConnection(url).use { c ->
-                DatabaseSchema.statements(if (url.contains("sqlite")) "sqlite" else "h2").forEach { sql ->
-                    c.createStatement().use { it.execute(sql) }
-                }
-                c.prepareStatement("INSERT INTO plots (plot_id, owner_uuid, x, z, y, radius, world, name, creation_time) VALUES (1, ?, 0, 0, 64, 16, 'world', 'Home', 0)").use {
-                    it.setString(1, owner.toString()); it.executeUpdate()
-                }
-                c.prepareStatement("INSERT INTO plot_members VALUES (1, ?, 'manager')").use {
-                    it.setString(1, recipient.toString()); it.executeUpdate()
-                }
-                DatabaseMigrations.migrate(c, if (url.contains("sqlite")) "sqlite" else "h2")
-                test(c)
+        DriverManager.getConnection("jdbc:sqlite::memory:").use { c ->
+            c.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
+            DatabaseSchema.statements("sqlite").forEach { sql -> c.createStatement().use { it.execute(sql) } }
+            c.prepareStatement("INSERT INTO plots (plot_id, owner_uuid, x, z, y, radius, world, name, creation_time) VALUES (1, ?, 0, 0, 64, 16, 'world', 'Home', 0)").use {
+                it.setString(1, owner.toString()); it.executeUpdate()
             }
+            c.prepareStatement("INSERT INTO plot_members VALUES (1, ?, 'manager')").use {
+                it.setString(1, recipient.toString()); it.executeUpdate()
+            }
+            DatabaseMigrations.migrate(c, "sqlite")
+            test(c)
         }
     }
 

@@ -17,7 +17,7 @@ class ChunkPersistenceTest {
         "mysql" to System.getenv("PLOTSX_TEST_MYSQL_URL"),
         "postgresql" to System.getenv("PLOTSX_TEST_POSTGRESQL_URL")
     ).filterValues { !it.isNullOrBlank() }
-    private val dialects = listOf("sqlite", "h2") + servers.keys
+    private val dialects = listOf("sqlite") + servers.keys
     private fun connect(type: String): Connection {
         if (type in servers) {
             val namespace = "plotsx_test_" + UUID.randomUUID().toString().replace("-", "")
@@ -39,9 +39,10 @@ class ChunkPersistenceTest {
                 }
             }
         }
-        return DriverManager.getConnection(
-            if (type == "sqlite") "jdbc:sqlite::memory:" else "jdbc:h2:mem:${UUID.randomUUID()}"
-        ).also { if (type == "sqlite") it.createStatement().use { stmt -> stmt.execute("PRAGMA foreign_keys=ON") } }
+        require(type == "sqlite") { "Unsupported test database: $type" }
+        return DriverManager.getConnection("jdbc:sqlite::memory:").also {
+            it.createStatement().use { stmt -> stmt.execute("PRAGMA foreign_keys=ON") }
+        }
     }
 
     private fun databases(test: (Connection, String) -> Unit) {
@@ -114,7 +115,6 @@ class ChunkPersistenceTest {
         c.autoCommit = false
         val first = insertChunk(c)
         assertThrows(Exception::class.java) { insertChunk(c, world = "WORLD") }
-        // The first entry of this batch is free; the second conflicts. Neither may survive.
         assertThrows(Exception::class.java) {
             PlotRepository.insert(c, owner, "world", "Partial batch", -32, 64, -16, 123456,
                 ChunkGeometry(listOf(ChunkPosition(-2, -1), ChunkPosition(-1, -1))))

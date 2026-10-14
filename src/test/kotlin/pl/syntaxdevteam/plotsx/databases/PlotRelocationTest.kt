@@ -9,13 +9,12 @@ import java.util.UUID
 
 class PlotRelocationTest {
     private fun databases(test: (Connection) -> Unit) {
-        listOf("sqlite" to "jdbc:sqlite::memory:", "h2" to "jdbc:h2:mem:${UUID.randomUUID()}").forEach { (type, url) ->
-            DriverManager.getConnection(url).use { c ->
-                DatabaseSchema.statements(type).forEach { sql -> c.createStatement().use { it.execute(sql) } }
-                DatabaseMigrations.migrate(c, type)
-                PlotSpawnRepository.migrate(c)
-                test(c)
-            }
+        DriverManager.getConnection("jdbc:sqlite::memory:").use { c ->
+            c.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
+            DatabaseSchema.statements("sqlite").forEach { sql -> c.createStatement().use { it.execute(sql) } }
+            DatabaseMigrations.migrate(c, "sqlite")
+            PlotSpawnRepository.migrate(c)
+            test(c)
         }
     }
     private fun insert(c: Connection, shape: PlotGeometry, x: Int, z: Int): PlotData {

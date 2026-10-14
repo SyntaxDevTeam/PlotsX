@@ -3,6 +3,7 @@ package pl.syntaxdevteam.plotsx.databases
 import org.junit.Assert.*
 import org.junit.Test
 import pl.syntaxdevteam.plotsx.geometry.*
+import java.nio.file.Files
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.UUID
@@ -10,12 +11,11 @@ import java.util.UUID
 class ClaimTransactionTest {
     private val owner = UUID.randomUUID()
     private fun databases(test: (Connection) -> Unit) {
-        listOf("sqlite" to "jdbc:sqlite::memory:", "h2" to "jdbc:h2:mem:${UUID.randomUUID()}").forEach { (type, url) ->
-            DriverManager.getConnection(url).use { c ->
-                DatabaseSchema.statements(type).forEach { sql -> c.createStatement().use { it.execute(sql) } }
-                DatabaseMigrations.migrate(c, type)
-                test(c)
-            }
+        DriverManager.getConnection("jdbc:sqlite::memory:").use { c ->
+            c.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
+            DatabaseSchema.statements("sqlite").forEach { sql -> c.createStatement().use { it.execute(sql) } }
+            DatabaseMigrations.migrate(c, "sqlite")
+            test(c)
         }
     }
     private fun claim(c: Connection, shape: PlotGeometry, maxArea: Long = 10000,
@@ -38,7 +38,6 @@ class ClaimTransactionTest {
     @Test fun `mixed geometry rejects overlap in both directions`() = databases { c ->
         val chunk = ChunkGeometry(setOf(ChunkPosition(0, 0)))
         assertTrue(claim(c, chunk) is ClaimTransaction.Result.Success)
-        // Classic repository anchors must be the segment centre.
         fun classic() = ClaimTransaction.create(c, owner, owner, "WORLD", 16, 64, 8,
             ClassicGeometry(PlotSegment(16, 8, 1)), 10, 10000, 32, 64, "Home", emptyMap())
         assertEquals(ClaimTransaction.Result.Overlap, classic())
@@ -65,33 +64,46 @@ class ClaimTransactionTest {
     }
     @Test fun `coordinator serializes competing mixed claims and shared owner limits`() {
         for (overlap in listOf(true, false)) {
-            val url = "jdbc:h2:mem:${UUID.randomUUID()};DB_CLOSE_DELAY=-1"
-            DriverManager.getConnection(url).use { c ->
-                DatabaseSchema.statements("h2").forEach { sql -> c.createStatement().use { it.execute(sql) } }
-                DatabaseMigrations.migrate(c, "h2")
-                val coordinator = pl.syntaxdevteam.plotsx.protection.ProtectionCoordinator()
-                val ready = java.util.concurrent.CountDownLatch(2)
-                val start = java.util.concurrent.CountDownLatch(1)
-                val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
-                try {
-                    val jobs = (0..1).map { index -> executor.submit<ClaimTransaction.Result> {
-                        ready.countDown(); check(start.await(5, java.util.concurrent.TimeUnit.SECONDS))
-                        coordinator.mutate({}) {
-                            DriverManager.getConnection(url).use { connection ->
-                                val shape: PlotGeometry = if (index == 0) ChunkGeometry(setOf(ChunkPosition(0, 0)))
-                                    else ClassicGeometry(PlotSegment(if (overlap) 15 else 100, 0, 1))
-                                ClaimTransaction.create(connection, owner, owner, "world", if (index == 0) 0 else if (overlap) 15 else 100,
-                                    64, 0, shape, if (overlap) 10 else 1, 10000, 32, 64, "home", emptyMap())
+            val directory = Files.createTempDirectory("plotsx-claim-concurrency").toFile()
+            val db = directory.resolve("claims.db")
+            val url = "jdbc:sqlite:${db.absolutePath}"
+            try {
+                DriverManager.getConnection(url).use { c ->
+                    c.createStatement().use { stmt ->
+                        stmt.execute("PRAGMA journal_mode=WAL")
+                        stmt.execute("PRAGMA foreign_keys=ON")
+                        stmt.execute("PRAGMA busy_timeout=30000")
+                        DatabaseSchema.statements("sqlite").forEach { stmt.execute(it) }
+                    }
+                    DatabaseMigrations.migrate(c, "sqlite")
+                    val coordinator = pl.syntaxdevteam.plotsx.protection.ProtectionCoordinator()
+                    val ready = java.util.concurrent.CountDownLatch(2)
+                    val start = java.util.concurrent.CountDownLatch(1)
+                    val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+                    try {
+                        val jobs = (0..1).map { index -> executor.submit<ClaimTransaction.Result> {
+                            ready.countDown(); check(start.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                            coordinator.mutate({}) {
+                                DriverManager.getConnection(url).use { connection ->
+                                    connection.createStatement().use { stmt ->
+                                        stmt.execute("PRAGMA foreign_keys=ON")
+                                        stmt.execute("PRAGMA busy_timeout=30000")
+                                    }
+                                    val shape: PlotGeometry = if (index == 0) ChunkGeometry(setOf(ChunkPosition(0, 0)))
+                                        else ClassicGeometry(PlotSegment(if (overlap) 15 else 100, 0, 1))
+                                    ClaimTransaction.create(connection, owner, owner, "world", if (index == 0) 0 else if (overlap) 15 else 100,
+                                        64, 0, shape, if (overlap) 10 else 1, 10000, 32, 64, "home", emptyMap())
+                                }
                             }
-                        }
-                    } }
-                    assertTrue(ready.await(5, java.util.concurrent.TimeUnit.SECONDS)); start.countDown()
-                    val results = jobs.map { it.get(5, java.util.concurrent.TimeUnit.SECONDS) }
-                    assertEquals(1, results.count { it is ClaimTransaction.Result.Success })
-                    assertTrue(results.contains(if (overlap) ClaimTransaction.Result.Overlap else ClaimTransaction.Result.PlotLimit))
-                    assertEquals(1, PlotRepository.readAll(c).size)
-                } finally { start.countDown(); executor.shutdownNow(); c.createStatement().use { it.execute("SHUTDOWN") } }
-            }
+                        } }
+                        assertTrue(ready.await(5, java.util.concurrent.TimeUnit.SECONDS)); start.countDown()
+                        val results = jobs.map { it.get(5, java.util.concurrent.TimeUnit.SECONDS) }
+                        assertEquals(1, results.count { it is ClaimTransaction.Result.Success })
+                        assertTrue(results.contains(if (overlap) ClaimTransaction.Result.Overlap else ClaimTransaction.Result.PlotLimit))
+                        assertEquals(1, PlotRepository.readAll(c).size)
+                    } finally { start.countDown(); executor.shutdownNow() }
+                }
+            } finally { directory.deleteRecursively() }
         }
     }
 }

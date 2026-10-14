@@ -8,17 +8,16 @@ import java.util.UUID
 
 class PlotCacheLoaderTest {
     private fun databases(block: (Connection, String) -> Unit) {
-        for (dialect in listOf("sqlite", "h2")) DriverManager.getConnection(
-            if (dialect == "sqlite") "jdbc:sqlite::memory:" else "jdbc:h2:mem:${UUID.randomUUID()}"
-        ).use { c ->
+        DriverManager.getConnection("jdbc:sqlite::memory:").use { c ->
             c.createStatement().use { s ->
-                DatabaseSchema.statements(dialect).forEach { s.execute(it) }
+                s.execute("PRAGMA foreign_keys=ON")
+                DatabaseSchema.statements("sqlite").forEach { s.execute(it) }
                 for (id in 1..2) s.execute("INSERT INTO plots VALUES ($id, '${UUID.randomUUID()}', ${id * 100}, 0, 64, 16, 'world', 'Home$id', 0)")
                 s.execute("INSERT INTO plot_segments VALUES (1, 133, 0, 16)")
                 s.execute("INSERT INTO plot_flags VALUES (1, 'build', 'false')")
                 s.execute("INSERT INTO plot_members VALUES (1, '${UUID.randomUUID()}', 'member')")
             }
-            block(c, dialect)
+            block(c, "sqlite")
         }
     }
 

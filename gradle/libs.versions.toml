@@ -16,7 +16,6 @@ adventure = "5.2.0"
 mariadb = "3.5.10"
 sqlite = "3.53.4.0"
 postgresql = "42.7.14"
-h2 = "2.5.252"
 caffeine = "3.3.0"
 ant = "1.10.18"
 luckperms = "5.5"
@@ -47,7 +46,6 @@ adventure-ansi = { module = "net.kyori:adventure-text-serializer-ansi", version.
 mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version.ref = "mariadb" }
 sqlite = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
-h2 = { module = "com.h2database:h2", version.ref = "h2" }
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
 ant = { module = "org.apache.ant:ant", version.ref = "ant" }
 luckperms = { module = "net.luckperms:api", version.ref = "luckperms" }

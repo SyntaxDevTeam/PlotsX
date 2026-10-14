@@ -23,18 +23,23 @@ class ExpansionPurchaseServiceTest(private val classic: Boolean, private val dia
             "postgresql" to System.getenv("PLOTSX_TEST_POSTGRESQL_URL")
         ).filterValues { !it.isNullOrBlank() }
         @JvmStatic @org.junit.runners.Parameterized.Parameters(name = "classic={0}, database={1}")
-        fun geometries(): List<Array<Any>> = (listOf("h2", "sqlite") + servers.keys).flatMap { dialect ->
+        fun geometries(): List<Array<Any>> = (listOf("sqlite") + servers.keys).flatMap { dialect ->
             listOf(arrayOf(false, dialect), arrayOf(true, dialect))
         }
     }
     private class Fixture(val classic: Boolean, val dialect: String) : AutoCloseable {
         private val sqliteFile = if (dialect == "sqlite") java.nio.file.Files.createTempFile("plotsx-payment", ".db") else null
-        val url = servers[dialect] ?: if (sqliteFile != null) "jdbc:sqlite:$sqliteFile" else "jdbc:h2:mem:${UUID.randomUUID()};DB_CLOSE_DELAY=-1"
+        val url = servers[dialect] ?: "jdbc:sqlite:${requireNotNull(sqliteFile)}"
         private val namespace = "plotsx_test_" + UUID.randomUUID().toString().replace("-", "")
         private fun rawConnection(): Connection = (if (dialect in listOf("mariadb", "mysql"))
             DriverManager.getConnection(url, "root", "") else DriverManager.getConnection(url)).also {
             if (dialect in servers) {
                 if (dialect == "postgresql") it.schema = namespace else it.catalog = namespace
+            } else {
+                it.createStatement().use { statement ->
+                    statement.execute("PRAGMA foreign_keys=ON")
+                    statement.execute("PRAGMA busy_timeout=30000")
+                }
             }
         }
         private val control = if (dialect in servers) (if (dialect == "postgresql") DriverManager.getConnection(url)
@@ -88,8 +93,6 @@ class ExpansionPurchaseServiceTest(private val classic: Boolean, private val dia
             override val currencyId = "default"
             override fun withdraw(): Boolean {
                 assertEquals("test-server", Thread.currentThread().name)
-                // A reserved purchase no longer globally fail-closes protection. Readers keep using the
-                // previous immutable snapshot until the committed cache snapshot is published.
                 assertTrue(coordinator.decision({ false }) { true })
                 withdrawals++
                 if (disconnectAfterDebit) disconnected = true
@@ -125,8 +128,7 @@ class ExpansionPurchaseServiceTest(private val classic: Boolean, private val dia
             if (control != null) control.use { c -> c.createStatement().use {
                 it.execute("DROP ${if (dialect == "postgresql") "SCHEMA" else "DATABASE"} $namespace" + if (dialect == "postgresql") " CASCADE" else "")
             } }
-            else if (sqliteFile != null) java.nio.file.Files.deleteIfExists(sqliteFile)
-            else DriverManager.getConnection(url).use { c -> c.createStatement().use { it.execute("SHUTDOWN") } }
+            else java.nio.file.Files.deleteIfExists(requireNotNull(sqliteFile))
         }
     }
     @Test fun `paid purchase executes provider on server and commits before publication`() = Fixture(classic, dialect).use { f ->

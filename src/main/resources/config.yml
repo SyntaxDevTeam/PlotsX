@@ -1,4 +1,4 @@
-config-version: 101
+config-version: 102
 
 # /********************************************/
 #    Global settings
@@ -20,7 +20,6 @@ interactions:
 # /********************************************/
 database:
   # Runtime backends managed by SyntaxDB: mariadb (MySQL-compatible alias), mysql, postgresql, sqlite.
-  # H2 remains supported only by legacy/offline SQL backup conversion and is not a live runtime backend.
   type: "sqlite"
   sql:
     host: "localhost"

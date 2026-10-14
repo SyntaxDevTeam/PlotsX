@@ -17,7 +17,7 @@ class IdentityMigrationStoreTest {
     private val target = UUID.fromString("22222222-2222-4222-8222-222222222222")
 
     @Test
-    fun `migration and rollback preserve exact ownership and membership on sqlite and h2`() {
+    fun `migration and rollback preserve exact ownership and membership on sqlite`() {
         databases { connection ->
             val plotId = insertPlot(connection, source)
             connection.prepareStatement(
@@ -121,17 +121,12 @@ class IdentityMigrationStoreTest {
     }
 
     private fun databases(test: (Connection) -> Unit) {
-        for (type in listOf("sqlite", "h2")) {
-            val url = if (type == "sqlite") "jdbc:sqlite::memory:" else "jdbc:h2:mem:identity-${UUID.randomUUID()}"
-            DriverManager.getConnection(url).use { connection ->
-                if (type == "sqlite") {
-                    connection.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
-                }
-                DatabaseMigrations.migrate(connection, type)
-                OperationJournal.migrate(connection)
-                IdentityMigrationStore.migrateSchema(connection)
-                test(connection)
-            }
+        DriverManager.getConnection("jdbc:sqlite::memory:").use { connection ->
+            connection.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
+            DatabaseMigrations.migrate(connection, "sqlite")
+            OperationJournal.migrate(connection)
+            IdentityMigrationStore.migrateSchema(connection)
+            test(connection)
         }
     }
 

@@ -3,6 +3,7 @@ package pl.syntaxdevteam.plotsx.databases
 import org.junit.Assert.*
 import org.junit.Test
 import pl.syntaxdevteam.plotsx.geometry.*
+import java.nio.file.Files
 import java.sql.Connection
 import java.sql.DriverManager
 import java.util.UUID
@@ -15,13 +16,12 @@ class ChunkExpansionTransactionTest {
     private val limits = ChunkExpansionTransaction.Limits(100000, 32, 64)
 
     private fun databases(action: (Connection, Int) -> Unit) {
-        for ((type, url) in listOf("sqlite" to "jdbc:sqlite::memory:", "h2" to "jdbc:h2:mem:${UUID.randomUUID()}")) {
-            DriverManager.getConnection(url).use { conn ->
-                DatabaseSchema.statements(type).forEach { sql -> conn.createStatement().use { it.execute(sql) } }
-                DatabaseMigrations.migrate(conn, type)
-                val id = insert(conn, ChunkGeometry(setOf(source)))
-                action(conn, id)
-            }
+        DriverManager.getConnection("jdbc:sqlite::memory:").use { conn ->
+            conn.createStatement().use { it.execute("PRAGMA foreign_keys=ON") }
+            DatabaseSchema.statements("sqlite").forEach { sql -> conn.createStatement().use { it.execute(sql) } }
+            DatabaseMigrations.migrate(conn, "sqlite")
+            val id = insert(conn, ChunkGeometry(setOf(source)))
+            action(conn, id)
         }
     }
     private fun insert(conn: Connection, geometry: PlotGeometry, world: String = "world", ownerId: UUID = owner): Int {
@@ -139,36 +139,50 @@ class ChunkExpansionTransactionTest {
         assertNull(level(conn, id))
     }
     @Test fun `competing expansions of one revision publish exactly one new chunk`() {
-        val url = "jdbc:h2:mem:${UUID.randomUUID()};DB_CLOSE_DELAY=-1"
-        DriverManager.getConnection(url).use { conn ->
-            DatabaseSchema.statements("h2").forEach { sql -> conn.createStatement().use { it.execute(sql) } }
-            DatabaseMigrations.migrate(conn, "h2")
-            val id = insert(conn, ChunkGeometry(setOf(source)))
-            val coordinator = pl.syntaxdevteam.plotsx.protection.ProtectionCoordinator()
-            val published = java.util.concurrent.atomic.AtomicReference(PlotCacheLoader.load(conn).plots)
-            val ready = java.util.concurrent.CountDownLatch(2)
-            val start = java.util.concurrent.CountDownLatch(1)
-            val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
-            try {
-                val jobs = (0..1).map { index -> executor.submit<ChunkExpansionTransaction.Result> {
-                    val offer = if (index == 0) request(id) else request(id).copy(direction = ExpansionDirection.NORTH,
-                        expectedTarget = ChunkPosition(-1, -2))
-                    ready.countDown(); check(start.await(5, java.util.concurrent.TimeUnit.SECONDS))
-                    coordinator.mutate({
-                        DriverManager.getConnection(url).use { published.set(PlotCacheLoader.load(it).plots) }
-                    }) {
-                        DriverManager.getConnection(url).use { ChunkExpansionTransaction.expand(it, offer, limits) }
-                    }
-                } }
-                assertTrue(ready.await(5, java.util.concurrent.TimeUnit.SECONDS)); start.countDown()
-                val results = jobs.map { it.get(5, java.util.concurrent.TimeUnit.SECONDS) }
-                assertEquals(1, results.count { it is ChunkExpansionTransaction.Result.Success })
-                assertEquals(1, results.count { it == ChunkExpansionTransaction.Result.StaleQuote })
-                assertEquals(1, level(conn, id)); assertEquals(1L, published.get().single().geometryRevision)
-                assertEquals(512L, published.get().single().area)
-                val winner = (results.single { it is ChunkExpansionTransaction.Result.Success } as ChunkExpansionTransaction.Result.Success).chunk
-                assertTrue(published.get().single().contains(winner.bounds.minX.toInt(), winner.bounds.minZ.toInt()))
-            } finally { start.countDown(); executor.shutdownNow(); conn.createStatement().use { it.execute("SHUTDOWN") } }
-        }
+        val directory = Files.createTempDirectory("plotsx-expansion-concurrency").toFile()
+        val url = "jdbc:sqlite:${directory.resolve("expansion.db").absolutePath}"
+        try {
+            DriverManager.getConnection(url).use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.execute("PRAGMA journal_mode=WAL")
+                    stmt.execute("PRAGMA foreign_keys=ON")
+                    stmt.execute("PRAGMA busy_timeout=30000")
+                    DatabaseSchema.statements("sqlite").forEach { stmt.execute(it) }
+                }
+                DatabaseMigrations.migrate(conn, "sqlite")
+                val id = insert(conn, ChunkGeometry(setOf(source)))
+                val coordinator = pl.syntaxdevteam.plotsx.protection.ProtectionCoordinator()
+                val published = java.util.concurrent.atomic.AtomicReference(PlotCacheLoader.load(conn).plots)
+                val ready = java.util.concurrent.CountDownLatch(2)
+                val start = java.util.concurrent.CountDownLatch(1)
+                val executor = java.util.concurrent.Executors.newFixedThreadPool(2)
+                try {
+                    val jobs = (0..1).map { index -> executor.submit<ChunkExpansionTransaction.Result> {
+                        val offer = if (index == 0) request(id) else request(id).copy(direction = ExpansionDirection.NORTH,
+                            expectedTarget = ChunkPosition(-1, -2))
+                        ready.countDown(); check(start.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                        coordinator.mutate({
+                            DriverManager.getConnection(url).use {
+                                it.createStatement().use { stmt -> stmt.execute("PRAGMA foreign_keys=ON"); stmt.execute("PRAGMA busy_timeout=30000") }
+                                published.set(PlotCacheLoader.load(it).plots)
+                            }
+                        }) {
+                            DriverManager.getConnection(url).use {
+                                it.createStatement().use { stmt -> stmt.execute("PRAGMA foreign_keys=ON"); stmt.execute("PRAGMA busy_timeout=30000") }
+                                ChunkExpansionTransaction.expand(it, offer, limits)
+                            }
+                        }
+                    } }
+                    assertTrue(ready.await(5, java.util.concurrent.TimeUnit.SECONDS)); start.countDown()
+                    val results = jobs.map { it.get(5, java.util.concurrent.TimeUnit.SECONDS) }
+                    assertEquals(1, results.count { it is ChunkExpansionTransaction.Result.Success })
+                    assertEquals(1, results.count { it == ChunkExpansionTransaction.Result.StaleQuote })
+                    assertEquals(1, level(conn, id)); assertEquals(1L, published.get().single().geometryRevision)
+                    assertEquals(512L, published.get().single().area)
+                    val winner = (results.single { it is ChunkExpansionTransaction.Result.Success } as ChunkExpansionTransaction.Result.Success).chunk
+                    assertTrue(published.get().single().contains(winner.bounds.minX.toInt(), winner.bounds.minZ.toInt()))
+                } finally { start.countDown(); executor.shutdownNow() }
+            }
+        } finally { directory.deleteRecursively() }
     }
 }
