@@ -46,6 +46,17 @@ Startup-only services, including the database connection and SyntaxCore's own st
 settings, require a restart to apply changes. Core services start before PlotsX's
 migration; configuration reload does not automatically reinitialize them.
 
+Backup is per migration attempt/chain, not per individual version step. Retries create
+unique backups and retain previous copies. If backup creation fails, migration callbacks
+do not run. Parse validation happens before backup/mutation: malformed YAML is rejected
+without replacing it with a default file. Current/future schemas do not trigger a backup
+because no migration occurs. Missing fields in a current/future file are not automatically
+written back; add a new versioned step when evolving the schema.
+
+Language files and the reload prevalidation use strict Bukkit YAML parsing as well:
+syntax errors propagate and leave the original bytes intact. They cannot be converted
+into an empty document and overwritten with defaults after a parse failure.
+
 Language-file completion remains separate from the versioned main configuration.
 For adding a field or renaming a path in a future release, raise the template and
 `targetVersion` together and add the corresponding step in `ConfigMigrations`.

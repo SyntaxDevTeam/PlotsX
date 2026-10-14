@@ -164,7 +164,7 @@ class PlotsX : JavaPlugin() {
      */
     @JvmOverloads
     fun onReload(completion: (Exception?) -> Unit = {}) {
-        val candidate = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(File(dataFolder, "config.yml"))
+        val candidate = pl.syntaxdevteam.plotsx.common.YamlFiles.read(File(dataFolder, "config.yml"))
         require(validateClaimConfig(candidate) == claimMode) { "Changing plots.claiming.mode requires a server restart" }
         configHandler.verifyAndUpdateConfig()
         if (::borderVisualizer.isInitialized) borderVisualizer.close()
