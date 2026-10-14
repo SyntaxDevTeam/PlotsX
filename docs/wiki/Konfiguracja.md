@@ -97,16 +97,20 @@ Nie używa się już `levels` ani `step`. Przy aktualizacji usuń `levels` i ust
 
 ## Zapis danych
 
+Warstwą połączeń, poolingiem, lifecycle oraz sterownikami JDBC zarządza teraz biblioteka **SyntaxDB**. PlotsX nie tworzy już własnego `HikariDataSource` ani osobnych połączeń przez `DriverManager` w runtime.
+
 | Ustawienie | Znaczenie |
 | --- | --- |
-| `database.type` | Rodzaj bazy: `sqlite`, `h2`, `mysql`, `mariadb` lub `postgresql`. |
+| `database.type` | Rodzaj bazy: `sqlite`, `mysql`, `mariadb` lub `postgresql`. `mariadb` jest obsługiwane jako kompatybilny alias dialektu MySQL. |
 | `database.sql.host` | Adres osobnego serwera bazy danych. |
 | `database.sql.port` | Port bazy. Domyślnie 3306; dla typowego PostgreSQL ustaw 5432. |
 | `database.sql.dbname` | Nazwa bazy; przy SQLite również nazwa lokalnego pliku bez końcówki `.db`. |
 | `database.sql.username` | Login do bazy. |
 | `database.sql.password` | Hasło do bazy. |
 
-Na prosty start pozostaw SQLite. Przy domyślnej nazwie dane znajdują się w `plugins/PlotsX/my_database.db`. SQLite nie wymaga hosta, portu, loginu ani hasła. H2 również zapisuje dane lokalnie, ale korzysta z ustawień logowania.
+Na prosty start pozostaw SQLite. Przy domyślnej nazwie dane znajdują się w `plugins/PlotsX/my_database.db`. SQLite nie wymaga hosta, portu, loginu ani hasła. Dla SQLite SyntaxDB utrzymuje `WAL`, klucze obce oraz timeout oczekiwania na blokadę.
+
+**H2 nie jest już obsługiwane jako aktywna baza runtime PlotsX.** Format H2 pozostaje rozpoznawany przez mechanizm backupu/konwersji SQL, aby umożliwić migrację starszych danych. Jeżeli obecna instalacja używa `database.type: h2`, przed aktualizacją wyeksportuj dane i przenieś je do SQLite, MySQL/MariaDB albo PostgreSQL.
 
 Dla zewnętrznej bazy wpisz dane otrzymane od hostingu. Zmiana nazwy lub rodzaju bazy **nie przenosi działek**. Zrób kopię danych przed taką zmianą, a potem uruchom serwer ponownie.
 
