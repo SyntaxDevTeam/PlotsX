@@ -1,5 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.api.file.DuplicatesStrategy
+import java.util.zip.ZipFile
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -9,7 +10,7 @@ plugins {
 }
 
 group = "pl.syntaxdevteam"
-version = "1.0.0-profile.1"
+version = "1.0.0-profile.2"
 description = "Lightweight and versatile player plot protection plugin"
 
 repositories {
@@ -78,6 +79,7 @@ tasks {
 }
 
 val runtimeLibraryVersions = mapOf(
+    "kotlinVersion" to libs.versions.kotlin.get(),
     "syntaxcoreVersion" to libs.versions.syntaxcore.get(),
     "syntaxdbVersion" to libs.versions.syntaxdb.get(),
     "messagehandlerVersion" to libs.versions.messagehandler.get(),
@@ -102,6 +104,8 @@ tasks.named<ShadowJar>("shadowJar") {
     archiveClassifier.set("")
     archiveVersion.set(project.version.toString())
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    // Kotlin belongs to Paper's library classloader together with SyntaxDB, not the plugin JAR.
+    dependencies { exclude(dependency("org.jetbrains.kotlin:.*:.*")) }
     mergeServiceFiles()
     filesMatching("META-INF/services/**") { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
     filesMatching("META-INF/*.kotlin_module") { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
@@ -150,3 +154,27 @@ tasks.register<Jar>("foliaLiveTestJar") {
     from(compileLiveTest.flatMap { it.destinationDirectory })
     from("src/foliaLiveTest/resources")
 }
+
+val verifyRuntimePackaging = tasks.register("verifyRuntimePackaging") {
+    group = "verification"
+    description = "Prevents duplicate Kotlin runtimes across the plugin and Paper library classloaders."
+    val artifact = tasks.named<ShadowJar>("shadowJar").flatMap { it.archiveFile }
+    inputs.file(artifact)
+    dependsOn(tasks.named("shadowJar"))
+    doLast {
+        ZipFile(artifact.get().asFile).use { jar ->
+            check(jar.stream().noneMatch { it.name.startsWith("kotlin/") && it.name.endsWith(".class") }) {
+                "Kotlin runtime must be loaded by Paper, not bundled in the plugin JAR"
+            }
+            val manifest = jar.getInputStream(jar.getEntry("paper-libraries.yml")).bufferedReader().use { it.readText() }
+            check(manifest.contains("org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}")) {
+                "Runtime manifest must explicitly load Kotlin matching the compiler"
+            }
+            val loader = jar.getInputStream(jar.getEntry("pl/syntaxdevteam/plotsx/loader/SyntaxLoader.class")).use { it.readBytes() }
+            check(!loader.toString(Charsets.ISO_8859_1).contains("kotlin/")) {
+                "Bootstrap loader must not depend on Kotlin before libraries are resolved"
+            }
+        }
+    }
+}
+tasks.named("check") { dependsOn(verifyRuntimePackaging) }
