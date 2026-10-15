@@ -16,6 +16,7 @@ interface PlotsXApi {
     fun getPlot(id: Int): PlotSnapshot?
     fun getPlotAt(world: String, blockX: Int, blockZ: Int): PlotSnapshot?
     fun getPlots(): List<PlotSnapshot>
+    fun getOwnedPlotProfiles(owner: UUID): List<PlotProfileSnapshot>
     fun getOwnedPlots(owner: UUID): List<PlotSnapshot>
     fun getAccessiblePlots(player: UUID): List<PlotSnapshot>
     fun getMembers(plotId: Int): List<MemberSnapshot>
@@ -154,3 +155,7 @@ data class PlotRegionSnapshot(val x: Int, val z: Int, val radius: Int) {
     fun contains(x: Int, z: Int): Boolean = kotlin.math.abs(x.toLong() - this.x) <= radius &&
         kotlin.math.abs(z.toLong() - this.z) <= radius
 }
+
+/** Configured teleport block, not a promise that it is currently safe. No chunk loads. */
+data class PlotProfileSnapshot(val plot: PlotSnapshot, val teleport: PlotTeleportSnapshot?)
+data class PlotTeleportSnapshot(val x: Int, val y: Int, val z: Int)

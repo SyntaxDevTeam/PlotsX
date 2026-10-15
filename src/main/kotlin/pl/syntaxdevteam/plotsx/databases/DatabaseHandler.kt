@@ -108,7 +108,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
                     username = user
                     this.password = password
                 }
-                DatabaseType.SQL_SERVER -> error("SQL Server schema support is not enabled in PlotsX")
+                else -> error("Database dialect $type is not supported by PlotsX")
             }
             pool {
                 poolName = "PlotsX-SyntaxDB"

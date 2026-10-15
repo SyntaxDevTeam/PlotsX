@@ -37,6 +37,12 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
         return plugin.cacheManager.getPlotAt(world, blockX, blockZ)?.snapshot()
     }
     override fun getPlots(): List<PlotSnapshot> { ready(); return immutable(plugin.cacheManager.getCachedPlots().map { it.snapshot() }) }
+    override fun getOwnedPlotProfiles(owner: UUID): List<PlotProfileSnapshot> {
+        ready()
+        return immutable(plugin.cacheManager.getCachedPlots().filter { it.ownerUuid == owner }.map {
+            PlotProfileSnapshot(it.snapshot(), it.teleportSpawn?.let { spawn -> PlotTeleportSnapshot(spawn.x, spawn.y, spawn.z) })
+        })
+    }
     override fun getOwnedPlots(owner: UUID) = immutable(getPlots().filter { it.owner == owner })
     override fun getAccessiblePlots(player: UUID) = immutable(getPlots().filter { it.owner == player || isMember(it.id, player) })
     override fun getMembers(plotId: Int): List<MemberSnapshot> {

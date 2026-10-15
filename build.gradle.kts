@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "pl.syntaxdevteam"
-version = "1.0.0"
+version = "1.0.0-profile.1"
 description = "Lightweight and versatile player plot protection plugin"
 
 repositories {
