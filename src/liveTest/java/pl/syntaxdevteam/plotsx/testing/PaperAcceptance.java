@@ -62,20 +62,36 @@ public final class PaperAcceptance extends JavaPlugin {
             };
         });
     }
+    @FunctionalInterface private interface SqlWork { void accept(Connection connection) throws Exception; }
+    /** Test-only access, preserving SyntaxDB's scoped connection lifecycle. */
+    private void withJdbc(DatabaseHandler handler, SqlWork work) throws Exception {
+        var method = DatabaseHandler.class.getDeclaredMethod("database");
+        method.setAccessible(true);
+        var database = (pl.syntaxdevteam.syntaxdb.Database) method.invoke(handler);
+        database.withConnection(connection -> {
+            try { work.accept(connection); }
+            catch (Exception failure) { throw new IllegalStateException("Acceptance fixture failed", failure); }
+            return Unit.INSTANCE;
+        });
+    }
     private void runChecks() throws Exception {
         PlotsX plugin = (PlotsX) getServer().getPluginManager().getPlugin("PlotsX");
         check(plugin != null && plugin.isEnabled(), "plugin startup and migration");
         PlotsXApi api = getServer().getServicesManager().load(PlotsXApi.class);
         check(api != null && api.getApiVersion() == 2, "API v2 service");
+        var connect = pl.syntaxdevteam.syntaxdb.Database.Companion.getClass().getMethod("connect",
+            pl.syntaxdevteam.syntaxdb.config.DatabaseType.class, kotlin.jvm.functions.Function1.class);
+        check(connect.getParameterTypes()[1] == kotlin.jvm.functions.Function1.class,
+            "SyntaxDB connect and PlotsX share the same Kotlin Function1 class");
+        check(!kotlin.jvm.functions.Function1.class.getProtectionDomain().getCodeSource().getLocation().toString().contains("PlotsX-Paper"),
+            "Kotlin runtime is supplied by the library classloader");
         boolean reuse = Boolean.getBoolean("plotsx.acceptance.reuse");
         check(reuse ? api.getPlots().size() == 2 : api.getPlots().isEmpty(), reuse ? "persisted mixed plots survive mode restart" : "disposable empty database");
         UUID owner = reuse ? api.getPlot(1).getOwner() : UUID.randomUUID();
         World world = getServer().getWorlds().getFirst();
         DatabaseHandler db = plugin.getDatabaseHandler();
         // Seed both geometries using the migrated schema, before any actor events.
-        var connectionMethod = DatabaseHandler.class.getDeclaredMethod("getConnection");
-        connectionMethod.setAccessible(true);
-        if (!reuse) try (Connection c = (Connection) connectionMethod.invoke(db)) {
+        if (!reuse) withJdbc(db, c -> {
             c.setAutoCommit(false);
             try (PreparedStatement s = c.prepareStatement("INSERT INTO plots (plot_id,owner_uuid,x,z,y,radius,world,name,creation_time,geometry_type,geometry_revision) VALUES (?,?,?,?,?,?,?,?,?,?,0)")) {
                 for (int id = 1; id <= 2; id++) {
@@ -90,7 +106,7 @@ public final class PaperAcceptance extends JavaPlugin {
                 }
             }
             c.commit();
-        }
+        });
         plugin.getProtectionCoordinator().recover(() -> { plugin.getCacheManager().reloadAllCachesSync(); return Unit.INSTANCE; });
         check(api.getPlotAt(world.getName(),-16,-16).getRadius() == null, "chunk runtime has no artificial radius");
         check(api.getPlotAt(world.getName(),-32,-16).getArea() == 768, "negative boundary and exact area");
