@@ -22,9 +22,8 @@ class CacheManager(private val plugin: PlotsX) {
     fun getPlotAt(world: String, x: Int, z: Int): PlotData? = readSnapshot().at(world, x, z)
     fun getPlayerPlots(playerId: UUID): List<PlotData> {
         val snapshot = readSnapshot()
-        val playerIdText = playerId.toString()
         return snapshot.plots.values.filter { plot ->
-            plot.ownerUuid == playerId || snapshot.members[plot.id].orEmpty().any { it.memberUuid == playerIdText }
+            plot.ownerUuid == playerId || snapshot.member(plot.id, playerId) != null
         }
     }
     fun getPlotAtChunk(world: String, chunkX: Int, chunkZ: Int): PlotData? {
@@ -33,21 +32,16 @@ class CacheManager(private val plugin: PlotsX) {
     }
     fun getFlags(plotId: Int): List<PlotFlagData>? = readSnapshot().flags[plotId]
     fun getMembers(plotId: Int): List<PlotMemberData>? = readSnapshot().members[plotId]
+    fun getFlagValue(plotId: Int, name: String): Boolean? = readSnapshot().flagValue(plotId, name)
+    fun getMember(plotId: Int, playerId: UUID): PlotMemberData? = readSnapshot().member(plotId, playerId)
+    fun isMember(plotId: Int, playerId: UUID): Boolean = getMember(plotId, playerId) != null
     fun getCachedPlots(): Collection<PlotData> = readSnapshot().plots.values
     internal fun readSnapshot(): PlotCacheSnapshot = decisionSnapshot.get() ?: snapshots.read()
 
     fun reloadPlotSync(plotId: Int) {
         snapshots.reload { current ->
             val loaded = databaseHandler.loadPlotCacheData(plotId)
-            val plot = loaded.plots.singleOrNull()
-            val plots = current.plots.toMutableMap()
-            if (plot == null) plots.remove(plotId) else plots[plotId] = plot
-            val flags = if (plot == null) current.flags - plotId
-                else current.flags + (plotId to loaded.flags[plotId].orEmpty())
-            val members = if (plot == null) current.members - plotId
-                else current.members + (plotId to loaded.members[plotId].orEmpty())
-            if (plot != null && current.plots[plotId] == plot) current.withMetadata(flags, members)
-            else PlotCacheSnapshot.create(plots.values, flags, members)
+            current.withPlot(plotId, loaded.plots.singleOrNull(), loaded.flags[plotId].orEmpty(), loaded.members[plotId].orEmpty())
         }
     }
 
@@ -77,7 +71,7 @@ class CacheManager(private val plugin: PlotsX) {
     fun updateMemberCacheAsync(plotId: Int) { async { reloadMembersSync(plotId) } }
     fun invalidatePlot(plotId: Int) {
         snapshots.reload { current ->
-            PlotCacheSnapshot.create((current.plots - plotId).values, current.flags - plotId, current.members - plotId)
+            current.withPlot(plotId, null, emptyList(), emptyList())
         }
     }
     fun clearAllCaches() { snapshots.clear(PlotCacheSnapshot.create()) }

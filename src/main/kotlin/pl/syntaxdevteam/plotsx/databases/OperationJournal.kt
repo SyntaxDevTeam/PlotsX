@@ -72,10 +72,12 @@ internal object OperationJournal {
                 require(rows.getString(1) == "operation_journal")
                 require(exists(conn)) { "Journal migration is recorded but financial evidence table is missing" }
                 readAll(conn)
+                ensureIndexes(conn)
                 return
             } }
         }
         conn.createStatement().use { it.execute(schema()) }
+        ensureIndexes(conn)
         readAll(conn) // Validate a partially created/imported journal before marking migration complete.
         conn.createStatement().use { it.executeUpdate("INSERT INTO schema_migrations (version, name) VALUES (2, 'operation_journal')") }
     }
@@ -87,32 +89,75 @@ internal object OperationJournal {
         found
     }
 
-    fun readAll(conn: Connection): List<Operation> = conn.createStatement().use { stmt ->
-        stmt.executeQuery("SELECT * FROM plot_operations ORDER BY created_at, operation_id").use { rows -> buildList {
-            while (rows.next()) add(Operation(
-                UUID.fromString(rows.getString("operation_id")), rows.getInt("plot_id"),
-                UUID.fromString(rows.getString("owner_uuid")), UUID.fromString(rows.getString("actor_uuid")), rows.getString("world"),
-                ChunkPosition(rows.getInt("source_x"), rows.getInt("source_z")), ChunkPosition(rows.getInt("target_x"), rows.getInt("target_z")),
-                rows.getLong("expected_revision"), rows.getString("amount").toBigDecimal(), rows.getString("provider"), rows.getString("currency"),
-                State.valueOf(rows.getString("state")), rows.getLong("created_at"), rows.getLong("updated_at"),
-                if ((1..rows.metaData.columnCount).any { rows.metaData.getColumnName(it).equals("classic_radius", true) })
-                    (rows.getObject("classic_radius") as? Number)?.toInt() else null
-            ))
-        } }
+    private val pendingStates = State.entries.filterNot { it.terminal }
+    private val pendingPlaceholders = pendingStates.joinToString(",") { "?" }
+
+    /** Also runs for existing journals; JDBC metadata avoids dialect-specific IF NOT EXISTS syntax. */
+    private fun ensureIndexes(conn: Connection) {
+        val existing = conn.metaData.getIndexInfo(conn.catalog, conn.schema, "plot_operations", false, false).use { rows ->
+            buildSet { while (rows.next()) rows.getString("INDEX_NAME")?.let { add(it.lowercase(java.util.Locale.ROOT)) } }
+        }
+        for ((name, columns) in mapOf(
+            "idx_plot_operations_owner_state" to "owner_uuid, state",
+            "idx_plot_operations_plot_state" to "plot_id, state",
+            "idx_plot_operations_state_time" to "state, created_at, operation_id"
+        )) if (name !in existing) conn.createStatement().use { it.execute("CREATE INDEX $name ON plot_operations ($columns)") }
     }
 
-    fun pending(conn: Connection): List<Operation> = readAll(conn).filterNot { it.state.terminal }
+    private fun read(rows: java.sql.ResultSet): List<Operation> {
+        // Legacy backups can omit this column. Detect it once per result, not once per operation.
+        val classic = (1..rows.metaData.columnCount).any { rows.metaData.getColumnName(it).equals("classic_radius", true) }
+        return buildList { while (rows.next()) add(Operation(
+            UUID.fromString(rows.getString("operation_id")), rows.getInt("plot_id"),
+            UUID.fromString(rows.getString("owner_uuid")), UUID.fromString(rows.getString("actor_uuid")), rows.getString("world"),
+            ChunkPosition(rows.getInt("source_x"), rows.getInt("source_z")), ChunkPosition(rows.getInt("target_x"), rows.getInt("target_z")),
+            rows.getLong("expected_revision"), rows.getString("amount").toBigDecimal(), rows.getString("provider"), rows.getString("currency"),
+            State.valueOf(rows.getString("state")), rows.getLong("created_at"), rows.getLong("updated_at"),
+            if (classic) (rows.getObject("classic_radius") as? Number)?.toInt() else null
+        )) }
+    }
+
+    fun readAll(conn: Connection): List<Operation> = conn.createStatement().use { stmt ->
+        stmt.executeQuery("SELECT * FROM plot_operations ORDER BY created_at, operation_id").use(::read)
+    }
+
+    fun find(conn: Connection, id: UUID): Operation? = conn.prepareStatement(
+        "SELECT * FROM plot_operations WHERE operation_id = ?"
+    ).use { stmt ->
+        stmt.setString(1, id.toString())
+        stmt.executeQuery().use(::read).singleOrNull()
+    }
+
+    fun pending(conn: Connection): List<Operation> = conn.prepareStatement(
+        "SELECT * FROM plot_operations WHERE state IN ($pendingPlaceholders) ORDER BY created_at, operation_id"
+    ).use { stmt ->
+        pendingStates.forEachIndexed { index, state -> stmt.setString(index + 1, state.name) }
+        stmt.executeQuery().use(::read)
+    }
+
+    private fun hasPending(conn: Connection, owner: UUID, plotId: Int): Boolean {
+        // Separate predicates let both owner/state and plot/state indexes serve an existence lookup.
+        fun exists(column: String, value: Any): Boolean = conn.prepareStatement(
+            "SELECT 1 FROM plot_operations WHERE $column = ? AND state IN ($pendingPlaceholders)"
+        ).use { stmt ->
+            stmt.setObject(1, value)
+            pendingStates.forEachIndexed { index, state -> stmt.setString(index + 2, state.name) }
+            stmt.maxRows = 1
+            stmt.executeQuery().use { it.next() }
+        }
+        return exists("owner_uuid", owner.toString()) || exists("plot_id", plotId)
+    }
 
     /** Return false for an identical existing operation: the caller must NOT withdraw again. */
     fun prepare(conn: Connection, operation: Operation): Boolean {
         require(conn.autoCommit) { "Preparation must be durable before a provider is called" }
         require(operation.state == State.PREPARED && operation.createdAt == operation.updatedAt)
-        val existing = readAll(conn).singleOrNull { it.id == operation.id }
+        val existing = find(conn, operation.id)
         if (existing != null) {
             require(existing.copy(state = State.PREPARED, updatedAt = existing.createdAt) == operation) { "Operation ID reused with a different request" }
             return false
         }
-        require(pending(conn).none { it.owner == operation.owner || it.plotId == operation.plotId }) {
+        require(!hasPending(conn, operation.owner, operation.plotId)) {
             "An unresolved operation reserves this owner or plot"
         }
         conn.prepareStatement("INSERT INTO plot_operations (operation_id, plot_id, owner_uuid, actor_uuid, world, source_x, source_z, target_x, target_z, expected_revision, amount, provider, currency, state, created_at, updated_at, classic_radius) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").use {
@@ -156,12 +201,12 @@ internal object OperationJournal {
     /** Caller owns transaction AND mutation coordinator; rollback on any failure or rejection. */
     fun applyLand(conn: Connection, id: UUID, limits: ChunkExpansionTransaction.Limits, now: Long): ChunkExpansionTransaction.Result {
         require(!conn.autoCommit)
-        val operation = readAll(conn).single { it.id == id }
+        val operation = requireNotNull(find(conn, id)) { "Missing payment operation $id" }
         require(operation.classicRadius == null) { "Classic purchase requires classic land validation" }
         require(operation.state == State.DEBITED || (operation.state == State.PREPARED && operation.amount.signum() == 0)) {
             "Land requires confirmed payment or a prepared free operation"
         }
-        val plot = PlotRepository.readAll(conn).singleOrNull { it.id == operation.plotId }
+        val plot = PlotRepository.readAll(conn, operation.plotId).singleOrNull()
         require(plot == null || plot.world.equals(operation.world, true)) { "Operation world differs from current plot" }
         val direction = ExpansionDirection.entries.single { operation.source.neighbour(it) == operation.target }
         val result = ChunkExpansionTransaction.applyInTransaction(conn, ChunkExpansionTransaction.Request(
@@ -176,7 +221,7 @@ internal object OperationJournal {
     fun applyClassicLand(conn: Connection, id: UUID, expectedLevel: Int, limits: ClassicExpansionTransaction.Limits,
                          now: Long): ClassicExpansionTransaction.Result {
         require(!conn.autoCommit)
-        val op = readAll(conn).single { it.id == id }
+        val op = requireNotNull(find(conn, id)) { "Missing payment operation $id" }
         require(op.state == State.DEBITED || (op.state == State.PREPARED && op.amount.signum() == 0))
         val result = ClassicExpansionTransaction.apply(conn, op, expectedLevel, limits)
         if (result == ClassicExpansionTransaction.Result.SUCCESS)

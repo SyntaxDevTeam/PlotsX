@@ -28,25 +28,18 @@ internal class AnimalProtectionListener(private val plugin: PlotsX) : Listener {
 
     private fun plotAt(entity: Entity): PlotData? {
         val location = entity.location
-        return plugin.cacheManager.getCachedPlots().firstOrNull { plot ->
-            plot.world.equals(location.world.name, ignoreCase = true) &&
-                plot.contains(location.blockX, location.blockZ)
-        }
+        return plugin.cacheManager.getPlotAt(location.world.name, location.blockX, location.blockZ)
     }
 
     private fun hasPlotPermission(player: Player, plot: PlotData, flag: String): Boolean {
         if (PermissionChecker.canBypassPlots(player)) return true
         if (player.uniqueId == plot.ownerUuid) return true
 
-        val isMember = plugin.cacheManager.getMembers(plot.id)
-            ?.any { it.memberUuid == player.uniqueId.toString() } ?: false
+        val isMember = plugin.cacheManager.isMember(plot.id, player.uniqueId)
         if (isMember) return true
 
         val definition = PlotFlagRegistry.allFlags[flag] ?: return false
-        val stored = plugin.cacheManager.getFlags(plot.id)
-            ?.firstOrNull { it.name == flag }
-            ?.value
-            ?.toBooleanStrictOrNull()
+        val stored = plugin.cacheManager.getFlagValue(plot.id, flag)
             ?: definition.defaultValue
 
         return definition.type.allows(stored)

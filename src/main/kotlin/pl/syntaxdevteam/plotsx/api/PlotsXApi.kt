@@ -7,8 +7,8 @@ import java.util.UUID
 
 /** Obtain through Bukkit's ServicesManager. Do not shade these classes into consumers.
  * Snapshot/flag reads use caches and may run asynchronously; they never load worlds/chunks.
- * getRolePermissions is a database-backed exception requiring the server thread.
- * Mutation, registration and CommandSender operations require the Paper server thread.
+ * CommandSender operations require the actor's entity thread (Paper server thread for console).
+ * Flag registration requires the server thread. Synchronous mutations may block; prefer Async variants.
  * A retained service becomes invalid when PlotsX is disabled.
  */
 interface PlotsXApi {
@@ -30,7 +30,7 @@ interface PlotsXApi {
      */
     fun evaluateFlag(world: String, blockX: Int, blockZ: Int, flag: String, subject: UUID?): FlagDecision
     fun canManage(actor: CommandSender, plotId: Int, action: String): Boolean
-    /** Database-backed, server thread only. */
+    /** Cache-backed; may be called asynchronously. */
     fun getRolePermissions(plotId: Int, role: String): Set<String>
     fun getRoles(): List<String>
     fun addMember(actor: CommandSender, plotId: Int, player: UUID): MemberUpdateResult
@@ -47,6 +47,17 @@ interface PlotsXApi {
     fun transferOwnershipAsync(actor: CommandSender, plotId: Int, recipient: UUID): java.util.concurrent.CompletableFuture<MemberUpdateResult>
     /** Checks current owner/rank permissions, persists, refreshes cache and emits a changed event. */
     fun setFlag(actor: CommandSender, plotId: Int, flag: String, value: Boolean): FlagUpdateResult
+    /** Async mutations: invoke on the actor's entity thread (server thread for console).
+     * Permissions are captured there; current plot ownership, membership and grants are checked on the worker.
+     * Futures complete after cache publication. Never join/get on a server thread; schedule UI callbacks yourself.
+     * On disable or persistence/publication failure pending requests complete with DATABASE_ERROR.
+     * Flag-change events are subsequently scheduled on the actor thread while the plugin/actor remains available.
+     */
+    fun addMemberAsync(actor: CommandSender, plotId: Int, player: UUID): java.util.concurrent.CompletableFuture<MemberUpdateResult>
+    fun removeMemberAsync(actor: CommandSender, plotId: Int, player: UUID): java.util.concurrent.CompletableFuture<MemberUpdateResult>
+    fun setMemberRoleAsync(actor: CommandSender, plotId: Int, player: UUID, role: String): java.util.concurrent.CompletableFuture<MemberUpdateResult>
+    fun setRolePermissionAsync(actor: CommandSender, plotId: Int, role: String, action: String, allowed: Boolean): java.util.concurrent.CompletableFuture<MemberUpdateResult>
+    fun setFlagAsync(actor: CommandSender, plotId: Int, flag: String, value: Boolean): java.util.concurrent.CompletableFuture<FlagUpdateResult>
     /** Register a namespaced flag owned by provider, e.g. myplugin:machines. Never replaces a flag. */
     fun registerFlag(provider: Plugin, definition: FlagDefinition): Boolean
     /** Removes the definition only; saved values survive disable/re-enable. */

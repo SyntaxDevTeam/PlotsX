@@ -23,6 +23,7 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     @Volatile private var active = true
     override val apiVersion = 2
     private val access = PlotAccess(plugin)
+    private val asyncTasks = AsyncApiTasks(report = { plugin.logger.err("Async API operation failed: ${it.message}") }) { plugin.schedulerAdapter.runAsync(it) }
     private val providers = java.util.concurrent.ConcurrentHashMap<String, Plugin>()
     private fun ready() = check(active) { "PlotsX API is disabled; obtain a new provider from ServicesManager" }
     private fun serverThread() { ready(); check(Bukkit.isPrimaryThread()) { "This API operation requires the Paper server thread" } }
@@ -43,13 +44,19 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
             PlotProfileSnapshot(it.snapshot(), it.teleportSpawn?.let { spawn -> PlotTeleportSnapshot(spawn.x, spawn.y, spawn.z) })
         })
     }
-    override fun getOwnedPlots(owner: UUID) = immutable(getPlots().filter { it.owner == owner })
-    override fun getAccessiblePlots(player: UUID) = immutable(getPlots().filter { it.owner == player || isMember(it.id, player) })
+    override fun getOwnedPlots(owner: UUID): List<PlotSnapshot> {
+        ready()
+        return immutable(plugin.cacheManager.getCachedPlots().filter { it.ownerUuid == owner }.map { it.snapshot() })
+    }
+    override fun getAccessiblePlots(player: UUID): List<PlotSnapshot> {
+        ready()
+        return immutable(plugin.cacheManager.getPlayerPlots(player).map { it.snapshot() })
+    }
     override fun getMembers(plotId: Int): List<MemberSnapshot> {
         ready()
         return immutable(plugin.cacheManager.getMembers(plotId).orEmpty().map { MemberSnapshot(UUID.fromString(it.memberUuid), it.memberRole) })
     }
-    override fun isMember(plotId: Int, player: UUID) = getMembers(plotId).any { it.player == player }
+    override fun isMember(plotId: Int, player: UUID): Boolean { ready(); return plugin.cacheManager.isMember(plotId, player) }
     override fun getFlags(): List<FlagDefinition> {
         ready()
         return immutable(PlotFlagRegistry.allFlags.values.map {
@@ -59,9 +66,9 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     }
     override fun getFlagValue(plotId: Int, flag: String): Boolean? {
         ready()
-        if (getPlot(plotId) == null) return null
+        if (plugin.cacheManager.getPlot(plotId) == null) return null
         val definition = PlotFlagRegistry.allFlags[flag] ?: return null
-        return plugin.cacheManager.getFlags(plotId)?.firstOrNull { it.name == flag }?.value?.toBooleanStrictOrNull()
+        return plugin.cacheManager.getFlagValue(plotId, flag)
             ?: definition.defaultValue
     }
     override fun evaluateFlag(world: String, blockX: Int, blockZ: Int, flag: String, subject: UUID?): FlagDecision {
@@ -70,10 +77,10 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
         return plugin.protectionCoordinator.decision({ FlagDecision.DENY }) {
         val snapshot = plugin.cacheManager.readSnapshot()
         val plot = snapshot.at(world, blockX, blockZ) ?: return@decision FlagDecision.ALLOW
-        val value = snapshot.flags[plot.id]?.firstOrNull { it.name == flag }?.value?.toBooleanStrictOrNull()
+        val value = snapshot.flagValue(plot.id, flag)
             ?: definition.defaultValue
         val member = subject != null && (plot.ownerUuid == subject ||
-            snapshot.members[plot.id].orEmpty().any { it.memberUuid == subject.toString() })
+            snapshot.member(plot.id, subject) != null)
         if (FlagRules.allowed(value, definition.type == FlagType.WHITELIST, definition.memberBypass, member))
             FlagDecision.ALLOW else FlagDecision.DENY
         }
@@ -88,13 +95,17 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     override fun canManage(actor: CommandSender, plotId: Int, action: String): Boolean {
         actorThread(actor)
         if (action !in access.actions) return false
-        val plot = plugin.databaseHandler.getPlotById(plotId) ?: return false
-        return access.allowed(actor, plot, action)
+        return plugin.cacheManager.withDecisionSnapshot {
+            val plot = plugin.cacheManager.getPlot(plotId) ?: return@withDecisionSnapshot false
+            access.allowed(actor, plot, action)
+        }
     }
     override fun getRolePermissions(plotId: Int, role: String): Set<String> {
-        serverThread()
-        if (plugin.databaseHandler.getPlotById(plotId) == null) return emptySet()
-        return Collections.unmodifiableSet(access.grants(plotId, role))
+        ready()
+        return plugin.cacheManager.withDecisionSnapshot {
+            if (plugin.cacheManager.getPlot(plotId) == null) emptySet()
+            else Collections.unmodifiableSet(access.grants(plotId, role))
+        }
     }
     override fun getRoles(): List<String> { ready(); return immutable(access.roles) }
     override fun addMember(actor: CommandSender, plotId: Int, player: UUID) = changeMember(actor, plotId, player, "add")
@@ -110,7 +121,7 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     private fun changeMember(actor: CommandSender, plotId: Int, target: UUID, action: String, role: String = "member"): MemberUpdateResult {
         actorThread(actor)
         try {
-            val plot = plugin.databaseHandler.getPlotById(plotId) ?: return MemberUpdateResult.PLOT_NOT_FOUND
+            val plot = plugin.cacheManager.getPlot(plotId) ?: return MemberUpdateResult.PLOT_NOT_FOUND
             val permitted = when (action) {
                 "add" -> access.allowed(actor, plot, "invite")
                 "remove" -> access.allowed(actor, plot, "kick")
@@ -119,7 +130,7 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
             if (!permitted) return MemberUpdateResult.DENIED
             if (target == plot.ownerUuid) return MemberUpdateResult.OWNER
             if (role !in access.roles) return MemberUpdateResult.UNKNOWN_ROLE
-            val members = plugin.databaseHandler.getPlotMembers(plotId)
+            val members = plugin.cacheManager.getMembers(plotId).orEmpty()
             val existing = members.firstOrNull { it.memberUuid == target.toString() }
             if (action == "add" && existing != null) return MemberUpdateResult.ALREADY_MEMBER
             if (action != "add" && existing == null) return MemberUpdateResult.NOT_MEMBER
@@ -143,8 +154,6 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
                 }
             }
             if (!success) return if (action == "transfer") MemberUpdateResult.TRANSFER_REJECTED else MemberUpdateResult.DATABASE_ERROR
-            plugin.cacheManager.reloadMembersSync(plotId)
-            plugin.cacheManager.reloadPlotSync(plotId)
             plugin.databaseHandler.logPlotAction(PlotLogEntry(plotId, "Member:$action:$target:$role",
                 (actor as? Player)?.uniqueId ?: UUID(0, 0), System.currentTimeMillis()))
             return MemberUpdateResult.UPDATED
@@ -157,7 +166,7 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     override fun setRolePermission(actor: CommandSender, plotId: Int, role: String, action: String, allowed: Boolean): MemberUpdateResult {
         actorThread(actor)
         try {
-            val plot = plugin.databaseHandler.getPlotById(plotId) ?: return MemberUpdateResult.PLOT_NOT_FOUND
+            val plot = plugin.cacheManager.getPlot(plotId) ?: return MemberUpdateResult.PLOT_NOT_FOUND
             if (!access.owner(actor, plot)) return MemberUpdateResult.DENIED
             if (role !in access.roles) return MemberUpdateResult.UNKNOWN_ROLE
             if (action !in access.actions) return MemberUpdateResult.UNKNOWN_ACTION
@@ -173,10 +182,10 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     override fun setFlag(actor: CommandSender, plotId: Int, flag: String, value: Boolean): FlagUpdateResult {
         actorThread(actor)
         val definition = PlotFlagRegistry.allFlags[flag] ?: return FlagUpdateResult.UNKNOWN_FLAG
-        val plot = plugin.databaseHandler.getPlotById(plotId) ?: return FlagUpdateResult.PLOT_NOT_FOUND
+        val plot = plugin.cacheManager.getPlot(plotId) ?: return FlagUpdateResult.PLOT_NOT_FOUND
         if (!access.allowed(actor, plot, "flag.$flag")) return FlagUpdateResult.DENIED
         try {
-            val previous = plugin.databaseHandler.getPlotFlag(plotId, flag)?.value?.toBooleanStrictOrNull() ?: definition.defaultValue
+            val previous = plugin.cacheManager.getFlagValue(plotId, flag) ?: definition.defaultValue
             if (previous == value) return FlagUpdateResult.UNCHANGED
             if (!plugin.databaseHandler.updatePlotFlag(plotId, flag, value)) return FlagUpdateResult.DATABASE_ERROR
             val actorId = (actor as? Player)?.uniqueId
@@ -188,6 +197,109 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
             return FlagUpdateResult.DATABASE_ERROR
         }
     }
+    /** Capture Bukkit permissions/configuration on the caller's entity thread. Worker checks use current cache data. */
+    private fun actorPolicy(actor: CommandSender): ApiActorPolicy {
+        actorThread(actor)
+        return ApiActorPolicy((actor as? Player)?.uniqueId, access.admin(actor), access.roles.toSet(), access.actions.toSet(),
+            access.roles.associateWith { role ->
+                val path = "plot-roles.$role.permissions"
+                if (plugin.config.contains(path)) plugin.config.getStringList(path).toSet()
+                else if (role == "manager") setOf("invite", "kick", "rename") else emptySet()
+            })
+    }
+
+    private class WriteScope(val actor: ApiActorPolicy) {
+        var dirty = false
+        var event: PlotFlagChangedEvent? = null
+        fun write(action: () -> Boolean): Boolean { dirty = true; return action() }
+    }
+
+    private fun <T> submit(actor: CommandSender, plotId: Int, failure: T, action: (WriteScope) -> T): java.util.concurrent.CompletableFuture<T> {
+        val policy = actorPolicy(actor)
+        return asyncTasks.submit(failure) {
+            ready()
+            val scope = WriteScope(policy)
+            val result = plugin.protectionCoordinator.mutate({
+                if (scope.dirty) plugin.cacheManager.reloadPlotSync(plotId)
+            }) { action(scope) }
+            scope.event?.let { event ->
+                // This is a normal synchronous Bukkit event; dispatch after cache publication on the actor scheduler.
+                runCatching {
+                    plugin.schedulerAdapter.runForSender(actor, Runnable {
+                        if (active && plugin.isEnabled) plugin.server.pluginManager.callEvent(event)
+                    })
+                }.onFailure { plugin.logger.err("API flag-change notification could not be scheduled: ${it.message}") }
+            }
+            result
+        }
+    }
+
+    override fun addMemberAsync(actor: CommandSender, plotId: Int, player: UUID) = changeMemberAsync(actor, plotId, player, "add")
+    override fun removeMemberAsync(actor: CommandSender, plotId: Int, player: UUID) = changeMemberAsync(actor, plotId, player, "remove")
+    override fun setMemberRoleAsync(actor: CommandSender, plotId: Int, player: UUID, role: String) = changeMemberAsync(actor, plotId, player, "role", role)
+
+    private fun changeMemberAsync(actor: CommandSender, plotId: Int, target: UUID, action: String, role: String = "member") =
+        submit(actor, plotId, MemberUpdateResult.DATABASE_ERROR) { scope ->
+            val snapshot = plugin.cacheManager.readSnapshot()
+            val plot = snapshot.plots[plotId] ?: return@submit MemberUpdateResult.PLOT_NOT_FOUND
+            val owner = scope.actor.owner(plot)
+            val permitted = when (action) {
+                "add" -> scope.actor.allowed(snapshot, plot, "invite")
+                "remove" -> scope.actor.allowed(snapshot, plot, "kick")
+                else -> owner
+            }
+            if (!permitted) return@submit MemberUpdateResult.DENIED
+            if (target == plot.ownerUuid) return@submit MemberUpdateResult.OWNER
+            if (role !in scope.actor.roles) return@submit MemberUpdateResult.UNKNOWN_ROLE
+            val existing = snapshot.member(plotId, target)
+            if (action == "add" && existing != null) return@submit MemberUpdateResult.ALREADY_MEMBER
+            if (action != "add" && existing == null) return@submit MemberUpdateResult.NOT_MEMBER
+            if (action == "remove" && !owner && !pl.syntaxdevteam.plotsx.commands.RoleHierarchy.canRemove(
+                    scope.actor.id?.let { snapshot.member(plotId, it)?.memberRole }, existing?.memberRole))
+                return@submit MemberUpdateResult.DENIED
+            val success = scope.write {
+                when (action) {
+                    "add" -> plugin.databaseHandler.addPlotMember(plotId, target)
+                    "remove" -> plugin.databaseHandler.removePlotMember(plotId, target)
+                    else -> plugin.databaseHandler.updatePlotMemberRole(plotId, target, role)
+                }
+            }
+            if (!success) return@submit MemberUpdateResult.DATABASE_ERROR
+            plugin.databaseHandler.logPlotAction(PlotLogEntry(plotId, "Member:$action:$target:$role",
+                scope.actor.id ?: UUID(0, 0), System.currentTimeMillis()))
+            MemberUpdateResult.UPDATED
+        }
+
+    override fun setRolePermissionAsync(actor: CommandSender, plotId: Int, role: String, action: String, allowed: Boolean) =
+        submit(actor, plotId, MemberUpdateResult.DATABASE_ERROR) { scope ->
+            val plot = plugin.cacheManager.getPlot(plotId) ?: return@submit MemberUpdateResult.PLOT_NOT_FOUND
+            if (!scope.actor.owner(plot)) return@submit MemberUpdateResult.DENIED
+            if (role !in scope.actor.roles) return@submit MemberUpdateResult.UNKNOWN_ROLE
+            if (action !in scope.actor.actions) return@submit MemberUpdateResult.UNKNOWN_ACTION
+            if (!scope.write { plugin.databaseHandler.updatePlotFlag(plotId, access.key(role, action), allowed) })
+                return@submit MemberUpdateResult.DATABASE_ERROR
+            plugin.databaseHandler.logPlotAction(PlotLogEntry(plotId, "RolePermission:$role:$action:$allowed",
+                scope.actor.id ?: UUID(0, 0), System.currentTimeMillis()))
+            MemberUpdateResult.UPDATED
+        }
+
+    override fun setFlagAsync(actor: CommandSender, plotId: Int, flag: String, value: Boolean): java.util.concurrent.CompletableFuture<FlagUpdateResult> {
+        actorThread(actor)
+        val definition = PlotFlagRegistry.allFlags[flag]
+            ?: return java.util.concurrent.CompletableFuture.completedFuture(FlagUpdateResult.UNKNOWN_FLAG)
+        return submit(actor, plotId, FlagUpdateResult.DATABASE_ERROR) { scope ->
+            val snapshot = plugin.cacheManager.readSnapshot()
+            val plot = snapshot.plots[plotId] ?: return@submit FlagUpdateResult.PLOT_NOT_FOUND
+            if (!scope.actor.allowed(snapshot, plot, "flag.$flag")) return@submit FlagUpdateResult.DENIED
+            val previous = snapshot.flagValue(plotId, flag) ?: definition.defaultValue
+            if (previous == value) return@submit FlagUpdateResult.UNCHANGED
+            if (!scope.write { plugin.databaseHandler.updatePlotFlag(plotId, flag, value) }) return@submit FlagUpdateResult.DATABASE_ERROR
+            plugin.databaseHandler.logPlotAction(PlotLogEntry(plotId, "UpdateFlag:$flag:$value", scope.actor.id ?: UUID(0, 0), System.currentTimeMillis()))
+            scope.event = PlotFlagChangedEvent(plot.snapshot(), flag, previous, value, scope.actor.id)
+            FlagUpdateResult.UPDATED
+        }
+    }
+
     override fun registerFlag(provider: Plugin, definition: FlagDefinition): Boolean {
         serverThread()
         require(provider.isEnabled) { "Flag provider must be enabled" }
@@ -213,6 +325,7 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
     }
     fun close() {
         active = false
+        asyncTasks.close()
         providers.keys.toList().forEach { PlotFlagRegistry.unregister(it) }
         providers.clear()
     }

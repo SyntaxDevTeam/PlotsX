@@ -233,4 +233,41 @@ class OperationJournalTest {
             assertEquals(op.copy(state = OperationJournal.State.REFUND_REQUIRED, updatedAt = 200), recovered)
         } finally { dir.deleteRecursively() }
     }
+
+    @Test fun `indexed lookups preserve duplicate and pending rules with a long terminal history`() = databases { c, _, op ->
+        c.prepareStatement("""
+            INSERT INTO plot_operations (operation_id, plot_id, owner_uuid, actor_uuid, world, source_x, source_z,
+                target_x, target_z, expected_revision, amount, provider, currency, state, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, -1, -1, 0, -1, 0, '0', 'Vault:TestProvider', 'default', 'CANCELLED', 100, 100)
+        """.trimIndent()).use { stmt ->
+            repeat(2_000) { index ->
+                stmt.setString(1, UUID(0, index.toLong() + 1).toString()); stmt.setInt(2, op.plotId)
+                stmt.setString(3, op.owner.toString()); stmt.setString(4, op.actor.toString()); stmt.setString(5, op.world)
+                stmt.addBatch()
+            }
+            stmt.executeBatch()
+        }
+        assertTrue(OperationJournal.pending(c).isEmpty())
+        assertNull(OperationJournal.find(c, op.id))
+        assertTrue(OperationJournal.prepare(c, op))
+        assertEquals(op, OperationJournal.find(c, op.id))
+        assertEquals(listOf(op), OperationJournal.pending(c))
+        assertFalse(OperationJournal.prepare(c, op))
+        assertThrows(IllegalArgumentException::class.java) {
+            OperationJournal.prepare(c, op.copy(id = UUID.randomUUID(), plotId = op.plotId + 1))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            OperationJournal.prepare(c, op.copy(id = UUID.randomUUID(), owner = UUID.randomUUID()))
+        }
+        repeat(2) { OperationJournal.migrate(c) }
+        val indexes = c.metaData.getIndexInfo(c.catalog, c.schema, "plot_operations", false, false).use { rows ->
+            buildSet { while (rows.next()) rows.getString("INDEX_NAME")?.let(::add) }
+        }
+        assertTrue(indexes.containsAll(listOf("idx_plot_operations_owner_state", "idx_plot_operations_plot_state", "idx_plot_operations_state_time")))
+        c.createStatement().use { stmt ->
+            stmt.executeQuery("EXPLAIN QUERY PLAN SELECT * FROM plot_operations WHERE operation_id = '${op.id}'").use { rows ->
+                assertTrue(rows.next()); assertTrue(rows.getString("detail").contains("SEARCH"))
+            }
+        }
+    }
 }

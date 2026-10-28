@@ -50,7 +50,7 @@ internal object ChunkRemovalTransaction {
 
     fun applyInTransaction(conn: Connection, request: Request): Result {
         require(!conn.autoCommit) { "An existing transaction is required" }
-        val plot = PlotRepository.readAll(conn).singleOrNull { it.id == request.plotId }
+        val plot = PlotRepository.readAll(conn, request.plotId).singleOrNull()
             ?: return Result.PlotNotFound
         if (plot.ownerUuid != request.owner) return Result.NotOwner
         val geometry = plot.geometry as? ChunkGeometry ?: return Result.WrongGeometry

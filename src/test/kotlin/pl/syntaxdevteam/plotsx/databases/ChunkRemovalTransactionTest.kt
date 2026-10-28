@@ -111,4 +111,13 @@ class ChunkRemovalTransactionTest {
         assertEquals(0L, plot.geometryRevision)
         assertEquals(setOf(anchor, east), (plot.geometry as ChunkGeometry).chunks)
     }
+
+    @Test fun `removal reads only its plot even when unrelated geometry cannot be loaded`() = databases { conn, id ->
+        val other = insert(conn, ClassicGeometry(PlotSegment(100, 100, 1)))
+        conn.prepareStatement("UPDATE plots SET geometry_type = 'unknown' WHERE plot_id = ?").use {
+            it.setInt(1, other); it.executeUpdate()
+        }
+        assertEquals(ChunkRemovalTransaction.Result.Success(east, 1), ChunkRemovalTransaction.remove(conn, request(id)))
+        assertEquals(setOf(anchor), (PlotRepository.readAll(conn, id).single().geometry as ChunkGeometry).chunks)
+    }
 }

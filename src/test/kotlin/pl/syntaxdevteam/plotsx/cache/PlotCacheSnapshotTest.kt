@@ -42,4 +42,52 @@ class PlotCacheSnapshotTest {
         assertEquals("false", old.flags[1]?.single()?.value)
         assertEquals("true", next.flags[1]?.single()?.value)
     }
+
+    @Test fun `single plot metadata replacement retains unrelated models and updates every lookup atomically`() {
+        val original = plot()
+        val other = original.copy(id = 2, x = 100, name = "Other")
+        val player = UUID.randomUUID()
+        val old = PlotCacheSnapshot.create(listOf(original, other),
+            mapOf(1 to listOf(PlotFlagData(1, "build", "false"))),
+            mapOf(1 to listOf(PlotMemberData(1, player.toString(), "member"))))
+        val next = old.withPlot(1, original.copy(name = "Renamed", ownerUuid = player),
+            listOf(PlotFlagData(1, "build", "true")), listOf(PlotMemberData(1, player.toString(), "manager")))
+        assertEquals("Renamed", next.at("world", 0, 0)?.name)
+        assertEquals(player, next.atChunk("world", pl.syntaxdevteam.plotsx.geometry.ChunkPosition(0, 0))?.ownerUuid)
+        assertSame(old.plots[2], next.at("world", 100, 0))
+        assertEquals(false, old.flagValue(1, "build"))
+        assertEquals(true, next.flagValue(1, "build"))
+        assertEquals("member", old.member(1, player)?.memberRole)
+        assertEquals("manager", next.member(1, player)?.memberRole)
+        assertEquals("Home", old.at("world", 0, 0)?.name)
+    }
+
+    @Test fun `targeted geometry publication inserts moves and removes complete policies`() {
+        val player = UUID.randomUUID()
+        val first = PlotCacheSnapshot.create()
+        val flags = mutableListOf(PlotFlagData(1, "build", "true"))
+        val members = mutableListOf(PlotMemberData(1, player.toString(), "member"))
+        val inserted = first.withPlot(1, plot(), flags, members)
+        flags.clear(); members.clear()
+        assertEquals(true, inserted.flagValue(1, "build"))
+        assertNotNull(inserted.member(1, player))
+        val moved = inserted.withPlot(1, plot().copy(x = 100, world = "nether"), emptyList(), emptyList())
+        assertNull(moved.at("world", 0, 0))
+        assertEquals(1, moved.at("NETHER", 100, 0)?.id)
+        val removed = moved.withPlot(1, null, emptyList(), emptyList())
+        assertNull(removed.at("nether", 100, 0))
+        assertNull(removed.flagValue(1, "build")); assertNull(removed.member(1, player))
+        assertNotNull(inserted.at("world", 0, 0)); assertNull(first.at("world", 0, 0))
+    }
+
+    @Test fun `policy indexes retain first-match and invalid-boolean fallback semantics`() {
+        val player = UUID.randomUUID()
+        val snapshot = PlotCacheSnapshot.create(listOf(plot()), mapOf(1 to listOf(
+            PlotFlagData(1, "build", "invalid"), PlotFlagData(1, "build", "true"))), mapOf(1 to listOf(
+            PlotMemberData(1, player.toString(), "member"), PlotMemberData(1, player.toString(), "manager"))))
+        assertNull(snapshot.flagValue(1, "build"))
+        assertNull(snapshot.flagValue(1, "unknown"))
+        assertNull(snapshot.member(2, player))
+        assertEquals("member", snapshot.member(1, player)?.memberRole)
+    }
 }

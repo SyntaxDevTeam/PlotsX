@@ -182,6 +182,9 @@ class DatabaseHandler(private val plugin: PlotsX) {
     private fun <T> protectedMutation(action: () -> T): T =
         plugin.protectionCoordinator.mutate({ plugin.cacheManager.reloadAllCachesSync() }, action)
 
+    private fun <T> protectedPlotMutation(plotId: Int, action: () -> T): T =
+        plugin.protectionCoordinator.mutate({ plugin.cacheManager.reloadPlotSync(plotId) }, action)
+
     fun createTables() {
         withJdbcConnection { conn ->
             conn.createStatement().use { statement ->
@@ -256,32 +259,39 @@ class DatabaseHandler(private val plugin: PlotsX) {
         namePrefix: String,
         maxChunksPerPlot: Int = Int.MAX_VALUE,
         maxChunksOwned: Int = Int.MAX_VALUE,
-    ): ClaimResult = protectedMutation {
-        try {
-            withJdbcConnection { conn ->
-                val shape = pl.syntaxdevteam.plotsx.claiming.ClaimGeometryFactory.create(plugin.claimMode, x, z, radius)
-                when (val result = ClaimTransaction.create(
-                    conn, ownerUuid, actorUuid, world, x, y, z, shape,
-                    maxPlots, maxTotalArea, maxChunksPerPlot, maxChunksOwned, namePrefix,
-                    PlotFlagRegistry.allFlags.values.associate { it.name to it.defaultValue },
-                )) {
-                    is ClaimTransaction.Result.Success -> ClaimResult.Success(result.id)
-                    ClaimTransaction.Result.PlotLimit -> ClaimResult.LimitReached
-                    ClaimTransaction.Result.AreaLimit -> ClaimResult.AreaLimitReached
-                    ClaimTransaction.Result.ChunkLimit -> ClaimResult.ChunkLimitReached
-                    ClaimTransaction.Result.Overlap -> ClaimResult.Overlap
+    ): ClaimResult {
+        var createdPlotId: Int? = null
+        return plugin.protectionCoordinator.mutate({
+            // An unknown failure may follow a durable commit; retain the full recovery read in that case.
+            val id = createdPlotId
+            if (id == null) plugin.cacheManager.reloadAllCachesSync() else plugin.cacheManager.reloadPlotSync(id)
+        }) {
+            try {
+                withJdbcConnection { conn ->
+                    val shape = pl.syntaxdevteam.plotsx.claiming.ClaimGeometryFactory.create(plugin.claimMode, x, z, radius)
+                    when (val result = ClaimTransaction.create(
+                        conn, ownerUuid, actorUuid, world, x, y, z, shape,
+                        maxPlots, maxTotalArea, maxChunksPerPlot, maxChunksOwned, namePrefix,
+                        PlotFlagRegistry.allFlags.values.associate { it.name to it.defaultValue },
+                    )) {
+                        is ClaimTransaction.Result.Success -> ClaimResult.Success(result.id).also { createdPlotId = result.id }
+                        ClaimTransaction.Result.PlotLimit -> ClaimResult.LimitReached
+                        ClaimTransaction.Result.AreaLimit -> ClaimResult.AreaLimitReached
+                        ClaimTransaction.Result.ChunkLimit -> ClaimResult.ChunkLimitReached
+                        ClaimTransaction.Result.Overlap -> ClaimResult.Overlap
+                    }
                 }
+            } catch (failure: Exception) {
+                logger.err("Claim transaction failed: ${failure.message}")
+                ClaimResult.DatabaseError
             }
-        } catch (failure: Exception) {
-            logger.err("Claim transaction failed: ${failure.message}")
-            ClaimResult.DatabaseError
         }
     }
 
     internal fun relocatePlot(expected: PlotData, target: PlotRelocation.Target, actor: UUID): PlotRelocation.Result =
-        protectedMutation { withJdbcConnection { PlotRelocation.move(it, expected, target, actor) } }
+        protectedPlotMutation(expected.id) { withJdbcConnection { PlotRelocation.move(it, expected, target, actor) } }
 
-    fun deletePlot(plotId: Int): Boolean = protectedMutation { performDeletePlot(plotId) }
+    fun deletePlot(plotId: Int): Boolean = protectedPlotMutation(plotId) { performDeletePlot(plotId) }
 
     private fun performDeletePlot(plotId: Int): Boolean = try {
         val affectedRows = database().delete("plots") { "plot_id" eq plotId }
@@ -298,7 +308,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
     }
 
     fun updatePlotDetails(plotId: Int, newName: String? = null, newRadius: Int? = null): Boolean =
-        protectedMutation { performUpdatePlotDetails(plotId, newName, newRadius) }
+        protectedPlotMutation(plotId) { performUpdatePlotDetails(plotId, newName, newRadius) }
 
     private fun performUpdatePlotDetails(plotId: Int, newName: String? = null, newRadius: Int? = null): Boolean {
         if (newRadius != null) {
@@ -438,13 +448,13 @@ class DatabaseHandler(private val plugin: PlotsX) {
     internal fun expandChunkAtomically(
         request: ChunkExpansionTransaction.Request,
         limits: ChunkExpansionTransaction.Limits,
-    ): ChunkExpansionTransaction.Result = protectedMutation {
+    ): ChunkExpansionTransaction.Result = protectedPlotMutation(request.plotId) {
         withJdbcConnection { ChunkExpansionTransaction.expand(it, request, limits) }
     }
 
     /** Removes exactly one chunk while publishing the new protection snapshot atomically. */
     internal fun removeChunkAtomically(request: ChunkRemovalTransaction.Request): ChunkRemovalTransaction.Result =
-        protectedMutation { withJdbcConnection { ChunkRemovalTransaction.remove(it, request) } }
+        protectedPlotMutation(request.plotId) { withJdbcConnection { ChunkRemovalTransaction.remove(it, request) } }
 
     fun expandPlotAtomically(
         plotId: Int,
@@ -661,7 +671,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
     }
 
     fun addPlotMember(plotId: Int, memberUuid: UUID, role: String = "member"): Boolean =
-        protectedMutation { performAddPlotMember(plotId, memberUuid, role) }
+        protectedPlotMutation(plotId) { performAddPlotMember(plotId, memberUuid, role) }
 
     private fun performAddPlotMember(plotId: Int, memberUuid: UUID, role: String = "member"): Boolean = try {
         database().upsert(
@@ -681,7 +691,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
     }
 
     fun removePlotMember(plotId: Int, memberUuid: UUID): Boolean =
-        protectedMutation { performRemovePlotMember(plotId, memberUuid) }
+        protectedPlotMutation(plotId) { performRemovePlotMember(plotId, memberUuid) }
 
     private fun performRemovePlotMember(plotId: Int, memberUuid: UUID): Boolean = try {
         database().delete("plot_members") {
@@ -702,7 +712,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
         maxArea: Long,
         maxChunksPerPlot: Int = Int.MAX_VALUE,
         maxChunksOwned: Int = Int.MAX_VALUE,
-    ): Boolean = protectedMutation {
+    ): Boolean = protectedPlotMutation(plotId) {
         performTransferPlotOwnership(
             plotId, expectedOwner, recipient, maxPlots, maxRadius, maxArea, maxChunksPerPlot, maxChunksOwned,
         )
@@ -730,7 +740,7 @@ class DatabaseHandler(private val plugin: PlotsX) {
     }
 
     fun updatePlotMemberRole(plotId: Int, memberUuid: UUID, newRole: String): Boolean =
-        protectedMutation { performUpdatePlotMemberRole(plotId, memberUuid, newRole) }
+        protectedPlotMutation(plotId) { performUpdatePlotMemberRole(plotId, memberUuid, newRole) }
 
     private fun performUpdatePlotMemberRole(plotId: Int, memberUuid: UUID, newRole: String): Boolean = try {
         database().update("plot_members", mapOf("role" to newRole)) {

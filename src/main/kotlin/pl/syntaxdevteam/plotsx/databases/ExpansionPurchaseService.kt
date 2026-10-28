@@ -77,7 +77,7 @@ internal class ExpansionPurchaseService(
     }
 
     private fun state(op: OperationJournal.Operation) = connections.withConnection { connection ->
-        OperationJournal.readAll(connection).singleOrNull { it.id == op.id }?.state
+        OperationJournal.find(connection, op.id)?.state
     }
 
     private fun transition(op: OperationJournal.Operation, from: OperationJournal.State, to: OperationJournal.State) {

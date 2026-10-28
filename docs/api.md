@@ -195,8 +195,10 @@ Zdarzenie nie obejmuje importu bazy ani zmian uprawnień rang.
 Odczyty snapshotów, list członków, definicji i wartości flag oraz `evaluateFlag`
 działają z cache i mogą być wywoływane asynchronicznie. Są to snapshoty, nie
 transakcja łącząca kilka wywołań; równoczesna zmiana może być widoczna przy kolejnym
-odczycie. `getRolePermissions`, `canManage`, wszystkie zapisy i rejestracja flag
-wymagają głównego wątku Paper. Nie wywołuj ich bezpośrednio na wątkach regionów Folia.
+odczycie. `getRolePermissions` również korzysta wyłącznie z cache i może działać
+asynchronicznie. `canManage` i zapisy z `CommandSender` wymagają wątku encji
+aktora (głównego wątku Paper dla konsoli). Rejestracja flag wymaga wątku serwera;
+nie wykonuj jej bezpośrednio na wątku regionu Folia.
 
 Po wyłączeniu PlotsX serwis jest wyrejestrowany, a odwołania do starej implementacji
 zgłaszają `IllegalStateException`. Integracja opcjonalna powinna obsłużyć
@@ -245,3 +247,30 @@ nie są zmieniane przez dodanie tego API do PlotsX.
 `transferOwnership()` wymaga, aby bieżący wątek był właścicielem zarówno aktora, jak i odbiorcy. Dla odbiorcy w innym regionie zwraca `RECIPIENT_WRONG_THREAD` przed odczytem jego uprawnień.
 
 Użyj `transferOwnershipAsync(actor, plotId, recipientUuid)` na wątku aktora. Metoda pobiera limity na wątku encji odbiorcy i wykonuje zapis na workerze. Nie blokuj wątku serwera przez `join()` ani `get()`. Obsłuż wynik futures i zaplanuj wiadomość lub GUI na schedulerze aktora. Wyłączenie pluginu kończy oczekujące futures wynikiem `DATABASE_ERROR`; rozłączenie przed odczytem limitów daje `RECIPIENT_OFFLINE`.
+
+
+## Asynchroniczne zapisy i koszt odczytów
+
+`addMemberAsync`, `removeMemberAsync`, `setMemberRoleAsync`,
+`setRolePermissionAsync` i `setFlagAsync` zwracają `CompletableFuture`.
+Wywołuj je na wątku encji aktora (na wątku serwera dla konsoli).
+Uprawnienia Bukkit i domyślne uprawnienia ról są przechwytywane na tym wątku;
+aktualna własność działki, członkostwo i zapisane uprawnienia są sprawdzane
+ponownie na workerze pod blokadą zmian ochrony. Zapis do bazy oraz publikacja
+cache odbywają się na workerze. Dotychczasowe synchroniczne metody pozostają
+obsługiwane, lecz mogą blokować wywołujący wątek podczas zapisu.
+
+Future kończy się po publikacji cache. Nie wywołuj `join()` ani `get()` na
+wątku serwera lub encji. Zaplanuj aktualizację GUI lub wiadomość przez
+scheduler gracza. Przy wyłączeniu pluginu oczekujące futures otrzymują
+`DATABASE_ERROR`; ten sam wynik może oznaczać nieudaną publikację po trwałym
+zapisie, więc integracja nie powinna automatycznie powtarzać operacji.
+
+Po udanym `setFlagAsync` zdarzenie `PlotFlagChangedEvent` jest planowane na
+wątku aktora. Future nie czeka na dostarczenie zdarzenia; rozłączenie aktora
+lub wyłączenie pluginu może uniemożliwić jego dostarczenie.
+
+`canManage` i `getRolePermissions` nie wykonują zapytań SQL. Odczyty flag i
+członkostwa używają indeksów bieżącego snapshotu. Listy działek właściciela i
+działek dostępnych dla gracza filtrują dane przed tworzeniem publicznych
+snapshotów, ograniczając kopiowanie geometrii niepowiązanych działek.

@@ -4,7 +4,9 @@ config-version: 103
 #    Global settings
 # /********************************************/
 
-# Plugin language selection. Bundled values: EN, PL
+# Plugin language selection. Bundled values:
+# EN - English, PL - Polish, DE - German, ES - Spanish,
+# FR - French, PT_BR - Brazilian Portuguese.
 # If you would like to add your own language file, please contact us on Discord (https://discord.gg/Zk6mxv7eMh).
 language: "EN"
 
@@ -101,7 +103,7 @@ plot-roles:
   builder:
     permissions: []
   manager:
-    permissions: [invite, kick, rename]
+    permissions: [invite, kick, rename, flag.*]
 
 # /********************************************/
 #    Settings for main commands

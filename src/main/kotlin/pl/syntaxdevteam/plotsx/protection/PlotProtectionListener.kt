@@ -148,8 +148,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         if (hasBypass(player)) return true
         if (player.uniqueId == plot.ownerUuid) return true
 
-        val isMember = plugin.cacheManager.getMembers(plot.id)
-            ?.any { it.memberUuid == player.uniqueId.toString() } ?: false
+        val isMember = plugin.cacheManager.isMember(plot.id, player.uniqueId)
         if (isMember) return true
 
         val flagMeta = PlotFlagRegistry.allFlags[flag]
@@ -158,8 +157,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 return false
             }
 
-        val flags = plugin.cacheManager.getFlags(plot.id) ?: emptyList()
-        val value = flags.firstOrNull { it.name == flag }?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
+        val value = plugin.cacheManager.getFlagValue(plot.id, flag) ?: flagMeta.defaultValue
 
         plugin.logger.debug(
             "[hasPlotPermission] Flaga '$flag' = $value (domyślnie=${flagMeta.defaultValue}, typ=${flagMeta.type}) " +
@@ -177,8 +175,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
      */
     private fun isFlagAllowed(plotId: Int, flag: String): Boolean {
         val flagMeta = PlotFlagRegistry.allFlags[flag] ?: return false
-        val flags = plugin.cacheManager.getFlags(plotId) ?: emptyList()
-        val value = flags.firstOrNull { it.name == flag }?.value?.toBooleanStrictOrNull() ?: flagMeta.defaultValue
+        val value = plugin.cacheManager.getFlagValue(plotId, flag) ?: flagMeta.defaultValue
         return flagMeta.type.allows(value)
     }
 
@@ -229,9 +226,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
     private fun isPlotParticipant(player: Player, plot: PlotData): Boolean =
         hasBypass(player) || player.uniqueId == plot.ownerUuid ||
-            plugin.cacheManager.getMembers(plot.id).orEmpty().any {
-                it.memberUuid == player.uniqueId.toString()
-            }
+            plugin.cacheManager.isMember(plot.id, player.uniqueId)
 
     private fun plotAt(block: Block): PlotData? =
         getPlotAtLocation(block.world.name, block.x, block.z)
@@ -274,7 +269,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             if (newPlotId == null) playerLastPlot.remove(uuid) else playerLastPlot[uuid] = newPlotId
 
             if (oldPlotId != null) {
-                val oldPlot = plugin.cacheManager.getCachedPlots().firstOrNull { it.id == oldPlotId }
+                val oldPlot = plugin.cacheManager.getPlot(oldPlotId)
                 if (oldPlot != null) {
                     notifyPlotBoundary(player,
                         message.stringMessageToComponent("plots", "leave_plot", mapOf("plot" to oldPlot.name)))
