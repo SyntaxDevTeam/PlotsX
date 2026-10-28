@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       mariadb:
-        image: mariadb:11.8
+        image: mariadb:13.0
         env:
           MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: '1'
           MARIADB_ROOT_HOST: '%'
