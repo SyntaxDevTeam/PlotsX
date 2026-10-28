@@ -65,8 +65,9 @@ jobs:
           --health-cmd="pg_isready -U plotsx -d postgres"
           --health-interval=10s --health-timeout=5s --health-retries=12
     env:
-      PLOTSX_TEST_MARIADB_URL: jdbc:mariadb://127.0.0.1:13376/
-      PLOTSX_TEST_MYSQL_URL: jdbc:mariadb://127.0.0.1:13377/
+      # Disposable local services use self-signed certificates; keep TLS enabled.
+      PLOTSX_TEST_MARIADB_URL: jdbc:mariadb://127.0.0.1:13376/?sslMode=trust
+      PLOTSX_TEST_MYSQL_URL: jdbc:mariadb://127.0.0.1:13377/?sslMode=trust
       PLOTSX_TEST_POSTGRESQL_URL: jdbc:postgresql://127.0.0.1:15432/postgres?user=plotsx
     steps:
       - name: Checkout
@@ -85,6 +86,15 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew build liveTestJar foliaLiveTestJar --console=plain --no-daemon
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: |
+            build/reports/tests/test/
+            build/test-results/test/*.xml
 
   publish:
     name: Publish plotsx / paper

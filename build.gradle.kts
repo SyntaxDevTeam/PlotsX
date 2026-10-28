@@ -70,6 +70,17 @@ dependencies {
 
 kotlin { jvmToolchain(21) }
 
+tasks.test {
+    // Changing the configured engines must invalidate a previous SQLite-only result.
+    for (engine in listOf("MARIADB", "MYSQL", "POSTGRESQL")) {
+        val variable = "PLOTSX_TEST_${engine}_URL"
+        inputs.property(variable, providers.environmentVariable(variable).orElse(""))
+    }
+    testLogging {
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
 tasks {
     build { dependsOn("shadowJar") }
     runServer {
