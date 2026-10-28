@@ -31,6 +31,7 @@ These commands require `plotsx.cmd.plot` and, unless using the administrative fo
 | `/plot permission <role> <grant> <true\|false>` | Changes a role grant for this plot; owner/administrator only. |
 | `/plot transfer <player> confirm` | Transfers ownership to a current member who is online; owner/administrator only. Checks the recipient's plot-count, radius, area limits, and plot-name conflicts. |
 | `/plot admin list <player/UUID>` | Lists every plot owned by the target, including offline owners: ID, name, world, position, and radius. Works from console and in game; requires `plotsx.admin.manage`. |
+| `/plot admin <id> move confirm` | Moves the plot's protection and settings to the administrator's position; requires `plotsx.admin.manage` and an in-game sender. |
 | `/plot admin <id>` | Opens the member panel of the specified plot; requires `plotsx.admin.manage`. |
 | `/plot admin <id> <subcommand> [arguments]` | Executes the same management operations on the specified plot, including from console. Requires `plotsx.admin.manage` without separately requiring `plotsx.cmd.plot`. `members` prints the member list. |
 
@@ -42,6 +43,14 @@ Grants are `invite`, `kick`, `rename`, and `flag.<identifier>`; `flag.*` is not 
 Default aliases: `/c` = `/claim`, `/unc` = `/unclaim`. Administrators can change them.
 
 Renaming, border display, teleportation, flags, and expansion are available through the [Plot Panel](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Plot-Panel.md). Expansion additionally requires `plotsx.plot.expand`.
+
+## Moving plot protection
+
+Find the ID with `/plot admin list <player/UUID>`, stand at the destination, and use `/plot admin <id> move confirm`. The plot keeps its ID, owner, name, members, flags, and shape. Chunk plots move by whole chunks. The teleport point is reset.
+
+Buildings and containers remain at the old location, which loses this plot's protection. The destination is checked against allowed worlds, WorldGuard, and other plots. Relocation is rejected if the plot changed during the operation.
+
+If `/claim` is blocked by an ongoing expansion purchase, you receive a waiting message and a notification when you can try again. Retry the command manually.
 
 ## Creating plots: limits and worlds
 

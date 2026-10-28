@@ -14,3 +14,6 @@
 - [Integracje](Integracje.md)
 - [Administracja](Administracja.md)
 - [Pytania i problemy](FAQ.md)
+- [API](API.md)
+- [Limity i światy](Limity-i-swiaty.md)
+- [English wiki](en/Home.md)

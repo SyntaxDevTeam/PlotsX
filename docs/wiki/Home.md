@@ -36,3 +36,5 @@ Grasz na serwerze z PlotsX? Zajrzyj do [pierwszych kroków](Pierwsze-kroki.md). 
 | [Integracje](Integracje.md) | Współpraca z innymi pluginami. |
 | [Administracja](Administracja.md) | Aktualizacje, kopie i codzienna obsługa. |
 | [Pytania i problemy](FAQ.md) | Szybka pomoc, gdy coś nie działa. |
+| [API](API.md) | Publiczny kontrakt dla autorów integracji. |
+| [Limity i światy](Limity-i-swiaty.md) | Ustawienia rang i wielu światów. |

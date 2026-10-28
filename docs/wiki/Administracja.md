@@ -78,11 +78,6 @@ głównym wątku. `PlotsX border metrics` podaje liczbę punktów i particle na 
 danych wyłącz debug — te wpisy są przeznaczone do krótkiej diagnostyki, nie do
 stałego logowania na produkcji.
 
-Lokalny, niewiążący benchmark obrysu można wygenerować poleceniem
-`PLOTSX_BENCHMARK=1 ./gradlew test --tests '*BorderPerformanceTest' --console=plain`.
-Raport trafia do `build/reports/expansion-benchmark.md`. Nie jest to zamiennik testu
-MSPT na docelowym Paper z rzeczywistymi pluginami ekonomii i WorldGuard.
-
 [Zgłoś problem](https://github.com/SyntaxDevTeam/PlotsX/issues) · [Porozmawiaj na Discordzie](https://discord.gg/Zk6mxv7eMh)
 
 Dalej: [pytania i problemy](FAQ.md).

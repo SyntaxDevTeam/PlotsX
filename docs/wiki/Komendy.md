@@ -34,6 +34,7 @@ Komendy wymagają `plotsx.cmd.plot` i stania na działce, do której gracz ma do
 | `/plot permission <rola> <grant> <true\|false>` | Ustawia grant roli dla tej działki; tylko właściciel/administrator. |
 | `/plot transfer <gracz> confirm` | Przekazuje własność obecnemu członkowi, który jest online; tylko właściciel/administrator. Sprawdza limity liczby, promienia i powierzchni odbiorcy oraz konflikt nazwy działki. |
 | `/plot admin list <gracz/UUID>` | Wypisuje wszystkie działki właściciela (także offline): ID, nazwę, świat, pozycję i promień. Działa z konsoli i w grze; wymaga `plotsx.admin.manage`. |
+| `/plot admin <id> move confirm` | Przenosi ochronę i ustawienia działki do pozycji administratora; wymaga `plotsx.admin.manage` i wykonania w grze. |
 | `/plot admin <id>` | Otwiera panel członków wskazanej działki; wymaga `plotsx.admin.manage`. |
 | `/plot admin <id> <podkomenda> [argumenty]` | Wykonuje powyższe operacje na wskazanej działce, także z konsoli. Wymaga `plotsx.admin.manage`, bez osobnego wymogu `plotsx.cmd.plot`. `members` wypisuje listę. |
 
@@ -45,6 +46,14 @@ Granty to `invite`, `kick`, `rename` i `flag.<identyfikator>`; nie obsługują `
 Domyślne skróty: `/c` = `/claim`, `/unc` = `/unclaim`. Administrator może je zmienić.
 
 Zmiana nazwy, granice, teleportacja, flagi i rozszerzanie są dostępne w [panelu](Panel-dzialki.md). Rozszerzanie wymaga dodatkowo `plotsx.plot.expand`.
+
+## Przenoszenie ochrony działki
+
+Odczytaj ID przez `/plot admin list <gracz/UUID>`, stań w miejscu docelowym i użyj `/plot admin <id> move confirm`. Zachowane zostają ID, właściciel, nazwa, członkowie, flagi i kształt działki. Działki chunkowe przesuwają się o pełne chunki. Punkt teleportacji jest resetowany.
+
+Budowle i pojemniki pozostają w starym miejscu; stary teren traci ochronę tej działki. Cel jest sprawdzany względem dozwolonych światów, WorldGuarda i innych działek. Jeśli działka zmieniła się podczas operacji, przenoszenie jest odrzucane.
+
+Jeżeli `/claim` zostało zablokowane przez trwający zakup rozszerzenia, otrzymasz informację o oczekiwaniu i powiadomienie, gdy możesz spróbować ponownie. Ponowienie komendy jest ręczne.
 
 ## Tworzenie działek: limity i światy
 

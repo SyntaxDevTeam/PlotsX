@@ -36,7 +36,7 @@ Domyślne wartości to `plots.maxPlots`, `plots.radius`, `plots.chunks` oraz lim
 ograniczony od dołu do 1. Limity chunków mogą wynosić 0, co blokuje dalsze
 rozszerzanie chunkowe. Zmiana uprawnień nie zmienia istniejących działek.
 
-Przykład VIP: nadaj `plotsx.plot.max-plots.10`, `plotsx.plot.radius.24`, `plotsx.plot.size.96` i `plotsx.plot.max-area.100000`, oprócz uprawnień komend. [Szczegóły limitów i światów](../limits-and-worlds.md).
+Przykład VIP: nadaj `plotsx.plot.max-plots.10`, `plotsx.plot.radius.24`, `plotsx.plot.size.96` i `plotsx.plot.max-area.100000`, oprócz uprawnień komend. [Szczegóły limitów i światów](Limity-i-swiaty.md).
 
 Role działki `member`, `builder`, `manager` są niezależne od rang serwera. Ich granty `invite`, `kick`, `rename` i `flag.<identyfikator>` opisuje [lista grantów i flag](Ochrona-i-flagi.md).
 

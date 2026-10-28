@@ -1,81 +1,52 @@
 # Config — server settings
 
 For rank-based limits and multi-world configuration, see:
-[Rank limits and worlds](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/limits-and-worlds.md).
+[Rank limits and worlds](Limits-and-Worlds.md).
 
 [← Home](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Home.md)
 
 Settings are stored in `plugins/PlotsX/config.yml`. A value of `true` means “yes” and `false` means “no”. Preserve indentation and use spaces instead of tabs.
 
-## Versioned loading and reload
+## Configuration updates and reload
 
-PlotsX initializes SyntaxCore first and reuses `SyntaxCore.logger`. Its configuration
-is then loaded by SyntaxCore's ConfigManager before plot/database services start:
+The current configuration version is **103**. When updating an older file, PlotsX preserves administrator settings, adds missing options, and creates a backup such as `config.yml.102.bak`. Another attempt does not overwrite an earlier backup. Do not manually change `config-version` to skip an update.
 
-```kotlin
-SyntaxCore.init(this, versionType = "paper")
-logger = SyntaxCore.logger
-// PluginInitializer.setupConfig():
-configManager = ConfigManager(
-    plugin = this,
-    logger = logger,
-    initialVersion = 100,
-    targetVersion = 103
-).registerMigrations(ConfigMigrations.steps())
-configManager.load()
-reloadConfig() // refresh Bukkit's separate view used by PlotsX services
-pluginConfig = config
-```
+Invalid YAML is reported before the affected file is overwritten. If `/ptx reload` rejects the configuration, existing protection remains available. Correct the reported error and retry. Files with the current or a newer version are not automatically rewritten or downgraded.
 
-The current bundled schema is **103**. Existing unversioned files are treated as 100.
-Steps 100 → 101 → 102 → 103 preserve user settings and add missing template fields;
-101/102 were documentation changes, so there is no automatic database conversion or
-backend switch. Keep your actual database selection and credentials. Unsupported
-backends fail through normal database validation.
+Changing the database, claiming mode, language, or aliases requires a restart. Ordinary plot settings can be applied with `/ptx reload`; it also refreshes protection data but does not reconnect to a different database.
 
-Before migration, ConfigManager creates a backup such as `config.yml.102.bak`.
-It validates the staged YAML before atomically replacing the live file. Failed migration
-leaves the original file intact. Files already at schema 103 or a newer schema are
-read without rewriting or downgrading. New installations use the current template.
-Do not manually raise `config-version` to skip a required migration.
-
-`/ptx reload` uses the same loader and refreshes Bukkit's view before rebuilding
-runtime caches. Changes to `plots.claiming.mode` still require a restart. A failed
-configuration load keeps existing runtime caches; correct the YAML and try again.
-Startup-only services, including the database connection and SyntaxCore's own startup
-settings, require a restart to apply changes. Core services start before PlotsX's
-migration; configuration reload does not automatically reinitialize them.
-
-Backup is per migration attempt/chain, not per individual version step. Retries create
-unique backups and retain previous copies. If backup creation fails, migration callbacks
-do not run. Parse validation happens before backup/mutation: malformed YAML is rejected
-without replacing it with a default file. Current/future schemas do not trigger a backup
-because no migration occurs. Missing fields in a current/future file are not automatically
-written back; add a new versioned step when evolving the schema.
-
-Language files and the reload prevalidation use strict Bukkit YAML parsing as well:
-syntax errors propagate and leave the original bytes intact. They cannot be converted
-into an empty document and overwritten with defaults after a parse failure.
-
-Language-file completion remains separate from the versioned main configuration.
-For adding a field or renaming a path in a future release, raise the template and
-`targetVersion` together and add the corresponding step in `ConfigMigrations`.
-
-## Full default configuration
+## Example of the main settings
 
 ```yaml
+config-version: 103
+language: "EN"
+
 plots:
+  claiming:
+    mode: classic
+  chunks:
+    maxPerPlot: 32
+    maxTotalOwned: 64
+    expansion:
+      price: 500.0
+      priceMultiplier: 1.5
+      maxPrice: -1
+      standingCommand: true
   maxPlots: 5
   radius: 16
-  world: "world"
+  world: ["world"]
+  borderDisplaySeconds: 30
+  notifications:
+    boundary: actionbar
   expansion:
     price: 500.0
     priceMultiplier: 1.5
+    maxPrice: -1
     defaultMaxRadius: 64
     defaultMaxTotalArea: 16641
 
 privateChests:
-  protectOnPlace: true
+  protectOnPlace: false
 
 database:
   type: "sqlite"
@@ -86,24 +57,23 @@ database:
     username: "root"
     password: "password"
 
-language: "PL"
-
 aliases:
   claim: "c"
   unclaim: "unc"
 
-webhook:
-  discord:
-    enabled: false
-    url: "YOUR_WEBHOOK_URL_HERE"
+update:
+  check-for-updates: true
+  auto-download: false
+  hangar: true
+  github: true
+  modrinth: true
 
-checkForUpdates: true
-autoDownloadUpdates: false
-debug: true
-
+debug: off
 stats:
-  enabled: false
+  enabled: true
 ```
+
+This is an abbreviated example. See the complete current [config.yml](../../../src/main/resources/config.yml).
 
 ## Plots
 
@@ -140,7 +110,7 @@ An invalid value safely falls back to `actionbar`.
 
 The price of later expansions follows `price × priceMultiplier ^ purchased_segment_count`. The default `plots.expansion.priceMultiplier: 1.5` results in prices of 500, 750, 1125, and 1687.5. The multiplier must be at least 1; a value of 1 disables price growth. The counter is tracked separately for each plot, includes existing segments, and persists across restarts and ownership transfers. The original land and failed purchases do not increase the counter. Changing the base price or multiplier recalculates the next purchase price. Invalid values or a result outside the range supported by the economy provider block the purchase.
 
-The old `levels` and `step` settings are no longer used. When upgrading, remove `levels` and set `price: 500.0` or your own value. Existing plots keep their land, and their current size becomes the base size. Area limits count the sum of segments; the radius limit controls the farthest boundary from the original center. See [expansion and payments](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/commands.md#rozszerzanie-działki-i-opłaty).
+The old `levels` and `step` settings are no longer used. When upgrading, remove `levels` and set `price: 500.0` or your own value. Existing plots keep their land, and their current size becomes the base size. Area limits count the sum of segments; the radius limit controls the farthest boundary from the original center. See [expansion and payments](Expansion.md).
 
 ## Private containers
 
@@ -169,11 +139,22 @@ PlotsX accepts only the database types listed above. Changing the database name 
 
 | Setting | Meaning |
 | --- | --- |
-| `language` | Message language; `PL` is Polish and `EN` is English. |
+| `language` | Message language: `EN`, `PL`, `DE`, `ES`, `FR`, or `PT_BR`. |
 | `aliases.claim` | Additional alias for creating a plot, without the slash. |
 | `aliases.unclaim` | Additional alias for removing a plot, without the slash. |
 
-PlotsX includes Polish (`PL`) and English (`EN`) messages. For additional languages, contact the community.
+Bundled languages:
+
+| Value | Language |
+| --- | --- |
+| `EN` | English |
+| `PL` | Polish |
+| `DE` | German |
+| `ES` | Spanish |
+| `FR` | French |
+| `PT_BR` | Brazilian Portuguese |
+
+Message files are stored in `plugins/PlotsX/lang/`. Select a language in `config.yml` and restart the server.
 
 Changing an alias does not remove the base command. Restart the server after changing aliases or language.
 
@@ -183,19 +164,19 @@ Changing an alias does not remove the base command. Restart the server after cha
 | --- | --- | --- |
 | `webhook.discord.enabled` | `false` | Enables the Discord webhook connection. |
 | `webhook.discord.url` | `"YOUR_WEBHOOK_URL_HERE"` | Webhook URL; replace the placeholder with the real address. |
-| `checkForUpdates` | `true` | Enables update checks. |
-| `autoDownloadUpdates` | `false` | Enables automatic update downloads. |
-| `debug` | `true` | Enables detailed diagnostic messages in the console. |
-| `stats.enabled` | `false` | Enables operational statistics collection. |
+| `update.check-for-updates` | `true` | Enables update checks. |
+| `update.auto-download` | `false` | Enables automatic update downloads. |
+| `debug` | `off` | Diagnostic level: `off`, `info`, `diag`, or `dev`. |
+| `stats.enabled` | `true` | Enables operational statistics collection. |
 
 These settings control plugin maintenance and may depend on the release. The webhook entry itself does not define which plot events are sent; PlotsX does not expose a list of plot notifications here. Never publish your webhook URL or database password.
 
-If you are not diagnosing an issue, you can set `debug: false` to reduce detailed logging.
+After troubleshooting, set `debug: off` to reduce detailed logging.
 
 ## How do I apply changes?
 
 After changing ordinary plot settings, use `/ptx reload`. Changing the database, language, aliases, or integrations requires a server restart. If you are unsure, save the file and perform a full restart.
 
-`/ptx reload` rereads the config, but it does not restart the whole plugin or reload all plot data from scratch.
+`/ptx reload` reads the configuration and refreshes protection data. It does not restart the whole plugin or switch database connections.
 
 Next: [Administration](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Administration.md).

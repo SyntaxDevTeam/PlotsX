@@ -38,4 +38,4 @@ Podstawowe działki nie wymagają WorldGuarda ani pluginu ekonomii. Domyślne ro
 
 Zobacz [integracje](Integracje.md) i [konfigurację](Konfiguracja.md).
 
-Wydanie 1.0.0 obejmuje działki klasyczne i chunkowe. Przed otwarciem serwera dla graczy sprawdź tworzenie działki, ochronę skrzyń i rozszerzanie.
+PlotsX obsługuje działki klasyczne i chunkowe. Przed otwarciem serwera dla graczy sprawdź tworzenie działki, ochronę skrzyń i rozszerzanie.

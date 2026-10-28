@@ -93,9 +93,9 @@ PlotsX works without these integrations for normal free claiming and protection.
 | **Artifact** | `PlotsX-Paper-<version>.jar` |
 | **Native dialogs** | Paper **1.21.7+** when the Dialog API is available. |
 
-The current release line is **1.0.0**. Compatibility recognition does not mean every possible server/plugin combination has been certified, so test upgrades on a staging server before deploying them to production.
+The latest stable release is **1.0.0**; this branch prepares **1.1.0** (`1.1.0-R0.1-SNAPSHOT`). Compatibility recognition does not mean every possible server/plugin combination has been certified, so test upgrades on a staging server before deploying them to production.
 
-Public marketplace links will be added here when their PlotsX project pages are published. Current development artifacts are available from successful [Build Explorer workflow runs](https://github.com/SyntaxDevTeam/PlotsX/actions/workflows/buildexplorer.yml).
+Current development artifacts are available from successful [Build Explorer workflow runs](https://github.com/SyntaxDevTeam/PlotsX/actions/workflows/buildexplorer.yml).
 
 ## 🚀 Quick start
 
@@ -130,6 +130,8 @@ For players, the basic flow is intentionally short:
 | Administration / reload / backup | `/ptx ...` / `/plotsx ...` | `plotsx.cmd.ptx` |
 
 The administrator interface also supports listing and managing plots belonging to offline players. See the full **[command reference](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Commands.md)** and **[permission reference](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Permissions.md)** for exact syntax and limit nodes.
+
+Messages are bundled in English (`EN`), Polish (`PL`), German (`DE`), Spanish (`ES`), French (`FR`) and Brazilian Portuguese (`PT_BR`). Select the language in `config.yml` and restart the server.
 
 ## 🧩 Player interface
 
@@ -174,13 +176,12 @@ The PlotsX wiki is maintained in both English and Polish. Language versions are 
 | Commands | [Commands](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Commands.md) | [Komendy](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Komendy.md) |
 | Permissions | [Permissions](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Permissions.md) | [Uprawnienia](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Uprawnienia.md) |
 | Administration | [Administration](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Administration.md) | [Administracja](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Administracja.md) |
+| API | [Developer API](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/API.md) | [API dla programistów](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/API.md) |
+| Rank limits and worlds | [Limits and Worlds](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Limits-and-Worlds.md) | [Limity i światy](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Limity-i-swiaty.md) |
 | FAQ | [FAQ and Troubleshooting](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/FAQ.md) | [Pytania i problemy](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/FAQ.md) |
 
-Developer documentation: **[PlotsX API](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/api.md)**.
-Use `compileOnly("pl.syntaxdevteam:plotsx-api:1.0.1-R0.1-SNAPSHOT")` from the
-[SyntaxDevTeam snapshots repository](https://nexus.syntaxdevteam.pl/repository/maven-snapshots/)
-after publishing that version. API artifact versions follow the plugin version;
-there is one contract for both classic and chunk plots.
+Developer documentation: **[API — English](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/API.md)** · **[API — Polski](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/API.md)**.
+The API library is for integration developers; server administrators install the Paper plugin JAR.
 
 ## 🛠️ Build from source
 
@@ -193,13 +194,13 @@ PlotsX uses Gradle and a Java 21 toolchain.
 The installable server artifact is written to:
 
 ```text
-build/libs/PlotsX-Paper-1.0.0.jar
+build/libs/PlotsX-Paper-1.1.0-R0.1-SNAPSHOT.jar
 ```
 
 The compile-only API artifact is written alongside it as:
 
 ```text
-build/libs/PlotsX-1.0.0-api.jar
+build/libs/PlotsX-1.1.0-R0.1-SNAPSHOT-api.jar
 ```
 
 The API JAR is for integration developers and is **not** a server plugin.

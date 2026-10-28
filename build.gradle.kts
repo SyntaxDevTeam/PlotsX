@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "pl.syntaxdevteam"
-version = "1.0.1-R0.1-SNAPSHOT"
+version = "1.1.0-R0.1-SNAPSHOT"
 description = "Lightweight and versatile player plot protection plugin"
 
 repositories {

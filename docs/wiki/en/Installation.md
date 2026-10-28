@@ -38,4 +38,4 @@ Basic plots do not require WorldGuard or an economy plugin. Plot expansion is pa
 
 See [Integrations](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Integrations.md) and [Configuration](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Configuration.md).
 
-Release 1.0.0 includes both classic and chunk-based plots. Before opening the server to players, test plot creation, container protection, and expansion.
+PlotsX supports both classic and chunk-based plots. Before opening the server to players, test plot creation, container protection, and expansion.

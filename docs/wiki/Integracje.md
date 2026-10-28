@@ -71,4 +71,10 @@ PlotsX rozpoznaje te dodatki, ale obecnie nie udostępnia gotowej listy własnyc
 
 Po dodaniu integracji uruchom serwer ponownie.
 
+## API dla innych pluginów
+
+PlotsX udostępnia publiczne API do odczytu działek, sprawdzania ochrony oraz zarządzania członkami i ustawieniami. Autorzy innych dodatków mogą dzięki niemu respektować granice działek i udostępniać własne ustawienia w panelu PlotsX.
+
+[Dokumentacja API](API.md) opisuje możliwości, uprawnienia i użycie na Paper/Folia. Instalacja PlotsX nie wymaga pisania kodu integracji.
+
 Dalej: [konfiguracja](Konfiguracja.md).

@@ -33,7 +33,7 @@ You can replace the final number with another positive value. If a player has se
 
 Default values come from `plots.maxPlots`, `plots.radius`, `plots.chunks`, and limits under `plots.expansion`. `max-plots.0` blocks creation of new plots; the initial radius is clamped to at least 1. Chunk limits may be 0, which blocks further chunk expansion. Changing permissions does not resize existing plots.
 
-VIP example: grant `plotsx.plot.max-plots.10`, `plotsx.plot.radius.24`, `plotsx.plot.size.96`, and `plotsx.plot.max-area.100000` in addition to the required command permissions. See [rank limits and worlds](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/limits-and-worlds.md).
+VIP example: grant `plotsx.plot.max-plots.10`, `plotsx.plot.radius.24`, `plotsx.plot.size.96`, and `plotsx.plot.max-area.100000` in addition to the required command permissions. See [rank limits and worlds](Limits-and-Worlds.md).
 
 Plot roles `member`, `builder`, and `manager` are independent of server ranks. Their `invite`, `kick`, `rename`, and `flag.<identifier>` grants are documented under [Protection and Flags](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Protection-and-Flags.md).
 

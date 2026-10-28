@@ -123,3 +123,6 @@ build
 
 # Local Gradle settings and credentials
 /gradle.properties
+
+# Local documentation archives and maintainer notes
+/.local-docs/

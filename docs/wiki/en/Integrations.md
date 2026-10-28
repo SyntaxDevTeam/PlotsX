@@ -71,4 +71,10 @@ PlotsX detects these plugins, but currently does not expose a public set of plot
 
 Restart the server after adding integrations.
 
+## API for other plugins
+
+PlotsX provides a public API for reading plots, checking protection, and managing members and settings. Other plugin authors can use it to respect plot boundaries and expose their own settings in the PlotsX panel.
+
+The [API guide](API.md) covers capabilities, permissions, and Paper/Folia usage. Installing PlotsX itself does not require writing integration code.
+
 Next: [Configuration](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Configuration.md).

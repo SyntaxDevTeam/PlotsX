@@ -16,6 +16,7 @@ Using a regular player account, create a plot, add a friend, protect a chest, an
 | Reload config changes | `/ptx reload` |
 | Change database, aliases, or integrations | Perform a full server restart. |
 | Help with another player's private container | Use `plotsx.admin.bypass` together with the private-chest command permission. |
+| Move plot protection | `/plot admin <id> move confirm`; see [Commands](Commands.md). |
 | Investigate activity | Use the server console and CoreProtect when available. |
 
 `plotsx.cmd.ptx` also grants import and export access. Do not give it to every player just so they can open help.

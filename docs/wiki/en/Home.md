@@ -36,3 +36,5 @@ Playing on a server with PlotsX? See [Getting Started](https://github.com/Syntax
 | [Integrations](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Integrations.md) | Compatibility with other plugins. |
 | [Administration](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Administration.md) | Updates, backups, and day-to-day maintenance. |
 | [FAQ and Troubleshooting](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/FAQ.md) | Quick help when something does not work. |
+| [API](API.md) | Public contracts for integration developers. |
+| [Limits and Worlds](Limits-and-Worlds.md) | Rank and multi-world configuration. |
