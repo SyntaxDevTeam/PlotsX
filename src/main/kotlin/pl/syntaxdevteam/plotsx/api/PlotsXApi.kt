@@ -12,6 +12,7 @@ import java.util.UUID
  * A retained service becomes invalid when PlotsX is disabled.
  */
 interface PlotsXApi {
+    /** Historical contract revision (2), retained for existing consumers. Maven versions follow the plugin version. */
     val apiVersion: Int
     fun getPlot(id: Int): PlotSnapshot?
     fun getPlotAt(world: String, blockX: Int, blockZ: Int): PlotSnapshot?
@@ -130,7 +131,7 @@ data class PlotSnapshot @JvmOverloads constructor(val id: Int, val owner: UUID, 
     }
 }
 
-/** API v2: complete 16 x 16 block columns; radius is null for chunk plots. */
+/** Complete 16 x 16 block columns; radius is null for chunk plots. */
 data class ChunkSnapshot(val x: Int, val z: Int)
 
 data class MemberSnapshot(val player: UUID, val role: String)

@@ -33,7 +33,7 @@ This README describes the current `main` branch and is intended to serve as the 
 | **Native Paper dialogs** | Plot renaming uses Paper's native Dialog API on Paper 1.21.7+ with a compatible chat fallback on older servers. |
 | **Safe paid expansion** | Vault/VaultUnlocked economies can charge for expansion. Purchase state is journaled so land and money changes can be reconciled safely. |
 | **Multiple databases** | SQLite, MySQL, MariaDB and PostgreSQL are supported through SyntaxDB. |
-| **Public API v2** | Java and Kotlin integrations can query and work with PlotsX through the dedicated API artifact. |
+| **Public API** | Java and Kotlin integrations can query and work with PlotsX through the dedicated Maven API artifact. |
 
 ### Designed for player-owned worlds
 
@@ -176,7 +176,11 @@ The PlotsX wiki is maintained in both English and Polish. Language versions are 
 | Administration | [Administration](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Administration.md) | [Administracja](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/Administracja.md) |
 | FAQ | [FAQ and Troubleshooting](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/FAQ.md) | [Pytania i problemy](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/FAQ.md) |
 
-Developer documentation: **[API v2](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/api.md)**.
+Developer documentation: **[PlotsX API](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/api.md)**.
+Use `compileOnly("pl.syntaxdevteam:plotsx-api:1.0.1-R0.1-SNAPSHOT")` from the
+[SyntaxDevTeam snapshots repository](https://nexus.syntaxdevteam.pl/repository/maven-snapshots/)
+after publishing that version. API artifact versions follow the plugin version;
+there is one contract for both classic and chunk plots.
 
 ## 🛠️ Build from source
 

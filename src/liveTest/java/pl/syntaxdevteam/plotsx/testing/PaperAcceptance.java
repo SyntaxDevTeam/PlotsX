@@ -78,7 +78,7 @@ public final class PaperAcceptance extends JavaPlugin {
         PlotsX plugin = (PlotsX) getServer().getPluginManager().getPlugin("PlotsX");
         check(plugin != null && plugin.isEnabled(), "plugin startup and migration");
         PlotsXApi api = getServer().getServicesManager().load(PlotsXApi.class);
-        check(api != null && api.getApiVersion() == 2, "API v2 service");
+        check(api != null && api.getApiVersion() == 2, "PlotsX API service");
         var connect = pl.syntaxdevteam.syntaxdb.Database.Companion.getClass().getMethod("connect",
             pl.syntaxdevteam.syntaxdb.config.DatabaseType.class, kotlin.jvm.functions.Function1.class);
         check(connect.getParameterTypes()[1] == kotlin.jvm.functions.Function1.class,

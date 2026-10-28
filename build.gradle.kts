@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.shadow)
     alias(libs.plugins.run.paper)
     alias(libs.plugins.plugin.deployer)
+    `maven-publish`
 }
 
 group = "pl.syntaxdevteam"
@@ -118,6 +119,7 @@ tasks.register("buildAll") {
 }
 
 val apiJar = tasks.register<Jar>("apiJar") {
+    group = "build"
     description = "Generates a compile-only API jar for PlotsX integration authors."
     archiveClassifier.set("api")
     from(sourceSets.main.get().output) {
@@ -125,7 +127,86 @@ val apiJar = tasks.register<Jar>("apiJar") {
         exclude("pl/syntaxdevteam/plotsx/api/internal/**")
     }
 }
-tasks.named("assemble") { dependsOn(apiJar) }
+val apiSourcesJar = tasks.register<Jar>("apiSourcesJar") {
+    group = "build"
+    description = "Generates sources for the public PlotsX API only."
+    archiveClassifier.set("api-sources")
+    from(sourceSets.main.get().allSource) {
+        include("pl/syntaxdevteam/plotsx/api/**")
+        exclude("pl/syntaxdevteam/plotsx/api/internal/**")
+    }
+}
+tasks.named("assemble") { dependsOn(apiJar, apiSourcesJar) }
+
+publishing {
+    publications {
+        create<MavenPublication>("plotsxApi") {
+            artifactId = "plotsx-api"
+            // Publish only public contracts, never the server plugin or its implementation dependencies.
+            artifact(apiJar) { classifier = null }
+            artifact(apiSourcesJar) { classifier = "sources" }
+            pom {
+                name.set("PlotsX API")
+                description.set("Public API for Java and Kotlin integrations with PlotsX")
+                url.set("https://github.com/SyntaxDevTeam/PlotsX")
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/licenses/MIT")
+                    }
+                }
+                developers {
+                    developer {
+                        id.set("WieszczY85")
+                        name.set("WieszczY")
+                    }
+                }
+                // Kotlin is part of the API signatures; Paper remains provided by the consumer's server.
+                withXml {
+                    val dependency = asNode().appendNode("dependencies").appendNode("dependency")
+                    dependency.appendNode("groupId", "org.jetbrains.kotlin")
+                    dependency.appendNode("artifactId", "kotlin-stdlib")
+                    dependency.appendNode("version", libs.versions.kotlin.get())
+                    dependency.appendNode("scope", "compile")
+                }
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "Nexus"
+            val repository = if (project.version.toString().endsWith("-SNAPSHOT")) "maven-snapshots" else "maven-releases"
+            url = uri("https://nexus.syntaxdevteam.pl/repository/$repository/")
+            credentials {
+                username = providers.gradleProperty("nexusUser").orElse(providers.environmentVariable("NEXUS_USERNAME")).orNull
+                password = providers.gradleProperty("nexusPassword").orElse(providers.environmentVariable("NEXUS_PASSWORD")).orNull
+            }
+        }
+    }
+}
+
+val verifyApiPackaging = tasks.register("verifyApiPackaging") {
+    group = "verification"
+    description = "Checks that the published API contains public contracts without plugin implementation or runtime libraries."
+    val artifact = apiJar.flatMap { it.archiveFile }
+    inputs.file(artifact)
+    dependsOn(apiJar)
+    doLast {
+        ZipFile(artifact.get().asFile).use { jar ->
+            val entries = jar.entries().asSequence().filterNot { it.isDirectory }.map { it.name }.toList()
+            check(entries.containsAll(listOf(
+                "pl/syntaxdevteam/plotsx/api/PlotsXApi.class",
+                "pl/syntaxdevteam/plotsx/api/PlotSnapshot.class",
+                "pl/syntaxdevteam/plotsx/api/PlotFlagChangedEvent.class",
+            ))) { "Public API contracts are missing from the API JAR" }
+            check(entries.all {
+                it == "META-INF/MANIFEST.MF" ||
+                    (it.startsWith("pl/syntaxdevteam/plotsx/api/") && !it.startsWith("pl/syntaxdevteam/plotsx/api/internal/"))
+            }) { "The API JAR must contain only public API classes" }
+        }
+    }
+}
+tasks.named("check") { dependsOn(verifyApiPackaging) }
 
 plugindeployer {
     paper { dir = "/home/debian/poligon/Paper/26.2/plugins" }

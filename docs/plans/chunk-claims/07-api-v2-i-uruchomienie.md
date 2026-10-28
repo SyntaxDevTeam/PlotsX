@@ -1,5 +1,9 @@
 # 07 — API v2 i uruchomienie trybu chunkowego
 
+> Dokument historyczny migracji geometrii. Obecnie istnieje jeden kontrakt i jeden
+> artefakt `pl.syntaxdevteam:plotsx-api`, wersjonowany razem z pluginem.
+> Aktualne instrukcje zależności i publikacji: [PlotsX API](../../api.md).
+
 > Aktualizacja 20.09.2026: zakup chunków z ekonomią, GUI ekwipunkowym i natywnym dialogiem jest podłączony — [iteracja 7 i aktualny zakres](11-zakup-chunka-i-gui.md).
 
 [Spis planu](README.md) · [Postęp](06-postep-implementacji.md)
@@ -51,11 +55,11 @@ Import przez plugin dopuszcza poprawne działki chunkowe. Import i zwykłe mutac
 
 Migracja konsumenta:
 
-1. Użyć nowego artefaktu `-api.jar` jako zależności kompilacyjnej; nie dołączać klas API do własnego JAR.
+1. Użyć `pl.syntaxdevteam:plotsx-api` jako zależności kompilacyjnej zgodnie z [dokumentacją API](../../api.md); nie dołączać klas API do własnego JAR.
 2. Sprawdzić `getApiVersion() == 2` przed korzystaniem ze snapshotów.
 3. Zastąpić założenie „każda działka ma promień” rozgałęzieniem po `geometryType` albo wspólnym `contains()` / `area`.
 4. W Javie nie rozpakowywać automatycznie `Integer`, zanim nie zostanie sprawdzony typ działki. W Kotlinie obsłużyć `Int?`.
-5. Przebudować integrację. Testy `ApiV2JavaConsumerTest` i `ApiV2KotlinConsumerTest` pokazują wywołania dla obu typów.
+5. Przebudować integrację. Testy `ApiJavaConsumerTest` i `ApiKotlinConsumerTest` pokazują wywołania dla obu typów.
 
 ## Spójność decyzji ochrony
 

@@ -120,3 +120,6 @@ runs/
 
 # Ignore Gradle build output directory
 build
+
+# Local Gradle settings and credentials
+/gradle.properties

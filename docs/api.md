@@ -1,4 +1,9 @@
-# PlotsX API v2
+# PlotsX API
+
+PlotsX udostępnia jeden publiczny kontrakt API dla działek klasycznych i chunkowych.
+Wersja artefaktu API jest zawsze taka sama jak wersja pluginu: stabilne wydanie to
+`1.0.0`, a bieżąca gałąź rozwojowa ma wersję `1.0.1-R0.1-SNAPSHOT`.
+Nie wybiera się osobnych wariantów v1/v2.
 
 Kontrakt znajduje się w `pl.syntaxdevteam.plotsx.api`. Pobieraj go przez Bukkit
 `ServicesManager`; nie odwołuj się do `DatabaseHandler`, `CacheManager` ani
@@ -6,16 +11,51 @@ Kontrakt znajduje się w `pl.syntaxdevteam.plotsx.api`. Pobieraj go przez Bukkit
 
 ## Zależność i pobranie serwisu
 
-`./gradlew apiJar` tworzy `build/libs/PlotsX-<wersja>-api.jar`.
-W projekcie integracji dodaj ten plik jako `compileOnly`, bez dołączania go do
+Konfiguracja publikacji udostępnia samo API pod współrzędnymi
+`pl.syntaxdevteam:plotsx-api:<wersja>`. Nie zawiera implementacji pluginu ani jego
+bibliotek runtime. Zależność dodaj jako `compileOnly`, bez dołączania klas API do
 wynikowego JAR-a. API wymaga Paper API i Java 21; Kotlin runtime zapewnia PlotsX.
-Artefakt nie jest jeszcze publikowany do repozytorium Maven.
+Poniższy przykład używa bieżącej wersji rozwojowej i wymaga jej opublikowania na Nexusie.
 
 ```kotlin
+repositories {
+    maven("https://nexus.syntaxdevteam.pl/repository/maven-snapshots/")
+    maven("https://nexus.syntaxdevteam.pl/repository/maven-releases/")
+}
+
 dependencies {
-    compileOnly(files("libs/PlotsX-1.0.0-Beta-1-api.jar"))
+    compileOnly("pl.syntaxdevteam:plotsx-api:1.0.1-R0.1-SNAPSHOT")
 }
 ```
+
+Dla wydań stabilnych użyj wersji odpowiadającej zainstalowanemu pluginowi i
+repozytorium `maven-releases`. Nowa konfiguracja nie publikuje wstecznie API `1.0.0`.
+
+Maven (wraz z repozytoriami podanymi wyżej w sekcji `<repositories>`):
+
+```xml
+<dependency>
+    <groupId>pl.syntaxdevteam</groupId>
+    <artifactId>plotsx-api</artifactId>
+    <version>1.0.1-R0.1-SNAPSHOT</version>
+    <scope>provided</scope>
+</dependency>
+```
+
+`./gradlew apiJar` nadal tworzy lokalny `build/libs/PlotsX-<wersja>-api.jar`.
+Publikowany artefakt Maven nie wymaga klasyfikatora `api`.
+
+### Publikacja API
+
+`./gradlew publishPlotsxApiPublicationToNexusRepository` publikuje wyłącznie API,
+jego źródła i POM. Wersje kończące się `-SNAPSHOT` trafiają do `maven-snapshots`,
+pozostałe do `maven-releases`. Wersja pochodzi z `version` w `build.gradle.kts`.
+Nie jest publikowany główny JAR serwera.
+
+Poświadczenia skonfiguruj jako `nexusUser` i `nexusPassword` w swoim
+`~/.gradle/gradle.properties` (jak w PunisherX) lub jako zmienne środowiskowe
+`NEXUS_USERNAME` i `NEXUS_PASSWORD`. Zwykły build i testy nie wymagają poświadczeń.
+`./gradlew publishToMavenLocal` pozwala sprawdzić publikację lokalnie bez Nexusa.
 
 Paper plugin korzystający z API deklaruje w swoim `paper-plugin.yml`:
 
@@ -37,7 +77,6 @@ Kotlin, wewnątrz klasy integracji:
 
 ```kotlin
 val api = server.servicesManager.load(PlotsXApi::class.java) ?: return
-check(api.apiVersion == 2)
 val plot = api.getPlotAt(player.world.name, player.location.blockX, player.location.blockZ)
 val owned = api.getOwnedPlots(player.uniqueId)
 val accessible = api.getAccessiblePlots(player.uniqueId)
@@ -51,7 +90,7 @@ Java:
 
 ```java
 PlotsXApi api = getServer().getServicesManager().load(PlotsXApi.class);
-if (api == null || api.getApiVersion() != 2) return;
+if (api == null) return;
 PlotSnapshot plot = api.getPlotAt(player.getWorld().getName(),
     player.getLocation().getBlockX(), player.getLocation().getBlockZ());
 if (plot != null) {
@@ -64,9 +103,10 @@ if (plot != null) {
 | Obszar | Metody |
 | --- | --- |
 | Działki | `getPlot`, `getPlotAt`, `getPlots`, `getOwnedPlots`, `getAccessiblePlots` |
+| Profile i teleporty właściciela | `getOwnedPlotProfiles` |
 | Członkowie | `getMembers`, `isMember`, `addMember`, `removeMember` |
 | Rangi | `getRoles`, `getRolePermissions`, `setMemberRole`, `setRolePermission` |
-| Własność | `transferOwnership` |
+| Własność | `transferOwnership`, `transferOwnershipAsync` |
 | Flagi | `getFlags`, `getFlagValue`, `evaluateFlag`, `setFlag` |
 | Integracje | `registerFlag`, `unregisterFlag`, `PlotFlagChangedEvent` |
 | Uprawnienia zarządzania | `canManage` |
@@ -74,16 +114,19 @@ if (plot != null) {
 Snapshoty i zwracane listy nie pozwalają modyfikować stanu pluginu. `isMember`
 sprawdza wyłącznie dodanych członków; właściciel jest osobnym polem snapshotu.
 `getAccessiblePlots` oznacza własne działki i członkostwa, bez administracyjnego bypassu.
-Tworzenie/usuwanie działek i rozszerzanie nie są częścią API v2 — wymagają osobnych
+Tworzenie/usuwanie działek i rozszerzanie nie są częścią API — wymagają osobnych
 kontraktów obejmujących ekonomię, kolizje i ochronę innych pluginów.
 
-API v2 rozróżnia geometrię przez `PlotSnapshot.geometryType`. Dla działki klasycznej
+API rozróżnia geometrię przez `PlotSnapshot.geometryType`. Dla działki klasycznej
 `radius` jest liczbą, `extensions` zawiera dokupione segmenty, a `chunks` jest puste.
 Dla działki chunkowej `radius == null`, `chunks` zawiera kompletne współrzędne chunków,
 `area` wynosi `liczba_chunków × 256`, a `contains()` używa dokładnej geometrii.
 `geometryRevision` zmienia się przy modyfikacji kształtu i pozwala wykryć nieaktualny
-snapshot. Zmiana typu getterów względem API v1 jest binarnie niezgodna; integracje
-należy przebudować z artefaktem v2.
+snapshot. Integracje skompilowane ze starym, przedpremierowym getterem
+`getRadius(): int` trzeba przebudować: bieżący getter zwraca nullable `Integer`.
+Zachowane `apiVersion` / `getApiVersion()` zwraca `2` dla zgodności istniejących
+integracji; jest to historyczny numer rewizji kontraktu, nie wersja zależności Maven
+ani przełącznik wariantu API. Do nowych integracji używaj jednego artefaktu `plotsx-api`.
 
 Metody zapisujące wymagają `CommandSender` inicjującego operację, sprawdzają aktualne
 uprawnienia właściciela/rangi/administratora i zwracają enum wyniku. Nie wysyłają
