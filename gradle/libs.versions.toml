@@ -25,7 +25,7 @@ vault = "1.7.1"
 vault-unlocked = "2.15"
 coreprotect = "24.1"
 # Compile against the Java 21 baseline; installed integrations may use newer compatible versions.
-worldguard = "7.0.16"
+worldguard = "7.0.21"
 worldedit = "7.3.18"
 junit4 = "4.13.2"
 
