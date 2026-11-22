@@ -45,7 +45,7 @@ public final class SyntaxLoader implements PluginLoader {
             if (!(key instanceof String id) || id.isBlank() || !(value instanceof String configuredUrl) || configuredUrl.isBlank())
                 throw new IllegalArgumentException("Invalid repository entry: " + key);
             String url = configuredUrl.trim().equals("MAVEN_CENTRAL_DEFAULT_MIRROR")
-                ? MavenLibraryResolver.MAVEN_CENTRAL_DEFAULT_MIRROR : configuredUrl.trim();
+                ? centralMirror() : configuredUrl.trim();
             if (!url.startsWith("https://") && !url.startsWith("http://")) throw new IllegalArgumentException("Invalid repository URL for " + id);
             repositories.put(id.trim(), new RemoteRepository.Builder(id.trim(), "default", url).build());
         });
@@ -67,6 +67,14 @@ public final class SyntaxLoader implements PluginLoader {
         LibraryConfig config = new LibraryConfig(Collections.unmodifiableMap(repositories), List.copyOf(libraries));
         libraries.forEach(library -> selectRepository(library, config));
         return config;
+    }
+
+    private static String centralMirror() {
+        // Paper 1.20.6 predates the public MavenLibraryResolver mirror constant.
+        String mirror = System.getenv("PAPER_DEFAULT_CENTRAL_REPOSITORY");
+        return mirror != null ? mirror : System.getProperty(
+            "org.bukkit.plugin.java.LibraryLoader.centralURL",
+            "https://maven-central.storage-download.googleapis.com/maven2");
     }
 
     static String selectRepository(LibrarySpec library, LibraryConfig config) {

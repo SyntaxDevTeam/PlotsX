@@ -8,16 +8,9 @@ repositories:
 
 libraries:
   - org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}
-  - pl.syntaxdevteam:syntaxcore:${syntaxcoreVersion}
   - pl.syntaxdevteam:syntaxdb:${syntaxdbVersion}
   - pl.syntaxdevteam:messageHandler-paper:${messagehandlerVersion}
-  - com.github.ben-manes.caffeine:caffeine:${caffeineVersion}
   - org.eclipse.aether:aether-api:${aetherVersion}
   - org.yaml:snakeyaml:${snakeyamlVersion}
   - com.google.code.gson:gson:${gsonVersion}
-  - net.kyori:adventure-text-minimessage:${adventureVersion}
-  - net.kyori:adventure-text-serializer-gson:${adventureVersion}
-  - net.kyori:adventure-text-serializer-legacy:${adventureVersion}
-  - net.kyori:adventure-text-serializer-plain:${adventureVersion}
-  - net.kyori:adventure-text-serializer-ansi:${adventureVersion}
   - org.apache.ant:ant:${antVersion}

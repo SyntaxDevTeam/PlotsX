@@ -1,7 +1,6 @@
 package pl.syntaxdevteam.plotsx.protection
 
 import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver
 import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
@@ -108,8 +107,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         if (PermissionChecker.isAuthor(event.player.uniqueId)) {
             event.player.sendMessage(
                 plugin.messageHandler
-                    .formatMixedTextToMiniMessage(plugin.messageHandler.getPrefix() + " <green>Witaj, <b>WieszczY!</b> Ten serwer używa Twojego pluginu! :)",
-                        TagResolver.empty())
+                    .formatRichTextToComponent(
+                        plugin.messageHandler.getPrefix() + " <green>Witaj, <b>WieszczY!</b> Ten serwer używa Twojego pluginu! :)"
+                    )
             )
         }
     }

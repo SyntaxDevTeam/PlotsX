@@ -1,6 +1,5 @@
 package pl.syntaxdevteam.plotsx.loader
 
-import io.papermc.paper.plugin.loader.library.impl.MavenLibraryResolver
 import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -46,7 +45,10 @@ class SyntaxLoaderTest {
         val id = SyntaxLoader.selectRepository(config.libraries().single(), config)
         assertEquals("custom", id)
         assertEquals(listOf("custom", "central"), SyntaxLoader.repositoriesFor(id, config).map { it.id })
-        assertEquals(MavenLibraryResolver.MAVEN_CENTRAL_DEFAULT_MIRROR, config.repositories().getValue("central").url)
+        val expectedMirror = System.getenv("PAPER_DEFAULT_CENTRAL_REPOSITORY")
+            ?: System.getProperty("org.bukkit.plugin.java.LibraryLoader.centralURL")
+            ?: "https://maven-central.storage-download.googleapis.com/maven2"
+        assertEquals(expectedMirror, config.repositories().getValue("central").url)
         assertEquals(listOf("central"), SyntaxLoader.repositoriesFor("central", config).map { it.id })
     }
 

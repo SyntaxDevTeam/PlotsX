@@ -187,7 +187,7 @@ internal object IdentityMigrationStore {
                 check.legacyEvidence,
             )
         } catch (failure: Throwable) {
-            runCatching { connection.rollback() }
+            val _ = runCatching { connection.rollback() }
             throw failure
         } finally {
             connection.autoCommit = autoCommit
@@ -280,7 +280,7 @@ internal object IdentityMigrationStore {
             connection.commit()
             return IdentityMigrationBridgeResult(IdentityMigrationBridgeStatus.ROLLED_BACK, "PLOTSX_ROLLBACK_COMPLETED")
         } catch (failure: Throwable) {
-            runCatching { connection.rollback() }
+            val _ = runCatching { connection.rollback() }
             throw failure
         } finally {
             connection.autoCommit = autoCommit

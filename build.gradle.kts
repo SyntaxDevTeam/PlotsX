@@ -30,7 +30,21 @@ repositories {
     maven("https://repo.leavesmc.org/snapshots/") { name = "leavesmc-repo" }
 }
 
+// The optional dialog adapter is loaded only on servers with the newer Paper API.
+val paperDialog = sourceSets.create("paperDialog")
+
+// SyntaxCore's published JAR includes Adventure. Paper provides those classes at runtime.
+val syntaxCoreBundle = configurations.create("syntaxCoreBundle") {
+    isCanBeConsumed = false
+    isTransitive = false
+}
+
 dependencies {
+    add(syntaxCoreBundle.name, libs.syntaxcore)
+
+    add(paperDialog.compileOnlyConfigurationName, sourceSets.main.get().output)
+    add(paperDialog.compileOnlyConfigurationName, libs.paper.dialog.api)
+
     testImplementation(libs.aether.api)
     testImplementation(libs.snakeyaml)
     testImplementation(libs.paper.api)
@@ -50,11 +64,6 @@ dependencies {
     compileOnly(libs.aether.api)
     compileOnly(libs.snakeyaml)
     compileOnly(libs.gson)
-    compileOnly(libs.adventure.legacy)
-    compileOnly(libs.adventure.minimessage)
-    compileOnly(libs.adventure.gson)
-    compileOnly(libs.adventure.plain)
-    compileOnly(libs.adventure.ansi)
     compileOnly(libs.luckperms)
     compileOnly(libs.placeholderapi)
     compileOnly(libs.miniplaceholders)
@@ -92,14 +101,11 @@ tasks {
 
 val runtimeLibraryVersions = mapOf(
     "kotlinVersion" to libs.versions.kotlin.get(),
-    "syntaxcoreVersion" to libs.versions.syntaxcore.get(),
     "syntaxdbVersion" to libs.versions.syntaxdb.get(),
     "messagehandlerVersion" to libs.versions.messagehandler.get(),
-    "caffeineVersion" to libs.versions.caffeine.get(),
     "aetherVersion" to libs.versions.aether.get(),
     "snakeyamlVersion" to libs.versions.snakeyaml.get(),
     "gsonVersion" to libs.versions.gson.get(),
-    "adventureVersion" to libs.versions.adventure.get(),
     "antVersion" to libs.versions.ant.get(),
 )
 
@@ -111,7 +117,15 @@ tasks.processResources {
     filesMatching("paper-libraries.yml") { expand(runtimeLibraryVersions) }
 }
 
+tasks.jar { from(paperDialog.output) }
+
 tasks.named<ShadowJar>("shadowJar") {
+    from(paperDialog.output)
+    from({ zipTree(syntaxCoreBundle.singleFile) }) {
+        exclude("net/kyori/**", "META-INF/versions/**/net/kyori/**", "META-INF/services/net.kyori.*")
+        exclude("kotlin/**", "META-INF/versions/**/kotlin/**", "META-INF/*.kotlin_module")
+        exclude("META-INF/MANIFEST.MF", "META-INF/maven/**", "**/module-info.class")
+    }
     archiveBaseName.set("PlotsX-Paper")
     archiveClassifier.set("")
     archiveVersion.set(project.version.toString())
@@ -226,6 +240,7 @@ plugindeployer {
 
 val compileLiveTest = tasks.register<JavaCompile>("compileLiveTest") {
     description = "Compiles the live test harness for PlotsX. This is a Paper plugin that runs integration tests against a live server."
+    dependsOn(tasks.classes)
     source(fileTree("src/liveTest/java") { include("**/*.java") })
     classpath = sourceSets.main.get().compileClasspath + sourceSets.main.get().output
     destinationDirectory.set(layout.buildDirectory.dir("classes/liveTest"))
@@ -249,7 +264,7 @@ tasks.register<Jar>("foliaLiveTestJar") {
 
 val verifyRuntimePackaging = tasks.register("verifyRuntimePackaging") {
     group = "verification"
-    description = "Prevents duplicate Kotlin runtimes across the plugin and Paper library classloaders."
+    description = "Checks the Paper plugin JAR and its runtime library manifest."
     val artifact = tasks.named<ShadowJar>("shadowJar").flatMap { it.archiveFile }
     inputs.file(artifact)
     dependsOn(tasks.named("shadowJar"))
@@ -258,9 +273,24 @@ val verifyRuntimePackaging = tasks.register("verifyRuntimePackaging") {
             check(jar.stream().noneMatch { it.name.startsWith("kotlin/") && it.name.endsWith(".class") }) {
                 "Kotlin runtime must be loaded by Paper, not bundled in the plugin JAR"
             }
+            check(jar.stream().noneMatch { it.name.contains("net/kyori/") && it.name.endsWith(".class") }) {
+                "Adventure must come from the server"
+            }
+            check(jar.stream().noneMatch { it.name.startsWith("META-INF/services/net.kyori.") }) {
+                "Adventure service providers must come from the server"
+            }
+            check(jar.getEntry("pl/syntaxdevteam/plotsx/interaction/PaperDialogBackend.class") != null) {
+                "The optional Paper dialog adapter is missing"
+            }
             val manifest = jar.getInputStream(jar.getEntry("paper-libraries.yml")).bufferedReader().use { it.readText() }
             check(manifest.contains("org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}")) {
                 "Runtime manifest must explicitly load Kotlin matching the compiler"
+            }
+            check(manifest.contains("pl.syntaxdevteam:messageHandler-paper:${libs.versions.messagehandler.get()}")) {
+                "Runtime manifest must load the Paper variant of MessageHandler"
+            }
+            check(!manifest.contains("net.kyori:adventure-") && !manifest.contains("com.github.ben-manes.caffeine:caffeine:")) {
+                "Runtime manifest must not load Adventure or a separate Caffeine library"
             }
             val loader = jar.getInputStream(jar.getEntry("pl/syntaxdevteam/plotsx/loader/SyntaxLoader.class")).use { it.readBytes() }
             check(!loader.toString(Charsets.ISO_8859_1).contains("kotlin/")) {
