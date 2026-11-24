@@ -29,7 +29,7 @@ class ConfigMigrationsTest {
             requireNotNull(javaClass.classLoader.getResourceAsStream("config.yml"))
         }
         val loader = type.declaredConstructors.single().newInstance(
-            file, template, "config-version", 100, 103, true, logger)
+            file, template, "config-version", 100, 104, true, logger)
         return type.getMethod("load", List::class.java).invoke(loader, steps) as YamlDocument
     }
     private fun fixture(action: (File) -> Unit) {
@@ -39,13 +39,13 @@ class ConfigMigrationsTest {
     }
 
     @Test fun `all historical schemas keep custom values and create original backup`() {
-        for (version in listOf<Int?>(null, 100, 101, 102)) fixture { file ->
+        for (version in listOf<Int?>(null, 100, 101, 102, 103)) fixture { file ->
             val original = (version?.let { "config-version: $it\n" } ?: "") +
                 "database:\n  type: postgresql\n  sql:\n    password: custom-secret\n" +
                 "plots:\n  radius: 23\n  custom-list: [alpha, beta]\n  custom-map:\n    enabled: true\nlanguage: PL\ncustom-extension: keep\n"
             file.writeText(original)
             val config = load(file)
-            assertEquals(103, config.getInt("config-version"))
+            assertEquals(104, config.getInt("config-version"))
             assertEquals("postgresql", config.getString("database.type"))
             assertEquals("custom-secret", config.getString("database.sql.password"))
             assertEquals(23, config.getInt("plots.radius"))
@@ -54,19 +54,23 @@ class ConfigMigrationsTest {
             assertEquals(listOf("alpha", "beta"), config.getStringList("plots.custom-list"))
             assertTrue(config.getBoolean("plots.custom-map.enabled"))
             assertTrue(config.contains("plots.claiming.mode"))
+            assertTrue(config.getBoolean("flags.permissions.enabled"))
+            assertTrue(config.getBoolean("flags.permissions.default-access"))
+            assertFalse(config.getBoolean("flags.permissions.hide-restricted"))
+            assertTrue(config.getBoolean("flags.permissions.admin-bypass"))
             assertEquals(original, file.resolveSibling("config.yml.${version ?: 100}.bak").readText())
             val bukkit = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file)
-            assertEquals(103, bukkit.getInt("config-version"))
+            assertEquals(104, bukkit.getInt("config-version"))
             assertEquals(23, bukkit.getInt("plots.radius"))
         }
     }
 
-    @Test fun `fresh config uses 103 and current or future files remain untouched`() {
+    @Test fun `fresh config uses 104 and current or future files remain untouched`() {
         fixture { file ->
-            assertEquals(103, load(file).getInt("config-version"))
+            assertEquals(104, load(file).getInt("config-version"))
             assertFalse(file.resolveSibling("config.yml.100.bak").exists())
         }
-        for (version in listOf(103, 104)) fixture { file ->
+        for (version in listOf(104, 105)) fixture { file ->
             val original = "# custom comment\nconfig-version: $version\nplots:\n  radius: 31\n"
             file.writeText(original)
             assertEquals(version, load(file).getInt("config-version"))
@@ -199,7 +203,7 @@ class ConfigMigrationsTest {
     @Test fun `invalid YAML at every schema never copies defaults or alters original bytes`() {
         val badBodies = listOf("plots: [unterminated\n", "language: \"unterminated\n",
             "plots:\n\tradius: 20\n", "plots: {radius: 20\n")
-        for (version in listOf<Int?>(null, 100, 102, 103, 104)) for (body in badBodies) fixture { file ->
+        for (version in listOf<Int?>(null, 100, 102, 103, 104, 105)) for (body in badBodies) fixture { file ->
             val original = ((version?.let { "config-version: $it\n" } ?: "") + body).toByteArray()
             file.writeBytes(original)
             assertThrows(java.lang.reflect.InvocationTargetException::class.java) { load(file) }

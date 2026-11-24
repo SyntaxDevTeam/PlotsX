@@ -1,4 +1,4 @@
-config-version: 103
+config-version: 104
 
 # /********************************************/
 #    Global settings
@@ -93,9 +93,18 @@ privateChests:
   # Existing containers can be protected with /privatechest lock.
   protectOnPlace: false
 
+# Server-wide permissions for editing plot flags (not the flag values themselves).
+# Explicit plotsx.flag.<identifier> takes precedence over plotsx.flag.*.
+flags:
+  permissions:
+    enabled: true
+    default-access: true
+    hide-restricted: false
+    admin-bypass: true
+
 # Default grants; owners can override each grant per plot in /plot members.
 # Hierarchy: member < builder < manager. Only owner/admin assigns ranks.
-# Supported grants: invite, kick, rename, flag.<registered flag name>.
+# Supported grants: invite, kick, rename, flag.<registered flag name>, flag.*.
 # Publication reference: docs/wiki/Ochrona-i-flagi.md (flags and role grants).
 plot-roles:
   member:

@@ -15,7 +15,7 @@ import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 class FlagsGUI(
     private val plugin: PlotsX,
     private val plot: PlotData,
-    private val page: Int = 0
+    private var page: Int = 0
 ) : AbstractGUI(
     title = plugin.messageHandler.stringMessageToComponentNoPrefix("GUI", "flags.title"),
     size = 54
@@ -32,7 +32,11 @@ class FlagsGUI(
         inventory.clear()
 
         val flags = plugin.cacheManager.getFlags(plot.id).orEmpty()
-        val visibleFlags = PlotFlagRegistry.visibleFlags
+        val visibleFlags = PlotFlagRegistry.visibleFlags.filter {
+            !plugin.config.getBoolean("flags.permissions.hide-restricted", false) ||
+                "flag.${it.name}" in allowedActions
+        }
+        page = page.coerceIn(0, ((visibleFlags.size - 1).coerceAtLeast(0)) / 45)
 
         visibleFlags.drop(page * 45).take(45).forEachIndexed { idx: Int, flagMeta ->
             val flagData = flags.firstOrNull { it.name == flagMeta.name }
@@ -71,7 +75,9 @@ class FlagsGUI(
         val player = event.whoClicked as? Player ?: return
         val clicked = event.currentItem ?: return
         val meta = clicked.itemMeta ?: return
-        val visibleFlags = PlotFlagRegistry.visibleFlags
+        val currentPlot = plugin.cacheManager.getPlot(plot.id) ?: return
+        val access = pl.syntaxdevteam.plotsx.permissions.PlotAccess(plugin)
+        if (!access.canOpen(player, currentPlot)) return
 
         plugin.guiHandler.unregisterGui(player)
         player.closeInventory()
@@ -82,7 +88,7 @@ class FlagsGUI(
             plugin.guiHandler.registerGui(player, FlagsGUI(plugin, plot, page - 1))
             return
         }
-        if (event.slot == 53 && (page + 1) * 45 < visibleFlags.size) {
+        if (event.slot == 53) {
             plugin.guiHandler.registerGui(player, FlagsGUI(plugin, plot, page + 1))
             return
         }
@@ -92,8 +98,7 @@ class FlagsGUI(
         }
         if (flagKey == null) return
 
-        val currentPlot = plugin.cacheManager.getPlot(plot.id) ?: return
-        if (!pl.syntaxdevteam.plotsx.permissions.PlotAccess(plugin).allowed(player, currentPlot, "flag.$flagKey")) {
+        if (!access.allowed(player, currentPlot, "flag.$flagKey")) {
             player.sendMessage(message.stringMessageToComponent("error", "no_permission"))
             return
         }

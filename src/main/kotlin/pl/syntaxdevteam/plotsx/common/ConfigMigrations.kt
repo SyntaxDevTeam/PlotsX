@@ -6,12 +6,16 @@ import pl.syntaxdevteam.core.config.ConfigMigrationContext
 
 /** Historical 101/102 releases changed backend documentation, not configuration paths.
  * 103 adopts the versioned loader while retaining the old additive loader's custom keys.
+ * 104 adds server-wide flag editing permissions.
  * Database backend selections are preserved; migration never silently switches storage.
  */
 internal object ConfigMigrations {
     fun steps(): List<ConfigMigration> = listOf(
         documentationStep(100, 101), documentationStep(101, 102),
-        object : BaseConfigMigration(102, 103) {
+        mergeStep(102, 103), mergeStep(103, 104)
+    )
+
+    private fun mergeStep(from: Int, to: Int) = object : BaseConfigMigration(from, to) {
             override fun migrate(context: ConfigMigrationContext) {
                 val user = context.userConfig ?: return
                 for (key in user.keys) {
@@ -22,7 +26,6 @@ internal object ConfigMigrations {
                 }
             }
         }
-    )
 
     // Merge defaults first and raw user settings last, preserving unknown nested fields.
     private fun merge(defaults: Map<String, Any?>, user: Map<String, Any?>): Map<String, Any?> {

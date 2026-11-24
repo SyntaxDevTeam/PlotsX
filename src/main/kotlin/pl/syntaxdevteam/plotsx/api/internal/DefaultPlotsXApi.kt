@@ -205,7 +205,8 @@ internal class DefaultPlotsXApi(private val plugin: PlotsX) : PlotsXApi, Listene
                 val path = "plot-roles.$role.permissions"
                 if (plugin.config.contains(path)) plugin.config.getStringList(path).toSet()
                 else if (role == "manager") setOf("invite", "kick", "rename") else emptySet()
-            })
+            }, PlotFlagRegistry.allFlags.keys.map { "flag.$it" }
+                .filterNot { access.flagAllowed(actor, it) }.toSet())
     }
 
     private class WriteScope(val actor: ApiActorPolicy) {

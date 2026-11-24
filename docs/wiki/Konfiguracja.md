@@ -9,7 +9,7 @@ Ustawienia znajdziesz w `plugins/PlotsX/config.yml`. Wartość `true` oznacza �
 
 ## Aktualizacje konfiguracji i przeładowanie
 
-Bieżąca wersja konfiguracji to **103**. Przy aktualizacji starszego pliku PlotsX zachowuje własne ustawienia administratora, dodaje brakujące opcje i tworzy kopię zapasową, np. `config.yml.102.bak`. Kolejna próba nie nadpisuje wcześniejszej kopii. Nie zmieniaj ręcznie `config-version`, aby pominąć aktualizację.
+Bieżąca wersja konfiguracji to **104**. Przy aktualizacji starszego pliku PlotsX zachowuje własne ustawienia administratora, dodaje brakujące opcje i tworzy kopię zapasową, np. `config.yml.102.bak`. Kolejna próba nie nadpisuje wcześniejszej kopii. Nie zmieniaj ręcznie `config-version`, aby pominąć aktualizację.
 
 Błędny YAML jest zgłaszany przed nadpisaniem danego pliku. Gdy `/ptx reload` odrzuci konfigurację, dotychczasowa ochrona pozostaje dostępna. Popraw wskazany błąd i ponów przeładowanie. Pliki o bieżącej lub nowszej wersji nie są automatycznie przepisywane ani obniżane do starszej wersji.
 
@@ -18,7 +18,7 @@ Zmiana bazy, trybu zajmowania działek, języka lub aliasów wymaga restartu. Zw
 ## Przykład głównych ustawień
 
 ```yaml
-config-version: 103
+config-version: 104
 language: "EN"
 
 plots:
@@ -181,3 +181,16 @@ Po zmianie zwykłych ustawień działek użyj `/ptx reload`. Zmiana bazy, język
 `/ptx reload` odczytuje konfigurację i odświeża dane ochrony. Nie uruchamia całego pluginu ponownie ani nie przełącza bazy danych.
 
 Dalej: [administracja](Administracja.md).
+
+## Uprawnienia do flag
+
+```yaml
+flags:
+  permissions:
+    enabled: true
+    default-access: true
+    hide-restricted: false
+    admin-bypass: true
+```
+
+`enabled` włącza kontrolę, `default-access` określa dostęp bez jawnego uprawnienia, `hide-restricted` ukrywa flagi bez prawa edycji zamiast oznaczać je jako tylko do odczytu, a `admin-bypass` pozwala administratorom omijać ograniczenie. Domyślne wartości zachowują dostęp właścicieli bez dodatkowych uprawnień. Patrz [Uprawnienia](Uprawnienia.md).

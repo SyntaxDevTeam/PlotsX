@@ -61,3 +61,20 @@ Operators bypass protection as well as radius and area limits. For `/ptx`, grant
 Static permissions declared in `paper-plugin.yml` use `default: op`. Grant the required permissions to non-OP players through your permission system.
 
 Next: [Commands](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Commands.md).
+
+## Server-wide flag editing permissions
+
+- `plotsx.flag.<identifier>` — edit a particular flag, e.g. `plotsx.flag.pvp`.
+- `plotsx.flag.*` — all flags, including API-registered flags (e.g. `plotsx.flag.myplugin:machines`).
+- An explicit individual permission takes precedence over the wildcard; when neither is set, use `flags.permissions.default-access`.
+
+LuckPerms example:
+
+```text
+/lp group default permission set plotsx.flag.* true
+/lp group default permission set plotsx.flag.explosions false
+/lp group default permission set plotsx.flag.pvp false
+/lp group vip permission set plotsx.flag.pvp true
+```
+
+Plot members also need the corresponding role grant. Owners cannot bypass the server ceiling by granting a role permission. Console retains access; administrators bypass the ceiling only with `admin-bypass: true`. Revoking access does not change stored flag values. These permissions control editing through the GUI and API, not the activities governed by the flags.

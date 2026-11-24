@@ -64,3 +64,20 @@ Operatorzy omijają ochronę i limity promienia oraz powierzchni. Dla `/ptx` prz
 Stałe uprawnienia w `paper-plugin.yml` mają domyślnie `default: op`. Graczom bez OP nadaj potrzebne uprawnienia przez system rang.
 
 Dalej: [komendy](Komendy.md).
+
+## Globalne uprawnienia do edycji flag
+
+- `plotsx.flag.<identyfikator>` — edycja konkretnej flagi, np. `plotsx.flag.pvp`.
+- `plotsx.flag.*` — wszystkie flagi, także rejestrowane przez API (np. `plotsx.flag.myplugin:machines`).
+- Jawne uprawnienie konkretnej flagi ma pierwszeństwo przed wildcardem. Brak obu używa `flags.permissions.default-access`.
+
+Przykład LuckPerms:
+
+```text
+/lp group default permission set plotsx.flag.* true
+/lp group default permission set plotsx.flag.explosions false
+/lp group default permission set plotsx.flag.pvp false
+/lp group vip permission set plotsx.flag.pvp true
+```
+
+Członek działki musi dodatkowo posiadać grant swojej roli. Właściciel nie może ominąć globalnego ograniczenia, nadając grant roli. Konsola pozostaje uprawniona; administratorzy omijają ograniczenie tylko przy `admin-bypass: true`. Odebranie uprawnienia nie zmienia zapisanej wartości flagi. Ustawienia dotyczą edycji przez GUI i API, a nie wykonywania czynności na działce.

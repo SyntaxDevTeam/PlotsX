@@ -12,11 +12,11 @@ The owner can override their grants for a specific plot through `/plot members`.
 | `rename` | Rename the plot. |
 | `flag.<identifier>` | Change a specific flag, for example `flag.build`. |
 
-Every flag listed below has a matching `flag.<identifier>` grant. This also applies to additional flags registered by API integrations. There is no `flag.*` grant.
+Every flag listed below has a matching `flag.<identifier>` grant. This also applies to additional flags registered by API integrations. In default role grants, `flag.*` matches all available flags; individual per-plot overrides take precedence.
 A grant allows changing a flag, but does not change the flag value by itself.
 Assigning roles and transferring ownership remains limited to the owner or an administrator.
 Example: `permissions: [invite, rename, flag.build, flag.pvp]`.
-By default, only `manager` receives the `invite`, `kick`, and `rename` grants.
+By default, `manager` receives `invite`, `kick`, `rename`, and `flag.*`. Server permissions also restrict owners and members. See [flag permissions](Permissions.md).
 
 The integration flag `grave-create` (default YES) allows grave creation by integrations that use this flag; plot membership does not bypass it.
 
