@@ -1,5 +1,6 @@
 package pl.syntaxdevteam.plotsx.protection
 
+import io.papermc.paper.event.player.PlayerItemFrameChangeEvent
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.block.Block
@@ -151,20 +152,20 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         val isMember = plugin.cacheManager.isMember(plot.id, player.uniqueId)
         if (isMember) return true
 
-        val flagMeta = PlotFlagRegistry.allFlags[flag]
+        (val defaultValue, val type) = PlotFlagRegistry.allFlags[flag]
             ?: run {
                 plugin.logger.debug("[hasPlotPermission] Nieznana flaga '$flag' na działce ${plot.id} (${plot.name})")
                 return false
             }
 
-        val value = plugin.cacheManager.getFlagValue(plot.id, flag) ?: flagMeta.defaultValue
+        val value = plugin.cacheManager.getFlagValue(plot.id, flag) ?: defaultValue
 
         plugin.logger.debug(
-            "[hasPlotPermission] Flaga '$flag' = $value (domyślnie=${flagMeta.defaultValue}, typ=${flagMeta.type}) " +
+            "[hasPlotPermission] Flaga '$flag' = $value (domyślnie=$defaultValue, typ=$type) " +
                     "dla gracza ${player.name} na działce ${plot.id} (${plot.name})"
         )
 
-        return flagMeta.type.allows(value)
+        return type.allows(value)
     }
 
     /**
@@ -174,9 +175,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
      * @return true, jeśli flaga jest dozwolona, false w przeciwnym razie.
      */
     private fun isFlagAllowed(plotId: Int, flag: String): Boolean {
-        val flagMeta = PlotFlagRegistry.allFlags[flag] ?: return false
-        val value = plugin.cacheManager.getFlagValue(plotId, flag) ?: flagMeta.defaultValue
-        return flagMeta.type.allows(value)
+        (val defaultValue, val type) = PlotFlagRegistry.allFlags[flag] ?: return false
+        val value = plugin.cacheManager.getFlagValue(plotId, flag) ?: defaultValue
+        return type.allows(value)
     }
 
 
@@ -186,7 +187,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
      */
     @Suppress("unused")
     private fun printAllFlagBehaviors() {
-        PlotFlagRegistry.allFlags.forEach { (key, def) ->
+        PlotFlagRegistry.allFlags.forEach { [key, def] ->
             println("Flaga $key: default=${def.defaultValue}, typ=${def.type}, efektDlaObcego=${def.type.allows(def.defaultValue)}")
         }
     }
@@ -338,9 +339,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             logger.debug("Block należy do spawnerBlocks")
             if (plot != null && !hasPlotPermission(player, plot, "allow-spawners")) {
                 event.isCancelled = true
-                plugin.schedulerAdapter.runRegionallyLater(block.location, 1L, Runnable {
+                plugin.schedulerAdapter.runRegionallyLater(block.location, 1L) {
                     cancelAndRestore(event.block)
-                })
+                }
                 player.sendMessage(message.stringMessageToComponent("flags", "allow-spawners.not_allowed"))
             }else{
                 plugin.coreProtectHook.logBlockPlace(player, block)
@@ -351,9 +352,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         if (plot != null && !hasPlotPermission(player, plot, "build")) {
             logger.debug("BlockPlaceEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
             event.isCancelled = true
-            plugin.schedulerAdapter.runRegionallyLater(block.location, 1L, Runnable {
+            plugin.schedulerAdapter.runRegionallyLater(block.location, 1L) {
                 cancelAndRestore(event.block)
-            })
+            }
             player.sendMessage(message.stringMessageToComponent("flags", "build.not_allowed"))
         }
 
@@ -364,7 +365,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             val existingProtection = plugin.privateChestManager.getProtection(block, plot.id)
             if (existingProtection != null && existingProtection.owner != player.uniqueId && !hasBypass(player)) {
                 event.isCancelled = true
-                plugin.schedulerAdapter.runRegionallyLater(block.location, 1L, Runnable { cancelAndRestore(block) })
+                plugin.schedulerAdapter.runRegionallyLater(block.location, 1L) { cancelAndRestore(block) }
                 player.sendMessage(message.stringMessageToComponent("private_chest", "join_denied"))
                 return
             }
@@ -375,7 +376,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 // Copy metadata to the newly placed half of a double chest as well.
                 plugin.privateChestManager.synchronize(block, existingProtection)
             }
-        }/*else{ TODO: Po testach całkiem usunąć ten else
+        }/*else{
             plugin.coreProtectHook.logBlockPlace(player, block)
             logger.debug("Flaga nie zablokowana. Brak działki lub odpowiednie uprawnienia.")
         }*/
@@ -407,9 +408,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             logger.debug("Block należy do spawnerBlocks")
             if (plot != null && !hasPlotPermission(player, plot, "allow-spawners")) {
                 event.isCancelled = true
-                plugin.schedulerAdapter.runRegionallyLater(block.location, 1L, Runnable {
+                plugin.schedulerAdapter.runRegionallyLater(block.location, 1L) {
                     cancelAndRestore(event.block)
-                })
+                }
                 player.sendMessage(message.stringMessageToComponent("flags", "allow-spawners.not_allowed"))
             }else{
                 plugin.coreProtectHook.logBlockBreak(player, block)
@@ -420,9 +421,9 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
         if (plot != null && !hasPlotPermission(player, plot, "build")) {
             logger.debug("BlockBreakEvent at ${loc.blockX},${loc.blockZ} => plot=${plot.id}")
             event.isCancelled = true
-            plugin.schedulerAdapter.runRegionallyLater(block.location, 1L, Runnable {
+            plugin.schedulerAdapter.runRegionallyLater(block.location, 1L) {
                 cancelAndRestore(event.block)
-            })
+            }
             player.sendMessage(message.stringMessageToComponent("flags", "build.break_not_allowed"))
         }else{
             plugin.coreProtectHook.logBlockBreak(player, block)
@@ -524,6 +525,15 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onItemFrameChange(event: PlayerItemFrameChangeEvent) {
+        val plot = plotAt(event.itemFrame) ?: return
+        if (!hasPlotPermission(event.player, plot, "decorations")) {
+            event.isCancelled = true
+            event.player.sendMessage(message.stringMessageToComponent("flags", "decorations.not_allowed"))
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onArmorStandManipulate(event: PlayerArmorStandManipulateEvent) {
         val plot = plotAt(event.rightClicked) ?: return
         if (!hasPlotPermission(event.player, plot, "decorations")) {
@@ -548,7 +558,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     }
 
     /**
-     * Zdarzenie wywoływane, gdy blok zmienia się w inny blok (np. przez grawitację). TODO: Przetestować ponownie!!!
+     * Zdarzenie wywoływane, gdy blok zmienia się w inny blok (np. przez grawitację).
      * Sprawdza, czy gracz ma odpowiednie uprawnienia do zmiany bloków na działce.
      *
      * @param event Zdarzenie zmiany bloku.
@@ -662,19 +672,19 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     fun onCreatureSpawn(event: CreatureSpawnEvent) {
         val loc = event.location
-        val plot = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
+        (val id, val name) = getPlotAtLocation(loc.world.name, loc.blockX, loc.blockZ) ?: return
 
         val entityType = event.entityType
 
         if (entityType in aggressiveMobs) {
-            if (!isFlagAllowed(plot.id, "spawn-monsters")) {
+            if (!isFlagAllowed(id, "spawn-monsters")) {
                 event.isCancelled = true
-                plugin.logger.debug("Spawn potwora $entityType zablokowany na działce ${plot.name} (${plot.id})")
+                plugin.logger.debug("Spawn potwora $entityType zablokowany na działce $name ($id)")
             }
         } else if (entityType in passiveMobs) {
-            if (!isFlagAllowed(plot.id, "spawn-animals")) {
+            if (!isFlagAllowed(id, "spawn-animals")) {
                 event.isCancelled = true
-                plugin.logger.debug("Spawn zwierzęcia $entityType zablokowany na działce ${plot.name} (${plot.id})")
+                plugin.logger.debug("Spawn zwierzęcia $entityType zablokowany na działce $name ($id)")
             }
         }
     }
@@ -698,7 +708,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         // Tool-driven conversions do not produce a BlockPlaceEvent/BlockBreakEvent.
         // Treat path creation and log stripping like every other build action.
-        // Outside plots this listener returns above and leaves vanilla behaviour intact.
+        // Outside plots this listener returns above and leaves vanilla behavior intact.
         val itemType = event.item?.type
         val isPathCreation = itemType?.name?.endsWith("_SHOVEL") == true &&
             block.type in PATH_CONVERTIBLE_BLOCKS
@@ -760,7 +770,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             // must not activate disabled features. Iron doors need their own opt-in.
             if (data is Door && (if (ironDoor) ironDoors else doubleDoors)) {
                 if (!toggling.add(block)) return
-                plugin.schedulerAdapter.runRegionallyLater(block.location, 20L, Runnable { toggling.remove(block) })
+                plugin.schedulerAdapter.runRegionallyLater(block.location, 20L) { toggling.remove(block) }
 
                 val open = !data.isOpen
                 setOpenState(block, open)
@@ -1078,7 +1088,7 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
                 //logger.debug("Tworzenie lodu/śniegu zablokowane na działce ${plot.name} (${plot.id})")
             }
         }
-/*
+        /*
         if (!isFlagAllowed(plot.id, "fire")) {
             event.isCancelled = true
         }*/
