@@ -1,5 +1,22 @@
 # Ochrona i flagi
 
+## Domyślne wartości flag
+
+Administrator może ustawić domyślne wartości wbudowanych flag w `config.yml`.
+Poniższy przykład pozwala gościom używać smyczy i zwykłych drzwi.
+
+```yaml
+plots:
+  flag-defaults:
+    animal-leash: true
+    door: false
+```
+
+`true` odpowiada opcji **TAK** w menu flag. Dla flag blokujących, takich jak `door`, **TAK** włącza blokadę.
+`animal-ride` i `animal-breed` można ustawić osobno. Historyczna flaga `animal-interact` służy do zgodności ze starszymi danymi.
+
+Zmiany wczytuje `/plx reload`. Nowe działki zapisują aktualne wartości domyślne. Istniejące działki używają ich dla flag bez zapisanej wartości. Wersja konfiguracji 104 zawiera w `plots.flag-defaults` pierwotne wartości wszystkich konfigurowalnych flag. Pominięte klucze korzystają z ustawień wbudowanych.
+
 ## Supported grants — granty ról działki
 
 Granty wpisuje się do `plot-roles.<rola>.permissions`, dla ról `member`, `builder`

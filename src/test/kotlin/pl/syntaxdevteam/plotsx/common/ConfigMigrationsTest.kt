@@ -3,6 +3,7 @@ package pl.syntaxdevteam.plotsx.common
 import dev.dejvokep.boostedyaml.YamlDocument
 import org.junit.Assert.*
 import org.junit.Test
+import pl.syntaxdevteam.plotsx.protection.BuiltInFlagBehaviors
 import pl.syntaxdevteam.core.logging.DebugLevel
 import pl.syntaxdevteam.core.logging.Logger
 import pl.syntaxdevteam.core.plugin.PluginMetaProvider
@@ -15,6 +16,10 @@ import java.nio.file.Files
  * to exercise the identical flow without starting a server or adding a mocking framework.
  */
 class ConfigMigrationsTest {
+    private val originalFlagDefaults = BuiltInFlagBehaviors.all
+        .minus("animal-interact")
+        .mapValues { (_, behavior) -> behavior.defaultValue }
+
     private val logger = Logger(object : PluginMetaProvider {
         override val name = "test"
         override val version = "1"
@@ -29,7 +34,7 @@ class ConfigMigrationsTest {
             requireNotNull(javaClass.classLoader.getResourceAsStream("config.yml"))
         }
         val loader = type.declaredConstructors.single().newInstance(
-            file, template, "config-version", 100, 103, true, logger)
+            file, template, "config-version", 100, 104, true, logger)
         return type.getMethod("load", List::class.java).invoke(loader, steps) as YamlDocument
     }
     private fun fixture(action: (File) -> Unit) {
@@ -39,13 +44,13 @@ class ConfigMigrationsTest {
     }
 
     @Test fun `all historical schemas keep custom values and create original backup`() {
-        for (version in listOf<Int?>(null, 100, 101, 102)) fixture { file ->
+        for (version in listOf<Int?>(null, 100, 101, 102, 103)) fixture { file ->
             val original = (version?.let { "config-version: $it\n" } ?: "") +
                 "database:\n  type: postgresql\n  sql:\n    password: custom-secret\n" +
                 "plots:\n  radius: 23\n  custom-list: [alpha, beta]\n  custom-map:\n    enabled: true\nlanguage: PL\ncustom-extension: keep\n"
             file.writeText(original)
             val config = load(file)
-            assertEquals(103, config.getInt("config-version"))
+            assertEquals(104, config.getInt("config-version"))
             assertEquals("postgresql", config.getString("database.type"))
             assertEquals("custom-secret", config.getString("database.sql.password"))
             assertEquals(23, config.getInt("plots.radius"))
@@ -54,24 +59,43 @@ class ConfigMigrationsTest {
             assertEquals(listOf("alpha", "beta"), config.getStringList("plots.custom-list"))
             assertTrue(config.getBoolean("plots.custom-map.enabled"))
             assertTrue(config.contains("plots.claiming.mode"))
+            assertTrue(config.contains("plots.flag-defaults"))
             assertEquals(original, file.resolveSibling("config.yml.${version ?: 100}.bak").readText())
             val bukkit = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file)
-            assertEquals(103, bukkit.getInt("config-version"))
+            assertEquals(104, bukkit.getInt("config-version"))
             assertEquals(23, bukkit.getInt("plots.radius"))
         }
     }
 
-    @Test fun `fresh config uses 103 and current or future files remain untouched`() {
+    @Test fun `fresh config uses 104 and current or future files remain untouched`() {
         fixture { file ->
-            assertEquals(103, load(file).getInt("config-version"))
+            assertEquals(104, load(file).getInt("config-version"))
+            val bukkit = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file)
+            assertEquals(originalFlagDefaults, bukkit.getConfigurationSection("plots.flag-defaults")?.getValues(false))
             assertFalse(file.resolveSibling("config.yml.100.bak").exists())
         }
-        for (version in listOf(103, 104)) fixture { file ->
+        for (version in listOf(104, 105)) fixture { file ->
             val original = "# custom comment\nconfig-version: $version\nplots:\n  radius: 31\n"
             file.writeText(original)
             assertEquals(version, load(file).getInt("config-version"))
             assertEquals(original, file.readText())
         }
+    }
+
+    @Test fun `flag defaults keep their boolean values when migrating from 103`() = fixture { file ->
+        file.writeText("""
+            config-version: 103
+            plots:
+              flag-defaults:
+                animal-leash: true
+                door: false
+        """.trimIndent())
+        load(file)
+        val bukkit = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(file)
+        assertEquals(
+            originalFlagDefaults + mapOf("animal-leash" to true, "door" to false),
+            bukkit.getConfigurationSection("plots.flag-defaults")?.getValues(false)
+        )
     }
 
     @Test fun `repeated load is stable and malformed YAML never replaces original`() = fixture { file ->
@@ -162,9 +186,9 @@ class ConfigMigrationsTest {
     @Test fun `backup precedes callbacks and retries preserve each exact original`() = fixture { file ->
         val attempts = listOf("first", "second", "third")
         for (marker in attempts) {
-            val original = "# $marker\nconfig-version: 102\nlanguage: PL\n"
+            val original = "# $marker\nconfig-version: 103\nlanguage: PL\n"
             file.writeText(original)
-            val failing = object : pl.syntaxdevteam.core.config.BaseConfigMigration(102, 103) {
+            val failing = object : pl.syntaxdevteam.core.config.BaseConfigMigration(103, 104) {
                 override fun migrate(context: pl.syntaxdevteam.core.config.ConfigMigrationContext) {
                     val backups = file.parentFile.listFiles()!!.filter { it.name.endsWith(".bak") }
                     assertTrue("Exact backup exists before migration callback", backups.any { it.readText() == original })
@@ -199,7 +223,7 @@ class ConfigMigrationsTest {
     @Test fun `invalid YAML at every schema never copies defaults or alters original bytes`() {
         val badBodies = listOf("plots: [unterminated\n", "language: \"unterminated\n",
             "plots:\n\tradius: 20\n", "plots: {radius: 20\n")
-        for (version in listOf<Int?>(null, 100, 102, 103, 104)) for (body in badBodies) fixture { file ->
+        for (version in listOf<Int?>(null, 100, 102, 103, 104, 105)) for (body in badBodies) fixture { file ->
             val original = ((version?.let { "config-version: $it\n" } ?: "") + body).toByteArray()
             file.writeBytes(original)
             assertThrows(java.lang.reflect.InvocationTargetException::class.java) { load(file) }
@@ -209,14 +233,14 @@ class ConfigMigrationsTest {
     }
 
     @Test fun `unwritable backup directory stops migration before callbacks`() = fixture { file ->
-        val original = "config-version: 102\nlanguage: PL\n".toByteArray()
+        val original = "config-version: 103\nlanguage: PL\n".toByteArray()
         file.writeBytes(original)
         val directory = file.parentFile.toPath()
         org.junit.Assume.assumeNotNull(Files.getFileAttributeView(directory,
             java.nio.file.attribute.PosixFileAttributeView::class.java))
         val permissions = Files.getPosixFilePermissions(directory)
         var callbackStarted = false
-        val step = object : pl.syntaxdevteam.core.config.BaseConfigMigration(102, 103) {
+        val step = object : pl.syntaxdevteam.core.config.BaseConfigMigration(103, 104) {
             override fun migrate(context: pl.syntaxdevteam.core.config.ConfigMigrationContext) {
                 callbackStarted = true
                 context.config.set("language", "overwrite-attempt")

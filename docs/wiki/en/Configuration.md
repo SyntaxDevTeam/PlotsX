@@ -9,7 +9,7 @@ Settings are stored in `plugins/PlotsX/config.yml`. A value of `true` means “y
 
 ## Configuration updates and reload
 
-The current configuration version is **103**. When updating an older file, PlotsX preserves administrator settings, adds missing options, and creates a backup such as `config.yml.102.bak`. Another attempt does not overwrite an earlier backup. Do not manually change `config-version` to skip an update.
+The current configuration version is **104**. When updating an older file, PlotsX preserves administrator settings, adds missing options, and creates a backup such as `config.yml.103.bak`. Another attempt does not overwrite an earlier backup. Do not manually change `config-version` to skip an update.
 
 Invalid YAML is reported before the affected file is overwritten. If `/ptx reload` rejects the configuration, existing protection remains available. Correct the reported error and retry. Files with the current or a newer version are not automatically rewritten or downgraded.
 
@@ -18,10 +18,12 @@ Changing the database, claiming mode, language, or aliases requires a restart. O
 ## Example of the main settings
 
 ```yaml
-config-version: 103
+config-version: 104
 language: "EN"
 
 plots:
+  flag-defaults:
+    animal-leash: false
   claiming:
     mode: classic
   chunks:
@@ -79,6 +81,7 @@ This is an abbreviated example. See the complete current [config.yml](../../../s
 
 | Setting | Meaning |
 | --- | --- |
+| `plots.flag-defaults` | Default values for built-in plot flags. See [Protection and flags](Protection-and-Flags.md#default-flag-values). |
 | `plots.maxPlots` | Maximum number of plots a player may own. A value of 0 blocks new plot creation. |
 | `plots.radius` | Initial plot radius. A radius of 16 creates a 33 × 33 block area. Use a positive integer. |
 | `plots.world` | World where plots may be created. Enter its name, for example `world`. `"*"` or an empty string allows plot creation in every world. |

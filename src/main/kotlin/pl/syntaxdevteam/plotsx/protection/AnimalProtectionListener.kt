@@ -39,10 +39,10 @@ internal class AnimalProtectionListener(private val plugin: PlotsX) : Listener {
         if (isMember) return true
 
         val definition = PlotFlagRegistry.allFlags[flag] ?: return false
-        val stored = plugin.cacheManager.getFlagValue(plot.id, flag)
+        val value = plugin.cacheManager.getFlagValue(plot.id, flag)
             ?: definition.defaultValue
 
-        return definition.type.allows(stored)
+        return definition.type.allows(value)
     }
 
     private fun deny(player: Player) {

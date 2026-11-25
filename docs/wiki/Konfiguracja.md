@@ -9,7 +9,7 @@ Ustawienia znajdziesz w `plugins/PlotsX/config.yml`. Wartość `true` oznacza �
 
 ## Aktualizacje konfiguracji i przeładowanie
 
-Bieżąca wersja konfiguracji to **103**. Przy aktualizacji starszego pliku PlotsX zachowuje własne ustawienia administratora, dodaje brakujące opcje i tworzy kopię zapasową, np. `config.yml.102.bak`. Kolejna próba nie nadpisuje wcześniejszej kopii. Nie zmieniaj ręcznie `config-version`, aby pominąć aktualizację.
+Bieżąca wersja konfiguracji to **104**. Przy aktualizacji starszego pliku PlotsX zachowuje własne ustawienia administratora, dodaje brakujące opcje i tworzy kopię zapasową, np. `config.yml.103.bak`. Kolejna próba nie nadpisuje wcześniejszej kopii. Nie zmieniaj ręcznie `config-version`, aby pominąć aktualizację.
 
 Błędny YAML jest zgłaszany przed nadpisaniem danego pliku. Gdy `/ptx reload` odrzuci konfigurację, dotychczasowa ochrona pozostaje dostępna. Popraw wskazany błąd i ponów przeładowanie. Pliki o bieżącej lub nowszej wersji nie są automatycznie przepisywane ani obniżane do starszej wersji.
 
@@ -18,10 +18,12 @@ Zmiana bazy, trybu zajmowania działek, języka lub aliasów wymaga restartu. Zw
 ## Przykład głównych ustawień
 
 ```yaml
-config-version: 103
+config-version: 104
 language: "EN"
 
 plots:
+  flag-defaults:
+    animal-leash: false
   claiming:
     mode: classic
   chunks:
@@ -79,6 +81,7 @@ To skrócony przykład. Pełny aktualny plik: [config.yml](../../src/main/resour
 
 | Ustawienie | Znaczenie |
 | --- | --- |
+| `plots.flag-defaults` | Domyślne wartości wbudowanych flag działki. Zobacz [Ochrona i flagi](Ochrona-i-flagi.md#domyślne-wartości-flag). |
 | `plots.maxPlots` | Maksymalna liczba działek gracza. Wartość 0 blokuje tworzenie nowych. |
 | `plots.radius` | Początkowy promień działki. 16 daje teren 33 × 33 bloki. Używaj dodatniej liczby całkowitej. |
 | `plots.world` | Lista dozwolonych światów, np. `["world", "survival"]`. `["*"]` dopuszcza wszystkie światy, a `[]` blokuje nowe działki. |

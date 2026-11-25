@@ -52,7 +52,7 @@ class PluginInitializer(private val plugin: PlotsX) {
             plugin = plugin,
             logger = plugin.logger,
             initialVersion = 100,
-            targetVersion = 103
+            targetVersion = 104
         ).registerMigrations(pl.syntaxdevteam.plotsx.common.ConfigMigrations.steps())
         plugin.configHandler = ConfigHandler(plugin)
         plugin.configHandler.verifyAndUpdateConfig()

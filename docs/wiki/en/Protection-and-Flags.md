@@ -1,5 +1,21 @@
 # Protection and flags
 
+## Default flag values
+
+Administrators can set defaults for built-in plot flags in `config.yml`. This example lets guests use leads and ordinary doors.
+
+```yaml
+plots:
+  flag-defaults:
+    animal-leash: true
+    door: false
+```
+
+`true` corresponds to **YES** in the flag menu. For blocking flags such as `door`, **YES** enables the block.
+You can set `animal-ride` and `animal-breed` independently. The legacy `animal-interact` flag supports older plot data.
+
+Run `/plx reload` to apply changes. New plots save the current defaults. Existing plots use them for flags without a saved value. Config version 104 lists the original values of all configurable flags under `plots.flag-defaults`. Omitted keys use the built-in defaults.
+
 ## Supported grants — plot role grants
 
 Grants are configured under `plot-roles.<role>.permissions` for the `member`, `builder`, and `manager` plot roles. These roles are independent of server ranks such as VIP.

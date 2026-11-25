@@ -31,7 +31,7 @@ internal object AnimalFlagMigration {
                     }
                 }
 
-                if (legacyValue != true && plugin.databaseHandler.updatePlotFlag(plot.id, LEGACY_FLAG, true)) {
+                if (!legacyValue && plugin.databaseHandler.updatePlotFlag(plot.id, LEGACY_FLAG, true)) {
                     updates++
                 }
             }

@@ -1,6 +1,8 @@
 package pl.syntaxdevteam.plotsx.common
 
+import org.bukkit.configuration.ConfigurationSection
 import pl.syntaxdevteam.plotsx.PlotsX
+import pl.syntaxdevteam.plotsx.protection.PlotFlagRegistry
 import java.io.File
 
 class ConfigHandler(private val plugin: PlotsX) {
@@ -12,6 +14,14 @@ class ConfigHandler(private val plugin: PlotsX) {
         // PlotsX services consume Bukkit's view, not the separate BoostedYAML document.
         plugin.reloadConfig()
         plugin.pluginConfig = plugin.config
+
+        val defaults = plugin.config.get("plots.flag-defaults")
+        if (defaults != null && defaults !is ConfigurationSection) {
+            plugin.logger.warning("plots.flag-defaults must be a mapping of plot flags to booleans.")
+        }
+        PlotFlagRegistry.configureDefaults((defaults as? ConfigurationSection)?.getValues(false).orEmpty()) {
+            plugin.logger.warning(it)
+        }
     }
 
     /**

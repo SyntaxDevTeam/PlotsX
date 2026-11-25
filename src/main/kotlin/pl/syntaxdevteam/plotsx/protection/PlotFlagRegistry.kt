@@ -99,6 +99,21 @@ object PlotFlagRegistry {
     val allFlags: Map<String, FlagMeta> get() = registered
     val visibleFlags: List<FlagMeta> get() = registered.values.filter(FlagMeta::visibleInGui)
 
+    @Synchronized internal fun configureDefaults(values: Map<String, Any?>, warn: (String) -> Unit) {
+        val updated = LinkedHashMap(registered)
+        // Rebuild built-in defaults on every reload so removed overrides revert to the bundled values.
+        updated.putAll(builtInFlags)
+        for ((name, value) in values) {
+            val flag = builtInFlags[name]
+            when {
+                flag == null || !flag.visibleInGui -> warn("plots.flag-defaults.$name is not a configurable built-in plot flag.")
+                value !is Boolean -> warn("plots.flag-defaults.$name must be a boolean (true or false).")
+                else -> updated[name] = flag.copy(defaultValue = value)
+            }
+        }
+        registered = java.util.Collections.unmodifiableMap(updated)
+    }
+
     @Synchronized internal fun register(flag: FlagMeta): Boolean {
         if (flag.name in registered) return false
         registered = java.util.Collections.unmodifiableMap(LinkedHashMap(registered).apply { put(flag.name, flag) })

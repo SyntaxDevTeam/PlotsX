@@ -1,4 +1,4 @@
-config-version: 103
+config-version: 104
 
 # /********************************************/
 #    Global settings
@@ -32,6 +32,70 @@ database:
 
 # Plots settings
 plots:
+  # Defaults for built-in plot flags. The values below match the original defaults.
+  # Use YAML booleans (true or false), matching YES/NO in the plot menu.
+  # For example, animal-leash: true allows guests to use leads, and door: false
+  # removes the guest block for ordinary doors.
+  # New plots save these values. On existing plots, only missing flags use them.
+  # Omitted keys use the built-in default for that flag.
+  flag-defaults:
+    grave-create: true
+    build: false
+    path-create: false
+    log-strip: false
+    pvp: false
+    chest: true
+    ender-chest: true
+    lever: true
+    button: true
+    door: true
+    smart-door: false
+    iron-door: false
+    minecart: true
+    redstone: false
+    pistons: false
+    utility: false
+    spawn-monsters: false
+    spawn-animals: true
+    passives: false
+    flow: true
+    flow-damage: false
+    fire: true
+    allow-home: false
+    use-potions: false
+    iceform-player: false
+    iceform-world: false
+    teleport: true
+    cant-grow: true
+    allow-spawners: false
+    leaves-decay: true
+    effects: true
+    block-transform: true
+    fall: true
+    explosions: true
+    decorations: false
+    item-transfer: true
+    portal-create: false
+    portal-use: false
+    projectiles: false
+    item-pickup: false
+    item-drop: false
+    crop-trample: false
+    animal-leash: false
+    animal-ride: false
+    animal-breed: false
+    command-use: true
+    fishing: false
+    elytra: false
+    special-weapons: false
+    weather: true
+    bed-use: false
+    crafting: false
+    enchanting: false
+    respawn-anchor: false
+    conduit-effects: true
+    flight: false
+
   # Selects NEW claims only. Existing plots keep their geometry and protection.
   # Changes require a server restart. Supported values: classic | chunks.
   claiming:
