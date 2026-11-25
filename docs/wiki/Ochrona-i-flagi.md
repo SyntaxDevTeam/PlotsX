@@ -15,7 +15,7 @@ plots:
 `true` odpowiada opcji **TAK** w menu flag. Dla flag blokujących, takich jak `door`, **TAK** włącza blokadę.
 `animal-ride` i `animal-breed` można ustawić osobno. Historyczna flaga `animal-interact` służy do zgodności ze starszymi danymi.
 
-Zmiany wczytuje `/plx reload`. Nowe działki zapisują aktualne wartości domyślne. Istniejące działki używają ich dla flag bez zapisanej wartości. Wersja konfiguracji 104 zawiera w `plots.flag-defaults` pierwotne wartości wszystkich konfigurowalnych flag. Pominięte klucze korzystają z ustawień wbudowanych.
+Zmiany wczytuje `/plx reload`. Nowe działki zapisują aktualne wartości domyślne. Istniejące działki używają ich dla flag bez zapisanej wartości. Wersja konfiguracji 105 zawiera w `plots.flag-defaults` pierwotne wartości wszystkich konfigurowalnych flag. Pominięte klucze korzystają z ustawień wbudowanych.
 
 ## Supported grants — granty ról działki
 
@@ -31,11 +31,11 @@ Właściciel może nadpisywać ich granty dla konkretnej działki w `/plot membe
 | `flag.<identyfikator>` | Zmiana wskazanej flagi, np. `flag.build`. |
 
 Każda flaga w tabelach poniżej ma grant `flag.<identyfikator>`. Dotyczy to także
-dodatkowych flag rejestrowanych przez integracje API. Nie ma grantu `flag.*`.
+dodatkowych flag rejestrowanych przez integracje API. W konfiguracji domyślnych grantów `flag.*` oznacza wszystkie dostępne flagi; indywidualne nadpisanie roli działki ma pierwszeństwo.
 Grant pozwala zmieniać flagę, ale sam nie zmienia jej wartości.
 Nadawanie ról i przekazywanie własności pozostaje dostępne właścicielowi lub administratorowi.
 Przykład: `permissions: [invite, rename, flag.build, flag.pvp]`.
-Domyślnie tylko `manager` ma granty: `invite`, `kick`, `rename`.
+Domyślnie `manager` ma granty `invite`, `kick`, `rename`, `flag.*`. Globalne uprawnienia serwera ograniczają także właściciela i członków. Zobacz [uprawnienia do flag](Uprawnienia.md).
 
 Flaga integracyjna `grave-create` (domyślnie TAK) pozwala na tworzenie grobów
 przez integracje korzystające z tej flagi; członkostwo nie omija tej zasady.

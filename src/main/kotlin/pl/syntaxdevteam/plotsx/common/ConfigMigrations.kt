@@ -6,13 +6,14 @@ import pl.syntaxdevteam.core.config.ConfigMigrationContext
 
 /** Historical 101/102 releases changed backend documentation, not configuration paths.
  * 103 adopts the versioned loader while retaining the old additive loader's custom keys.
- * 104 adds optional defaults for built-in plot flags.
+ * 104 was used independently for flag defaults and flag editing permissions.
+ * 105 includes both sets of options.
  * Database backend selections are preserved; migration never silently switches storage.
  */
 internal object ConfigMigrations {
     fun steps(): List<ConfigMigration> = listOf(
         documentationStep(100, 101), documentationStep(101, 102),
-        preservingStep(102, 103), preservingStep(103, 104)
+        preservingStep(102, 103), preservingStep(103, 104), preservingStep(104, 105)
     )
 
     private fun preservingStep(from: Int, to: Int) =

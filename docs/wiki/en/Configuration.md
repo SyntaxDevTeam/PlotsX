@@ -9,7 +9,7 @@ Settings are stored in `plugins/PlotsX/config.yml`. A value of `true` means “y
 
 ## Configuration updates and reload
 
-The current configuration version is **104**. When updating an older file, PlotsX preserves administrator settings, adds missing options, and creates a backup such as `config.yml.103.bak`. Another attempt does not overwrite an earlier backup. Do not manually change `config-version` to skip an update.
+The current configuration version is **105**. When updating an older file, PlotsX preserves administrator settings, adds missing options, and creates a backup such as `config.yml.104.bak`. Another attempt does not overwrite an earlier backup. Do not manually change `config-version` to skip an update.
 
 Invalid YAML is reported before the affected file is overwritten. If `/ptx reload` rejects the configuration, existing protection remains available. Correct the reported error and retry. Files with the current or a newer version are not automatically rewritten or downgraded.
 
@@ -18,7 +18,7 @@ Changing the database, claiming mode, language, or aliases requires a restart. O
 ## Example of the main settings
 
 ```yaml
-config-version: 104
+config-version: 105
 language: "EN"
 
 plots:
@@ -183,3 +183,16 @@ After changing ordinary plot settings, use `/ptx reload`. Changing the database,
 `/ptx reload` reads the configuration and refreshes protection data. It does not restart the whole plugin or switch database connections.
 
 Next: [Administration](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Administration.md).
+
+## Flag editing permissions
+
+```yaml
+flags:
+  permissions:
+    enabled: true
+    default-access: true
+    hide-restricted: false
+    admin-bypass: true
+```
+
+`enabled` activates permission checks; `default-access` determines access when no permission is set; `hide-restricted` hides non-editable flags rather than marking them read-only; `admin-bypass` exempts administrators. Defaults preserve owner access without additional nodes. See [Permissions](Permissions.md).

@@ -22,7 +22,7 @@ class PlotAccess(private val plugin: PlotsX) {
     fun granted(plotId: Int, role: String, action: String): Boolean {
         if (role !in roles || action !in actions) return false
         return plugin.cacheManager.getFlagValue(plotId, key(role, action))
-            ?: defaults(role).contains(action)
+            ?: FlagEditPolicy.roleDefault(defaults(role), action)
     }
 
     private fun defaults(role: String): List<String> {
@@ -35,17 +35,35 @@ class PlotAccess(private val plugin: PlotsX) {
         if (role !in roles) return emptySet()
         val settings = plugin.cacheManager.getFlags(plotId).orEmpty().associate { it.name to it.value }
         val defaults = defaults(role)
-        return actions.filter { settings[key(role, it)]?.toBooleanStrictOrNull() ?: (it in defaults) }.toSet()
+        return actions.filter { settings[key(role, it)]?.toBooleanStrictOrNull() ?: FlagEditPolicy.roleDefault(defaults, it) }.toSet()
+    }
+
+    /** Global permission ceiling: applies before ownership or delegated role grants. */
+    fun flagAllowed(sender: CommandSender, action: String): Boolean {
+        if (!action.startsWith("flag.")) return true
+        if (action.removePrefix("flag.") !in PlotFlagRegistry.allFlags) return false
+        if (sender !is Player) return true
+        val path = "flags.permissions"
+        return FlagEditPolicy.allowed(
+            enabled = plugin.config.getBoolean("$path.enabled", true),
+            bypass = plugin.config.getBoolean("$path.admin-bypass", true) && admin(sender),
+            defaultAccess = plugin.config.getBoolean("$path.default-access", true),
+            permission = { node -> if (sender.isPermissionSet(node)) sender.hasPermission(node) else null },
+            flag = action.removePrefix("flag.")
+        )
     }
 
     fun allowedActions(sender: CommandSender, plot: PlotData): Set<String> {
-        if (owner(sender, plot)) return actions.toSet()
-        val player = sender as? Player ?: return emptySet()
-        val role = plugin.cacheManager.getMember(plot.id, player.uniqueId)?.memberRole ?: return emptySet()
-        return grants(plot.id, role)
+        val local = if (owner(sender, plot)) actions.toSet() else {
+            val player = sender as? Player ?: return emptySet()
+            val role = plugin.cacheManager.getMember(plot.id, player.uniqueId)?.memberRole ?: return emptySet()
+            grants(plot.id, role)
+        }
+        return local.filter { flagAllowed(sender, it) }.toSet()
     }
 
     fun allowed(sender: CommandSender, plot: PlotData, action: String): Boolean {
+        if (!flagAllowed(sender, action)) return false
         if (owner(sender, plot)) return true
         val player = sender as? Player ?: return false
         val role = plugin.cacheManager.getMember(plot.id, player.uniqueId)?.memberRole ?: return false

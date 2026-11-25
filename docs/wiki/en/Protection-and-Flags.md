@@ -14,7 +14,7 @@ plots:
 `true` corresponds to **YES** in the flag menu. For blocking flags such as `door`, **YES** enables the block.
 You can set `animal-ride` and `animal-breed` independently. The legacy `animal-interact` flag supports older plot data.
 
-Run `/plx reload` to apply changes. New plots save the current defaults. Existing plots use them for flags without a saved value. Config version 104 lists the original values of all configurable flags under `plots.flag-defaults`. Omitted keys use the built-in defaults.
+Run `/plx reload` to apply changes. New plots save the current defaults. Existing plots use them for flags without a saved value. Config version 105 lists the original values of all configurable flags under `plots.flag-defaults`. Omitted keys use the built-in defaults.
 
 ## Supported grants — plot role grants
 
@@ -28,11 +28,11 @@ The owner can override their grants for a specific plot through `/plot members`.
 | `rename` | Rename the plot. |
 | `flag.<identifier>` | Change a specific flag, for example `flag.build`. |
 
-Every flag listed below has a matching `flag.<identifier>` grant. This also applies to additional flags registered by API integrations. There is no `flag.*` grant.
+Every flag listed below has a matching `flag.<identifier>` grant. This also applies to additional flags registered by API integrations. In default role grants, `flag.*` matches all available flags; individual per-plot overrides take precedence.
 A grant allows changing a flag, but does not change the flag value by itself.
 Assigning roles and transferring ownership remains limited to the owner or an administrator.
 Example: `permissions: [invite, rename, flag.build, flag.pvp]`.
-By default, only `manager` receives the `invite`, `kick`, and `rename` grants.
+By default, `manager` receives `invite`, `kick`, `rename`, and `flag.*`. Server permissions also restrict owners and members. See [flag permissions](Permissions.md).
 
 The integration flag `grave-create` (default YES) allows grave creation by integrations that use this flag; plot membership does not bypass it.
 
