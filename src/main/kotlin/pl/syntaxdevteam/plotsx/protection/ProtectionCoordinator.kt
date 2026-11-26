@@ -33,7 +33,7 @@ class ProtectionCoordinator {
             if (purchase != null || recoveryRequired) emptyList()
             else readyListeners.values.toList().also { readyListeners.clear() }
         }
-        listeners.forEach { runCatching(it) }
+        listeners.forEach { val _ = runCatching(it) }
     }
 
     /** Cross-thread reservation; no JVM lock is held while waiting for the server/economy thread. */
