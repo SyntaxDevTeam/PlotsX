@@ -8,6 +8,7 @@ repositories:
 
 libraries:
   - org.jetbrains.kotlin:kotlin-stdlib:${kotlinVersion}
+  - pl.syntaxdevteam:syntaxcore:${syntaxcoreVersion}
   - pl.syntaxdevteam:syntaxdb:${syntaxdbVersion}
   - pl.syntaxdevteam:messageHandler-paper:${messagehandlerVersion}
   - org.eclipse.aether:aether-api:${aetherVersion}

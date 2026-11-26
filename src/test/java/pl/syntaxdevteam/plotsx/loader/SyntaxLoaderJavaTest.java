@@ -1,15 +1,22 @@
 package pl.syntaxdevteam.plotsx.loader;
 
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
+import pl.syntaxdevteam.core.SyntaxCore;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.zip.ZipFile;
 
 import static org.junit.Assert.*;
 
 public class SyntaxLoaderJavaTest {
+    @Rule public TemporaryFolder temporary = new TemporaryFolder();
+
     private static final String REPOSITORIES = """
             repositories:
               central: https://repo.maven.apache.org/maven2/
@@ -112,6 +119,9 @@ public class SyntaxLoaderJavaTest {
             assertNotNull("Processed runtime manifest must be on the test classpath", input);
             var config = SyntaxLoader.readLibraryConfig(input);
             assertEquals(1L, config.libraries().stream()
+                    .filter(library -> library.coordinate().startsWith("pl.syntaxdevteam:syntaxcore:"))
+                    .count());
+            assertEquals(1L, config.libraries().stream()
                     .filter(library -> library.coordinate().startsWith("org.jetbrains.kotlin:kotlin-stdlib:"))
                     .count());
             for (var library : config.libraries()) {
@@ -124,5 +134,25 @@ public class SyntaxLoaderJavaTest {
             assertTrue(config.repositories().containsKey("syntaxdevteam-snapshots"));
             assertTrue(config.repositories().containsKey("syntaxdevteam-releases"));
         }
+    }
+
+    @Test
+    public void filtersDownloadedSyntaxCoreWithoutRemovingItsDependenciesOrMetadata() throws Exception {
+        var source = Path.of(SyntaxCore.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        var cache = temporary.newFolder().toPath();
+        var prepared = SyntaxCoreLibrary.prepare(source, cache);
+        assertEquals(cache.resolve(source.getFileName()), prepared);
+        try (var original = new ZipFile(source.toFile()); var filtered = new ZipFile(prepared.toFile())) {
+            assertNotNull(original.getEntry("kotlin/jvm/internal/Intrinsics.class"));
+            assertNotNull(original.getEntry("net/kyori/adventure/text/Component.class"));
+            assertNotNull(filtered.getEntry("pl/syntaxdevteam/core/SyntaxCore.class"));
+            assertNotNull(filtered.getEntry("com/fasterxml/jackson/databind/ObjectMapper.class"));
+            assertNotNull(filtered.getEntry("META-INF/services/com.fasterxml.jackson.databind.Module"));
+            assertNotNull(filtered.getEntry("META-INF/MANIFEST.MF"));
+            assertTrue(filtered.stream().noneMatch(entry ->
+                    entry.getName().startsWith("kotlin/") || entry.getName().contains("net/kyori/")
+                            || entry.getName().startsWith("META-INF/services/net.kyori.")));
+        }
+        assertEquals(prepared, SyntaxCoreLibrary.prepare(source, cache));
     }
 }

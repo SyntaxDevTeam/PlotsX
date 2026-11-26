@@ -33,15 +33,7 @@ repositories {
 // The optional dialog adapter is loaded only on servers with the newer Paper API.
 val paperDialog = sourceSets.create("paperDialog")
 
-// SyntaxCore's published JAR includes Adventure. Paper provides those classes at runtime.
-val syntaxCoreBundle = configurations.create("syntaxCoreBundle") {
-    isCanBeConsumed = false
-    isTransitive = false
-}
-
 dependencies {
-    add(syntaxCoreBundle.name, libs.syntaxcore)
-
     add(paperDialog.compileOnlyConfigurationName, sourceSets.main.get().output)
     add(paperDialog.compileOnlyConfigurationName, libs.paper.dialog.api)
 
@@ -51,7 +43,6 @@ dependencies {
     testImplementation(libs.junit4)
     testImplementation(libs.syntaxdb)
     testImplementation(libs.syntaxcore)
-    // Direct JDBC dependencies remain test-only for low-level persistence contract tests.
     testImplementation(libs.sqlite)
     testRuntimeOnly(libs.mariadb)
     testRuntimeOnly(libs.postgresql)
@@ -72,7 +63,6 @@ dependencies {
     compileOnly(libs.coreprotect)
     compileOnly(libs.worldguard.bukkit) { isTransitive = false }
     compileOnly(libs.worldguard.core) { isTransitive = false }
-    // WorldEdit 7.4.x is compiled for Java 25. PlotsX still targets Java 21.
     compileOnly(libs.worldedit.bukkit) { isTransitive = false }
     compileOnly(libs.worldedit.core) { isTransitive = false }
 }
@@ -101,6 +91,7 @@ tasks {
 
 val runtimeLibraryVersions = mapOf(
     "kotlinVersion" to libs.versions.kotlin.get(),
+    "syntaxcoreVersion" to libs.versions.syntaxcore.get(),
     "syntaxdbVersion" to libs.versions.syntaxdb.get(),
     "messagehandlerVersion" to libs.versions.messagehandler.get(),
     "aetherVersion" to libs.versions.aether.get(),
@@ -121,19 +112,10 @@ tasks.jar { from(paperDialog.output) }
 
 tasks.named<ShadowJar>("shadowJar") {
     from(paperDialog.output)
-    from({ zipTree(syntaxCoreBundle.singleFile) }) {
-        exclude("net/kyori/**", "META-INF/versions/**/net/kyori/**", "META-INF/services/net.kyori.*")
-        exclude("kotlin/**", "META-INF/versions/**/kotlin/**", "META-INF/*.kotlin_module")
-        exclude("META-INF/MANIFEST.MF", "META-INF/maven/**", "**/module-info.class")
-    }
+    configurations = emptyList()
     archiveBaseName.set("PlotsX-Paper")
     archiveClassifier.set("")
     archiveVersion.set(project.version.toString())
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    // Kotlin belongs to Paper's library classloader together with SyntaxDB, not the plugin JAR.
-    dependencies { exclude(dependency("org.jetbrains.kotlin:.*:.*")) }
-    mergeServiceFiles()
-    filesMatching("META-INF/services/**") { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
     filesMatching("META-INF/*.kotlin_module") { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
 }
 
@@ -270,11 +252,11 @@ val verifyRuntimePackaging = tasks.register("verifyRuntimePackaging") {
     dependsOn(tasks.named("shadowJar"))
     doLast {
         ZipFile(artifact.get().asFile).use { jar ->
-            check(jar.stream().noneMatch { it.name.startsWith("kotlin/") && it.name.endsWith(".class") }) {
-                "Kotlin runtime must be loaded by Paper, not bundled in the plugin JAR"
-            }
-            check(jar.stream().noneMatch { it.name.contains("net/kyori/") && it.name.endsWith(".class") }) {
-                "Adventure must come from the server"
+            val bundledClass = jar.stream().filter {
+                it.name.endsWith(".class") && !it.name.startsWith("pl/syntaxdevteam/plotsx/")
+            }.findFirst()
+            check(bundledClass.isEmpty) {
+                "Plugin JAR contains a runtime library class: ${bundledClass.get().name}"
             }
             check(jar.stream().noneMatch { it.name.startsWith("META-INF/services/net.kyori.") }) {
                 "Adventure service providers must come from the server"
@@ -285,6 +267,9 @@ val verifyRuntimePackaging = tasks.register("verifyRuntimePackaging") {
             val manifest = jar.getInputStream(jar.getEntry("paper-libraries.yml")).bufferedReader().use { it.readText() }
             check(manifest.contains("org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}")) {
                 "Runtime manifest must explicitly load Kotlin matching the compiler"
+            }
+            check(manifest.contains("pl.syntaxdevteam:syntaxcore:${libs.versions.syntaxcore.get()}")) {
+                "Runtime manifest must load SyntaxCore through Paper"
             }
             check(manifest.contains("pl.syntaxdevteam:messageHandler-paper:${libs.versions.messagehandler.get()}")) {
                 "Runtime manifest must load the Paper variant of MessageHandler"

@@ -2,6 +2,7 @@ package pl.syntaxdevteam.plotsx.loader;
 
 import io.papermc.paper.plugin.loader.PluginClasspathBuilder;
 import io.papermc.paper.plugin.loader.PluginLoader;
+import io.papermc.paper.plugin.loader.library.ClassPathLibrary;
 import io.papermc.paper.plugin.loader.library.impl.MavenLibraryResolver;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.graph.Dependency;
@@ -24,16 +25,32 @@ public final class SyntaxLoader implements PluginLoader {
             throw new IllegalStateException("Cannot configure PlotsX runtime libraries from paper-libraries.yml", failure);
         }
         Map<String, MavenLibraryResolver> resolvers = new LinkedHashMap<>();
+        List<ClassPathLibrary> libraries = new ArrayList<>();
         for (LibrarySpec library : config.libraries()) {
             String repositoryId = selectRepository(library, config);
-            MavenLibraryResolver resolver = resolvers.computeIfAbsent(repositoryId, key -> {
-                MavenLibraryResolver created = new MavenLibraryResolver();
-                repositoriesFor(key, config).forEach(created::addRepository);
-                return created;
-            });
-            resolver.addDependency(new Dependency(new DefaultArtifact(library.coordinate()), null));
+            var artifact = new DefaultArtifact(library.coordinate());
+            if (artifact.getGroupId().equals("pl.syntaxdevteam") && artifact.getArtifactId().equals("syntaxcore")) {
+                var resolver = createResolver(repositoryId, config);
+                resolver.addDependency(new Dependency(artifact, null));
+                var cache = classpath.getContext().getDataDirectory().resolve(".libraries");
+                libraries.add(store -> resolver.register(path ->
+                        store.addLibrary(SyntaxCoreLibrary.prepare(path, cache))));
+            } else {
+                var resolver = resolvers.computeIfAbsent(repositoryId, key -> {
+                    var created = createResolver(key, config);
+                    libraries.add(created);
+                    return created;
+                });
+                resolver.addDependency(new Dependency(artifact, null));
+            }
         }
-        resolvers.values().forEach(classpath::addLibrary);
+        libraries.forEach(classpath::addLibrary);
+    }
+
+    private static MavenLibraryResolver createResolver(String repositoryId, LibraryConfig config) {
+        var resolver = new MavenLibraryResolver();
+        repositoriesFor(repositoryId, config).forEach(resolver::addRepository);
+        return resolver;
     }
 
     static LibraryConfig readLibraryConfig(InputStream input) {
