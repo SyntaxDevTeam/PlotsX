@@ -39,7 +39,7 @@ Plot roles `member`, `builder`, and `manager` are independent of server ranks. T
 
 ## Administrator access
 
-`/plot admin list <player/UUID>` requires `plotsx.admin.manage` and lists plots owned by the target, including offline owners. The normal "my plots" list shows only the player's own plots, even for operators.
+`/plot admin list <player/UUID>` requires `plotsx.admin.manage` and lists plots owned by the target, including offline owners. The list opened by `/plot` shows plots the player owns or belongs to, including for operators.
 
 | Permission | Meaning |
 | --- | --- |

@@ -516,7 +516,7 @@ help:
     import: "Stellt dump/backup.sql wieder her und ersetzt die aktuellen Daten."
     claim: "Erstellt nach Bestätigung ein Grundstück an deiner Position."
     unclaim: "Entfernt nach Bestätigung das Grundstück, auf dem du stehst."
-    plot: "Öffnet das Grundstücksmenü oder eine Liste deiner Grundstücke."
+    plot: "Öffnet das Menü des Grundstücks unter dir, wenn du Zugriff hast. Sonst zeigt es Grundstücke, die dir gehören oder auf denen du Mitglied bist."
     plot_name: "Öffnet ein zugängliches Grundstück anhand seines Namens."
     members: "Öffnet das Menü für Mitglieder, Ränge und Berechtigungen."
     add: "Fügt einen Spieler zum Grundstück hinzu."

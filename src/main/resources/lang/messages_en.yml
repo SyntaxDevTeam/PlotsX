@@ -518,7 +518,7 @@ help:
     import: "Restores dump/backup.sql, replacing current data."
     claim: "Creates a plot at your location after confirmation."
     unclaim: "Removes the plot you are standing on after confirmation."
-    plot: "Opens the plot panel or a list of your plots."
+    plot: "Opens the plot you can access where you stand, or lists plots you own or belong to."
     plot_name: "Opens an accessible plot by name."
     members: "Opens the members, ranks and permissions panel."
     add: "Adds a player to the plot."

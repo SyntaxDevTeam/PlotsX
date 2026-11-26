@@ -15,6 +15,7 @@
 | `/plot add <gracz>` | Dodaje członka do twojej działki. | `plotsx.cmd.plot` |
 | `/plot remove <gracz>` | Usuwa członka z twojej działki. | `plotsx.cmd.plot` |
 | `/plot members` | Otwiera panel członków działki. | `plotsx.cmd.plot` |
+| `/plot expand` | Otwiera potwierdzenie rozszerzenia z wolnego chunka obok własnej działki chunkowej, gdy opcja `plots.chunks.expansion.standingCommand` jest włączona. | `plotsx.cmd.plot` i `plotsx.plot.expand` |
 
 Administrator wybiera sposób tworzenia nowych działek przez
 `plots.claiming.mode: classic | chunks`. `classic` używa promienia, a `chunks`
@@ -23,7 +24,7 @@ pozostają chronione i rozszerzają się według własnej geometrii.
 
 ### Role, granty i administracja
 
-Komendy wymagają `plotsx.cmd.plot` i stania na działce, do której gracz ma dostęp. Właściciel i administrator zarządzają wszystkimi opcjami; członkowie korzystają z grantów swojej roli.
+Komendy dla graczy wymagają `plotsx.cmd.plot` i stania na działce, do której gracz ma dostęp. Członkowie korzystają z grantów swojej roli. Warianty `/plot admin` wymagają `plotsx.admin.manage`.
 
 | Komenda | Działanie i wymagany dostęp |
 | --- | --- |
@@ -33,9 +34,9 @@ Komendy wymagają `plotsx.cmd.plot` i stania na działce, do której gracz ma do
 | `/plot role <gracz> <member\|builder\|manager>` | Zmienia rolę członka; tylko właściciel/administrator. |
 | `/plot permission <rola> <grant> <true\|false>` | Ustawia grant roli dla tej działki; tylko właściciel/administrator. |
 | `/plot transfer <gracz> confirm` | Przekazuje własność obecnemu członkowi, który jest online; tylko właściciel/administrator. Sprawdza limity liczby, promienia i powierzchni odbiorcy oraz konflikt nazwy działki. |
-| `/plot admin list <gracz/UUID>` | Wypisuje wszystkie działki właściciela (także offline): ID, nazwę, świat, pozycję i promień. Działa z konsoli i w grze; wymaga `plotsx.admin.manage`. |
+| `/plot admin list <gracz/UUID>` | Wypisuje działki wskazanego właściciela, również offline, wraz z ID, nazwą, światem, pozycją oraz promieniem lub liczbą chunków. Działa z konsoli i w grze. |
 | `/plot admin <id> move confirm` | Przenosi ochronę i ustawienia działki do pozycji administratora; wymaga `plotsx.admin.manage` i wykonania w grze. |
-| `/plot admin <id>` | Otwiera panel członków wskazanej działki; wymaga `plotsx.admin.manage`. |
+| `/plot admin <id>` | Otwiera panel członków wskazanej działki w grze. |
 | `/plot admin <id> <podkomenda> [argumenty]` | Wykonuje powyższe operacje na wskazanej działce, także z konsoli. Wymaga `plotsx.admin.manage`, bez osobnego wymogu `plotsx.cmd.plot`. `members` wypisuje listę. |
 
 Przykłady: `/plot permission builder flag.build true`, `/plot role Alex manager`, `/plot admin 12 members`.
@@ -91,7 +92,7 @@ Skrót `/pchest` działa z każdą opcją. Szczegóły dostępu opisuje strona [
 
 ## Obsługa pluginu
 
-`/ptx` i `/plotsx` działają tak samo. Możesz używać ich w grze lub konsoli; w konsoli pomiń początkowy ukośnik.
+`/ptx`, `/plotsx` i `/plx` uruchamiają te same komendy. Działają w grze i w konsoli. W konsoli pomiń początkowy ukośnik.
 
 **Wszystkie opcje wymagają jednego uprawnienia `plotsx.cmd.ptx`, również import i przeładowanie. Przyznawaj je administracji.**
 
@@ -100,8 +101,8 @@ Skrót `/pchest` działa z każdą opcją. Szczegóły dostępu opisuje strona [
 | `/ptx` | Podpowiada, jak otworzyć pomoc. |
 | `/ptx help [strona]` | Pokazuje skróconą pomoc. |
 | `/ptx version` | Pokazuje wersję i informacje o pluginie. |
-| `/ptx reload` | Wczytuje config i odbudowuje cache; nie pozwala przełączyć `claiming.mode` bez restartu. |
-| `/ptx export [silnik]` | Tworzy przenośny backup działek i dziennika operacji w `dump/backup.sql`. |
+| `/ptx reload` | Wczytuje konfigurację i odświeża dane ochrony. Zmiana trybu zajmowania działek, bazy, języka lub aliasów wymaga restartu. |
+| `/ptx export [mysql\|mariadb\|sqlite\|postgresql]` | Zapisuje kopię w `plugins/PlotsX/dump/backup.sql`. Bez argumentu używa formatu SQL bieżącej bazy. |
 | `/ptx import` | Waliduje i przywraca backup, a następnie publikuje nowy cache. |
 
 Do kopii i przywracania danych użyj procedury z [administracji](Administracja.md).

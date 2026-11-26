@@ -516,7 +516,7 @@ help:
     import: "Restaura dump/backup.sql, substituindo os dados atuais."
     claim: "Cria um terreno na sua localização após a confirmação."
     unclaim: "Remove o terreno onde você está após a confirmação."
-    plot: "Abre o painel do terreno ou uma lista dos seus terrenos."
+    plot: "Abre o painel do terreno onde você está se tiver acesso. Caso contrário, lista os terrenos que você possui ou dos quais é membro."
     plot_name: "Abre um terreno acessível pelo nome."
     members: "Abre o painel de membros, cargos e permissões."
     add: "Adiciona um jogador ao terreno."

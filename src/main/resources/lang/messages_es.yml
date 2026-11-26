@@ -516,7 +516,7 @@ help:
     import: "Restaura dump/backup.sql, reemplazando los datos actuales."
     claim: "Crea una parcela en tu ubicación tras confirmarlo."
     unclaim: "Elimina la parcela en la que estás tras confirmarlo."
-    plot: "Abre el panel de la parcela o la lista de tus parcelas."
+    plot: "Abre el panel de la parcela en la que estás si tienes acceso. Si no, muestra las parcelas de las que eres propietario o miembro."
     plot_name: "Abre una parcela accesible por su nombre."
     members: "Abre el panel de miembros, rangos y permisos."
     add: "Añade un jugador a la parcela."

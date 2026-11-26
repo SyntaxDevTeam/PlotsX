@@ -519,7 +519,7 @@ help:
     import: "Przywraca dump/backup.sql, zastępując bieżące dane."
     claim: "Tworzy działkę w bieżącej lokalizacji po potwierdzeniu."
     unclaim: "Usuwa działkę, na której stoisz, po potwierdzeniu."
-    plot: "Otwiera panel działki lub listę własnych działek."
+    plot: "Otwiera panel dostępnej działki pod tobą albo listę działek, których jesteś właścicielem lub członkiem."
     plot_name: "Otwiera dostępną działkę o podanej nazwie."
     members: "Otwiera panel członków, rang i ich uprawnień."
     add: "Dodaje gracza do działki."

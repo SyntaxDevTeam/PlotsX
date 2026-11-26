@@ -516,7 +516,7 @@ help:
     import: "Restaure dump/backup.sql en remplaçant les données actuelles."
     claim: "Crée une parcelle à ta position après confirmation."
     unclaim: "Supprime la parcelle sur laquelle tu te trouves après confirmation."
-    plot: "Ouvre le panneau de la parcelle ou la liste de tes parcelles."
+    plot: "Ouvre le panneau de la parcelle où tu te trouves si tu y as accès. Sinon, affiche les parcelles dont tu es propriétaire ou membre."
     plot_name: "Ouvre une parcelle accessible à partir de son nom."
     members: "Ouvre le panneau des membres, rangs et permissions."
     add: "Ajoute un joueur à la parcelle."

@@ -101,6 +101,7 @@ Current development artifacts are available from successful [Build Explorer work
 ## 🚀 Quick start
 
 1. Build or obtain `PlotsX-Paper-<version>.jar` and place it in the server's `plugins/` directory.
+   Paper resolves runtime libraries such as SyntaxCore and SyntaxDB when it loads the plugin.
 2. Start the server once to generate the configuration and language files.
 3. Configure allowed worlds and choose `classic` or `chunks` as the claiming mode.
 4. Grant players the required `plotsx.*` permissions.
@@ -126,9 +127,11 @@ For players, the basic flow is intentionally short:
 | Manage roles | `/plot role <player> <role>` | Owner or administrator access |
 | Configure role grants | `/plot permission <role> <grant> <true\|false>` | Owner or administrator access |
 | Transfer ownership | `/plot transfer <player> confirm` | Owner or administrator access |
+| Move plot protection | `/plot admin <id> move confirm` in game | `plotsx.admin.manage` |
 | Expand a plot | Expansion GUI | `plotsx.plot.expand` |
+| Claim an adjacent chunk for your plot | `/plot expand` when enabled | `plotsx.cmd.plot` and `plotsx.plot.expand` |
 | Manage private containers | `/privatechest ...` / `/pchest ...` | `plotsx.cmd.privatechest` |
-| Administration / reload / backup | `/ptx ...` / `/plotsx ...` | `plotsx.cmd.ptx` |
+| Administration / reload / backup | `/ptx ...`, `/plotsx ...`, or `/plx ...` | `plotsx.cmd.ptx` |
 
 The administrator interface also supports listing and managing plots belonging to offline players. See the full **[command reference](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Commands.md)** and **[permission reference](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Permissions.md)** for exact syntax and limit nodes.
 
@@ -136,7 +139,7 @@ Messages are bundled in English (`EN`), Polish (`PL`), German (`DE`), Spanish (`
 
 ## 🧩 Player interface
 
-`/plot` is the central entry point. Depending on context, it opens the plot you are standing on or a list of your own plots.
+`/plot` opens the panel for the plot you are standing on if you have access. Otherwise, it lists the plots you own or belong to, if any.
 
 From the panel, players can:
 
@@ -156,7 +159,7 @@ PlotsX keeps protection data cache-backed for normal gameplay and supports SQLit
 
 Expansion purchases use a durable operation journal and transactional land commits. This makes failures easier to recover from and avoids treating an uncertain economy response as permission to repeat a debit blindly.
 
-Administrators can export and import PlotsX data with `/ptx export` and `/ptx import`. Keep a database and plugin-data backup before upgrades or migrations.
+Administrators can export PlotsX data with `/ptx export [mysql|mariadb|sqlite|postgresql]` and restore it with `/ptx import`. Export uses the current database's SQL format when no engine is specified. Keep a database and plugin-data backup before upgrades or migrations.
 
 ## 📚 Documentation
 

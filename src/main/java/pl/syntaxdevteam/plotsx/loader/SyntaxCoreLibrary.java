@@ -12,7 +12,6 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 final class SyntaxCoreLibrary {
-    private SyntaxCoreLibrary() {}
 
     static Path prepare(Path source, Path cache) {
         try (var jar = new ZipFile(source.toFile())) {

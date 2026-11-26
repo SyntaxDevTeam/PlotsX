@@ -42,7 +42,7 @@ Role działki `member`, `builder`, `manager` są niezależne od rang serwera. Ic
 
 ## Dostęp administracji
 
-`/plot admin list <gracz/UUID>` wymaga `plotsx.admin.manage` i wypisuje działki wskazanego właściciela, także offline. Zwykła lista „moich działek” pokazuje wyłącznie własne działki, również operatorom.
+`/plot admin list <gracz/UUID>` wymaga `plotsx.admin.manage` i wypisuje działki wskazanego właściciela, także offline. Lista otwierana przez `/plot` pokazuje działki, których gracz jest właścicielem lub członkiem. Ta sama zasada obowiązuje operatorów.
 
 | Uprawnienie | Znaczenie |
 | --- | --- |

@@ -15,12 +15,13 @@
 | `/plot add <player>` | Adds a member to your plot. | `plotsx.cmd.plot` |
 | `/plot remove <player>` | Removes a member from your plot. | `plotsx.cmd.plot` |
 | `/plot members` | Opens the plot member panel. | `plotsx.cmd.plot` |
+| `/plot expand` | Opens expansion confirmation from a free chunk next to a chunk plot you own when `plots.chunks.expansion.standingCommand` is enabled. | `plotsx.cmd.plot` and `plotsx.plot.expand` |
 
 The administrator chooses how new plots are created through `plots.claiming.mode: classic | chunks`. `classic` uses a radius, while `chunks` claims an entire 16 × 16 chunk. Changing the mode requires a restart; saved plots of both types remain protected and continue to expand according to their own geometry.
 
 ### Roles, grants, and administration
 
-These commands require `plotsx.cmd.plot` and, unless using the administrative form, standing on a plot the player can access. The owner and administrators can manage every option; members use grants assigned to their role.
+Player forms require `plotsx.cmd.plot` and standing on a plot the player can access. Members use grants assigned to their role. The `/plot admin` forms require `plotsx.admin.manage`.
 
 | Command | Action and required access |
 | --- | --- |
@@ -30,9 +31,9 @@ These commands require `plotsx.cmd.plot` and, unless using the administrative fo
 | `/plot role <player> <member\|builder\|manager>` | Changes a member role; owner/administrator only. |
 | `/plot permission <role> <grant> <true\|false>` | Changes a role grant for this plot; owner/administrator only. |
 | `/plot transfer <player> confirm` | Transfers ownership to a current member who is online; owner/administrator only. Checks the recipient's plot-count, radius, area limits, and plot-name conflicts. |
-| `/plot admin list <player/UUID>` | Lists every plot owned by the target, including offline owners: ID, name, world, position, and radius. Works from console and in game; requires `plotsx.admin.manage`. |
+| `/plot admin list <player/UUID>` | Lists plots owned by the target, including offline owners, with ID, name, world, position, and either the radius or chunk count. Works from console and in game. |
 | `/plot admin <id> move confirm` | Moves the plot's protection and settings to the administrator's position; requires `plotsx.admin.manage` and an in-game sender. |
-| `/plot admin <id>` | Opens the member panel of the specified plot; requires `plotsx.admin.manage`. |
+| `/plot admin <id>` | Opens the member panel of the specified plot in game. |
 | `/plot admin <id> <subcommand> [arguments]` | Executes the same management operations on the specified plot, including from console. Requires `plotsx.admin.manage` without separately requiring `plotsx.cmd.plot`. `members` prints the member list. |
 
 Examples: `/plot permission builder flag.build true`, `/plot role Alex manager`, `/plot admin 12 members`.
@@ -84,7 +85,7 @@ The `/pchest` alias works with every option. Access details are described in [Pr
 
 ## Plugin administration
 
-`/ptx` and `/plotsx` behave the same way. They can be used in game or from the console; omit the leading slash in the console.
+`/ptx`, `/plotsx`, and `/plx` run the same commands. They work in game and in the console. Omit the leading slash in the console.
 
 **Every option requires the single `plotsx.cmd.ptx` permission, including import and reload. Grant it only to administrators.**
 
@@ -93,8 +94,8 @@ The `/pchest` alias works with every option. Access details are described in [Pr
 | `/ptx` | Shows how to open help. |
 | `/ptx help [page]` | Shows concise help. |
 | `/ptx version` | Shows the plugin version and information. |
-| `/ptx reload` | Reloads the config and rebuilds the cache; it cannot switch `claiming.mode` without a restart. |
-| `/ptx export [engine]` | Creates a portable backup of plots and the operation journal in `dump/backup.sql`. |
+| `/ptx reload` | Reloads the config and refreshes protection data. Changing the claiming mode, database, language, or aliases requires a restart. |
+| `/ptx export [mysql\|mariadb\|sqlite\|postgresql]` | Writes the backup to `plugins/PlotsX/dump/backup.sql`. Omitting the engine uses the current database's SQL format. |
 | `/ptx import` | Validates and restores the backup, then publishes a rebuilt cache. |
 
 For backup and restore procedures, see [Administration](https://github.com/SyntaxDevTeam/PlotsX/blob/main/docs/wiki/en/Administration.md).
