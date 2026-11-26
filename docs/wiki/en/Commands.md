@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | `/claim` | Opens the confirmation for creating a plot at your current location. | `plotsx.cmd.claim` |
 | `/unclaim` | Opens the confirmation for removing the plot you own at your current location. | `plotsx.cmd.unclaim` |
-| `/plot` | Opens the panel of an accessible plot or your own plot list when outside claimed land, including for OP players. | `plotsx.cmd.plot` |
+| `/plot` | Opens the panel of the plot you are standing on if you have access. Otherwise, it lists plots you own or belong to. | `plotsx.cmd.plot` |
 | `/plot <name>` | Opens an accessible plot by name; your own plot takes priority. | `plotsx.cmd.plot` |
 | `/plot add <player>` | Adds a member to your plot. | `plotsx.cmd.plot` |
 | `/plot remove <player>` | Removes a member from your plot. | `plotsx.cmd.plot` |

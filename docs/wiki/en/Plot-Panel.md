@@ -4,7 +4,7 @@
 
 The most important options are available directly through `/plot`.
 
-On your own plot, the command opens that plot's panel. Outside plots, it shows a list of your plots. You can also select one of your plots by name, for example `/plot Base`. While standing on another player's land, a regular player cannot open the owner's management panel.
+If you have access to the plot you are standing on, the command opens its panel. Outside plots or on a plot you cannot access, it lists plots you own or belong to. You can also select one of your plots by name with a command such as `/plot Base`.
 
 ## What is available in the menu?
 

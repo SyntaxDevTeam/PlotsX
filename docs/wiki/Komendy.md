@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | `/claim` | Otwiera potwierdzenie założenia działki w twoim miejscu. | `plotsx.cmd.claim` |
 | `/unclaim` | Otwiera potwierdzenie usunięcia własnej działki, na której stoisz. | `plotsx.cmd.unclaim` |
-| `/plot` | Otwiera panel dostępnej działki lub listę własnych działek poza zajętym terenem, również dla OP. | `plotsx.cmd.plot` |
+| `/plot` | Otwiera panel działki pod graczem, jeśli ma do niej dostęp. W pozostałych przypadkach pokazuje listę działek, których gracz jest właścicielem lub członkiem. | `plotsx.cmd.plot` |
 | `/plot <nazwa>` | Otwiera panel dostępnej działki po nazwie; własna ma pierwszeństwo. | `plotsx.cmd.plot` |
 | `/plot add <gracz>` | Dodaje członka do twojej działki. | `plotsx.cmd.plot` |
 | `/plot remove <gracz>` | Usuwa członka z twojej działki. | `plotsx.cmd.plot` |

@@ -4,7 +4,7 @@
 
 Najważniejsze opcje masz pod ręką w `/plot`.
 
-Na własnej działce komenda otwiera jej panel. Poza działkami pokazuje listę twoich terenów. Możesz też wybrać własną działkę po nazwie: `/plot Baza`. Stojąc na cudzym terenie, zwykły gracz nie otworzy panelu właściciela.
+Jeśli masz dostęp do działki, na której stoisz, komenda otwiera jej panel. Poza działkami i na cudzej działce bez dostępu zobaczysz listę działek, których jesteś właścicielem lub członkiem. Możesz też wybrać własną działkę po nazwie, wpisując na przykład `/plot Baza`.
 
 ## Co znajdziesz w menu?
 

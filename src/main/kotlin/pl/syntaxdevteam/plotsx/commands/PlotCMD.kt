@@ -66,18 +66,22 @@ class PlotCMD(private val plugin: PlotsX) : BasicCommand {
             } else members.execute(player, standing.id, args.toList())
             return
         }
-        val cachedPlots = plugin.cacheManager.getCachedPlots()
-        val plot = if (args.isEmpty()) standing else {
+        val plot = if (args.isEmpty()) {
+            standing?.takeIf { access.canOpen(player, it) }
+        } else {
+            val cachedPlots = plugin.cacheManager.getCachedPlots()
             cachedPlots.firstOrNull { it.ownerUuid == player.uniqueId && it.name.equals(args[0], true) }
                 ?: cachedPlots.firstOrNull { it.name.equals(args[0], true) && access.canOpen(player, it) }
         }
         if (plot != null) {
-            if (!access.canOpen(player, plot)) { members.reply(player, "denied"); return }
             plugin.guiHandler.registerGui(player, PlotGUI(plugin, plot))
         } else if (args.isEmpty()) {
             val plots = plugin.cacheManager.getPlayerPlots(player.uniqueId)
-            if (plots.isEmpty()) members.reply(player, "stand_on_plot")
-            else plugin.guiHandler.registerGui(player, PlotListGUI(plugin, plots, player.uniqueId))
+            if (plots.isNotEmpty()) {
+                plugin.guiHandler.registerGui(player, PlotListGUI(plugin, plots, player.uniqueId))
+            } else {
+                members.reply(player, if (standing == null) "stand_on_plot" else "denied")
+            }
         } else player.sendMessage(plugin.messageHandler.stringMessageToComponent("error", "plot_not_found"))
     }
 
