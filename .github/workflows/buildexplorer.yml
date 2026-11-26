@@ -54,7 +54,7 @@ jobs:
           --health-cmd="mysqladmin ping -h localhost --silent"
           --health-interval=10s --health-timeout=5s --health-retries=12
       postgresql:
-        image: postgres:18
+        image: postgres:19
         env:
           POSTGRES_USER: plotsx
           POSTGRES_DB: postgres
