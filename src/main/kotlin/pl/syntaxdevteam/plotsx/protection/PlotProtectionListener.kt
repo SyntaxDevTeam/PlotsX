@@ -10,6 +10,7 @@ import org.bukkit.block.data.Directional
 import org.bukkit.block.data.Openable
 import org.bukkit.block.data.type.Door
 import org.bukkit.entity.EntityType
+import org.bukkit.entity.ItemFrame
 import org.bukkit.entity.LivingEntity
 import org.bukkit.entity.Player
 import org.bukkit.entity.Projectile
@@ -1320,6 +1321,18 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             potion.remove()
             player.sendMessage(message.stringMessageToComponent("flags", "use-potions.not_allowed"))
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onMobProjectileHitItemFrame(event: ProjectileHitEvent) {
+        val frame = event.hitEntity as? ItemFrame ?: return
+        val shooter = event.entity.shooter
+        if (shooter !is LivingEntity || shooter is Player) return
+        if (plotAt(frame) == null) return
+
+        event.isCancelled = true
+        // Stop the projectile so it cannot continue through the protected frame.
+        event.entity.remove()
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

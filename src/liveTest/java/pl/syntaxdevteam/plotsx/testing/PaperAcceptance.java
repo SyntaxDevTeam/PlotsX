@@ -3,9 +3,15 @@ package pl.syntaxdevteam.plotsx.testing;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.entity.Arrow;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Skeleton;
 import org.bukkit.event.block.*;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.util.Vector;
 import pl.syntaxdevteam.plotsx.PlotsX;
 import pl.syntaxdevteam.plotsx.api.*;
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler;
@@ -73,6 +79,61 @@ public final class PaperAcceptance extends JavaPlugin {
             catch (Exception failure) { throw new IllegalStateException("Acceptance fixture failed", failure); }
             return Unit.INSTANCE;
         });
+    }
+    private record FrameShot(ItemFrame frame, Arrow arrow) {
+        void remove() {
+            arrow.remove();
+            frame.remove();
+        }
+    }
+
+    private FrameShot shootAtFrame(World world, Skeleton shooter, int x, int z, EntityType frameType) {
+        Block space = world.getBlockAt(x, 100, z);
+        for (int column = x; column <= 46; column++) {
+            world.getBlockAt(column, 100, z).setType(Material.AIR);
+        }
+        space.getRelative(BlockFace.WEST).setType(Material.STONE);
+        ItemFrame frame = (ItemFrame) world.spawnEntity(space.getLocation(), frameType);
+        frame.setFacingDirection(BlockFace.EAST, true);
+        frame.setItem(new ItemStack(Material.DIAMOND), false);
+
+        Vector target = frame.getBoundingBox().getCenter();
+        Arrow arrow = world.spawn(new Location(world, 46.5, target.getY(), target.getZ()), Arrow.class);
+        arrow.setShooter(shooter);
+        arrow.setGravity(false);
+        arrow.setVelocity(new Vector(-1.5, 0, 0));
+        return new FrameShot(frame, arrow);
+    }
+
+    private void checkMobProjectiles(World world, PlotsXApi api) {
+        world.addPluginChunkTicket(2, 2, this);
+        Skeleton skeleton = world.spawn(new Location(world, 46.5, 100, 37.5), Skeleton.class);
+        skeleton.setAI(false);
+        skeleton.setGravity(false);
+        check(api.getPlotAt(world.getName(), 46, 37) == null, "skeleton stands outside the plot");
+        FrameShot regular = shootAtFrame(world, skeleton, 40, 39, EntityType.ITEM_FRAME);
+        FrameShot glow = shootAtFrame(world, skeleton, 40, 40, EntityType.GLOW_ITEM_FRAME);
+        FrameShot outside = shootAtFrame(world, skeleton, 44, 41, EntityType.ITEM_FRAME);
+
+        getServer().getScheduler().runTaskLater(this, () -> {
+            try {
+                check(regular.frame().isValid() && regular.frame().getItem().getType() == Material.DIAMOND
+                    && !regular.arrow().isValid(), "skeleton arrow stops and the item stays in the plot frame");
+                check(glow.frame().isValid() && glow.frame().getItem().getType() == Material.DIAMOND
+                    && !glow.arrow().isValid(), "skeleton arrow stops and the item stays in the plot glow frame");
+                check(outside.frame().isValid() && outside.frame().getItem().getType().isAir(),
+                    "skeleton arrow knocks the item out of the unclaimed frame");
+                finish(null);
+            } catch (Throwable error) {
+                finish(error);
+            } finally {
+                outside.remove();
+                glow.remove();
+                regular.remove();
+                skeleton.remove();
+                world.removePluginChunkTicket(2, 2, this);
+            }
+        }, 12L);
     }
     private void runChecks() throws Exception {
         PlotsX plugin = (PlotsX) getServer().getPluginManager().getPlugin("PlotsX");
@@ -180,7 +241,7 @@ public final class PaperAcceptance extends JavaPlugin {
                 check(api.getPlotAt(world.getName(),40,40).getGeometryType().equals("classic"), "reload preserves classic protection");
                 checks.add("SERVER " + getServer().getVersion());
                 checks.add("MODE " + plugin.getClaimMode());
-                finish(null);
+                checkMobProjectiles(world, api);
             } catch (Throwable error) { finish(error); }
             return Unit.INSTANCE;
         });
