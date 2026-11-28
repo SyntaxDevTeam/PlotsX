@@ -13,7 +13,9 @@ import pl.syntaxdevteam.plotsx.api.MemberUpdateResult;
 import pl.syntaxdevteam.plotsx.commands.PlotMembers;
 import pl.syntaxdevteam.plotsx.databases.DatabaseHandler;
 import java.nio.file.Files;
+import java.sql.Driver;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,7 +53,10 @@ public final class FoliaAcceptance extends JavaPlugin implements Listener {
     }
     private void prepare() {
         PlotsX plugin = (PlotsX) getServer().getPluginManager().getPlugin("PlotsX");
-        try { check(plugin != null && plugin.isEnabled(), "Folia startup"); }
+        try {
+            check(plugin != null && plugin.isEnabled(), "PlotsX startup");
+            check(plugin.getSchedulerAdapter().isFoliaBased(), "region-threaded platform detection");
+        }
         catch (Throwable error) { finish(error); return; }
         owner.getScheduler().run(this, task -> {
             String world = owner.getWorld().getName();
@@ -61,7 +66,7 @@ public final class FoliaAcceptance extends JavaPlugin implements Listener {
                 try {
                     check(plugin.getApi().getPlots().isEmpty(), "disposable empty database");
                     var claim = plugin.getDatabaseHandler().claimPlotAtomically(actor, actor, world, 0, 0, 5, 2, 10, 10000, "test", 32, 64);
-                    check(claim instanceof DatabaseHandler.ClaimResult.Success, "Folia worker claim and publication");
+                    check(claim instanceof DatabaseHandler.ClaimResult.Success, "Worker claim and publication");
                     int id = ((DatabaseHandler.ClaimResult.Success) claim).getPlotId();
                     check(plugin.getDatabaseHandler().addPlotMember(id, target, "member"), "recipient membership");
                     owner.getScheduler().runDelayed(this, ignored -> expand(plugin, id), () -> finish(new AssertionError("owner retired")), 40L);
@@ -90,12 +95,14 @@ public final class FoliaAcceptance extends JavaPlugin implements Listener {
                 var plot = plugin.getApi().getPlot(id);
                 if (plot.getArea() == 25 && attempt < 20) { waitExpansion(plugin, id, attempt + 1); return; }
                 check(plot.getArea() == 50 && plot.getExtensions().size() == 1 && plot.getGeometryRevision() == 1,
-                    "Folia classic GUI expansion commits once despite duplicate confirmation");
+                    "Classic GUI expansion commits once despite duplicate confirmation");
                 getServer().getAsyncScheduler().runNow(this, worker -> {
                     try {
-                        var method = DatabaseHandler.class.getDeclaredMethod("getConnection");
-                        method.setAccessible(true);
-                        try (var c = (java.sql.Connection) method.invoke(plugin.getDatabaseHandler());
+                        String database = plugin.getConfig().getString("database.sql.dbname", plugin.getName());
+                        var databaseUri = plugin.getDataFolder().toPath().resolve(database + ".db").toAbsolutePath().toUri();
+                        var driver = Class.forName("org.sqlite.JDBC", true, plugin.getClass().getClassLoader())
+                            .asSubclass(Driver.class).getConstructor().newInstance();
+                        try (var c = driver.connect("jdbc:sqlite:" + databaseUri + "?mode=ro", new Properties());
                              var statement = c.prepareStatement("SELECT state, classic_radius, amount FROM plot_operations WHERE plot_id = ?")) {
                             statement.setInt(1, id);
                             try (var rows = statement.executeQuery()) {
@@ -113,7 +120,7 @@ public final class FoliaAcceptance extends JavaPlugin implements Listener {
     private void transfer(PlotsX plugin, int id) {
         try {
             check(Bukkit.isOwnedByCurrentRegion(owner), "actor entity thread");
-            check(!Bukkit.isOwnedByCurrentRegion(recipient), "players in distinct Folia regions");
+            check(!Bukkit.isOwnedByCurrentRegion(recipient), "players in distinct ticking regions");
             check(plugin.getApi().transferOwnership(owner, id, recipient.getUniqueId()) == MemberUpdateResult.RECIPIENT_WRONG_THREAD,
                 "synchronous API safely rejects cross-region recipient");
             plugin.getApi().transferOwnershipAsync(owner, id, recipient.getUniqueId()).whenComplete((result, failure) -> {
@@ -128,8 +135,8 @@ public final class FoliaAcceptance extends JavaPlugin implements Listener {
                                     check(plugin.getApi().getPlot(id).getOwner().equals(owner.getUniqueId()), "command workflow transfers back across regions");
                                     plugin.onReload(error -> {
                                         try {
-                                            check(error == null, "Folia asynchronous reload");
-                                            check(plugin.getApi().getPlot(id).getOwner().equals(owner.getUniqueId()), "Folia reload preserves ownership");
+                                            check(error == null, "Asynchronous reload");
+                                            check(plugin.getApi().getPlot(id).getOwner().equals(owner.getUniqueId()), "Reload preserves ownership");
                                             checks.add("SERVER " + getServer().getVersion());
                                             finish(null);
                                         } catch (Throwable problem) { finish(problem); }
