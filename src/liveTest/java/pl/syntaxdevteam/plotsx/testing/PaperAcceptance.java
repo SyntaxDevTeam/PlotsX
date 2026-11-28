@@ -8,7 +8,10 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Skeleton;
+import org.bukkit.event.Event;
 import org.bukkit.event.block.*;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Vector;
@@ -135,6 +138,32 @@ public final class PaperAcceptance extends JavaPlugin {
             }
         }, 12L);
     }
+
+    private void checkBoneMeal(World world, Player owner, Player visitor) {
+        Block inside = world.getBlockAt(-1, 64, -1);
+        Block outside = inside.getRelative(BlockFace.EAST);
+        for (EquipmentSlot hand : List.of(EquipmentSlot.HAND, EquipmentSlot.OFF_HAND)) {
+            check(boneMealUse(visitor, inside, hand) == Event.Result.DENY, "visitor bone meal denied in " + hand);
+            check(boneMealUse(owner, inside, hand) != Event.Result.DENY, "owner bone meal allowed in " + hand);
+            check(boneMealUse(visitor, outside, hand) != Event.Result.DENY, "unclaimed bone meal allowed in " + hand);
+        }
+
+        BlockFertilizeEvent crossing = new BlockFertilizeEvent(outside, visitor, List.of(inside.getState()));
+        getServer().getPluginManager().callEvent(crossing);
+        check(crossing.isCancelled(), "visitor fertilizer crossing into plot is denied");
+
+        BlockFertilizeEvent allowed = new BlockFertilizeEvent(outside, owner, List.of(inside.getState()));
+        getServer().getPluginManager().callEvent(allowed);
+        check(!allowed.isCancelled(), "owner fertilizer crossing into plot is allowed");
+    }
+
+    private Event.Result boneMealUse(Player player, Block block, EquipmentSlot hand) {
+        PlayerInteractEvent event = new PlayerInteractEvent(
+            player, Action.RIGHT_CLICK_BLOCK, new ItemStack(Material.BONE_MEAL), block, BlockFace.UP, hand);
+        getServer().getPluginManager().callEvent(event);
+        return event.useItemInHand();
+    }
+
     private void runChecks() throws Exception {
         PlotsX plugin = (PlotsX) getServer().getPluginManager().getPlugin("PlotsX");
         check(plugin != null && plugin.isEnabled(), "plugin startup and migration");
@@ -185,6 +214,7 @@ public final class PaperAcceptance extends JavaPlugin {
         Block outside = world.getBlockAt(-32,64,-32);
         BlockBreakEvent free = new BlockBreakEvent(outside,visitor); getServer().getPluginManager().callEvent(free);
         check(!free.isCancelled(), "unclaimed hole permits breaking");
+        checkBoneMeal(world, member, visitor);
         Block source = world.getBlockAt(0,64,-1);
         BlockPistonExtendEvent piston = new BlockPistonExtendEvent(source.getRelative(BlockFace.EAST),List.of(source),BlockFace.WEST);
         getServer().getPluginManager().callEvent(piston);

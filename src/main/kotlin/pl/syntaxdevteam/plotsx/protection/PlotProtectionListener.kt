@@ -16,6 +16,7 @@ import org.bukkit.entity.Player
 import org.bukkit.entity.Projectile
 import org.bukkit.entity.ThrownPotion
 import org.bukkit.entity.ArmorStand
+import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
@@ -24,6 +25,7 @@ import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockBurnEvent
 import org.bukkit.event.block.BlockDispenseEvent
 import org.bukkit.event.block.BlockFadeEvent
+import org.bukkit.event.block.BlockFertilizeEvent
 import org.bukkit.event.block.BlockFormEvent
 import org.bukkit.event.block.BlockFromToEvent
 import org.bukkit.event.block.BlockGrowEvent
@@ -701,16 +703,23 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
             }
             return
         }
-        if (event.action != Action.RIGHT_CLICK_BLOCK || event.hand != EquipmentSlot.HAND) return
+        if (event.action != Action.RIGHT_CLICK_BLOCK) return
+        val itemType = event.item?.type
+        if (event.hand != EquipmentSlot.HAND && itemType != Material.BONE_MEAL) return
 
         val player = event.player
         val block = event.clickedBlock ?: return
-        val plot = getPlotAtLocation(block.world.name, block.x, block.z) ?: return
+        val plot = plotAt(block) ?: return
+
+        if (itemType == Material.BONE_MEAL && !hasPlotPermission(player, plot, "build")) {
+            event.setUseItemInHand(Event.Result.DENY)
+            player.sendMessage(message.stringMessageToComponent("flags", "cant-grow.not_allowed"))
+        }
+        if (event.hand != EquipmentSlot.HAND) return
 
         // Tool-driven conversions do not produce a BlockPlaceEvent/BlockBreakEvent.
         // Treat path creation and log stripping like every other build action.
         // Outside plots this listener returns above and leaves vanilla behavior intact.
-        val itemType = event.item?.type
         val isPathCreation = itemType?.name?.endsWith("_SHOVEL") == true &&
             block.type in PATH_CONVERTIBLE_BLOCKS
         val isLogStripping = itemType?.name?.endsWith("_AXE") == true &&
@@ -1428,6 +1437,20 @@ class PlotProtectionListener(private val plugin: PlotsX) : Listener {
 
         if (!isFlagAllowed(plot.id, "leaves-decay")) {
             event.isCancelled = true
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    fun onBlockFertilize(event: BlockFertilizeEvent) {
+        val player = event.player ?: return
+        // Fertilizer can change blocks beyond the clicked block, including across plot borders.
+        val denied = event.blocks.asSequence()
+            .mapNotNull { getPlotAtLocation(it.world.name, it.x, it.z) }
+            .distinctBy(PlotData::id)
+            .any { !hasPlotPermission(player, it, "build") }
+        if (denied) {
+            event.isCancelled = true
+            player.sendMessage(message.stringMessageToComponent("flags", "cant-grow.not_allowed"))
         }
     }
 
